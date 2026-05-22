@@ -16,7 +16,7 @@ export default function HomePage() {
         style={{
           minHeight: '100svh',
           display: 'grid',
-          placeItems: 'center',
+          placeItems: 'flex-end',
           padding: 'clamp(7rem, 14vh, 9rem) 1.25rem clamp(3rem, 8vh, 5rem)',
           position: 'relative',
           overflow: 'hidden',

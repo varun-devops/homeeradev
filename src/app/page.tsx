@@ -61,18 +61,6 @@ export default function HomePage() {
           >
               HOME ERA <br /> SINCE 1960 
           </h1>
-          <p
-            style={{
-              maxWidth: 560,
-              margin: '1.5rem auto 2.5rem',
-              color: 'var(--ink-soft)',
-              fontSize: '1.05rem',
-              textShadow: '0 1px 20px rgba(0,0,0,0.8)',
-            }}
-          >
-            Considered objects for the home — built slowly, used daily.
-            Drag the emblem to rotate. Scroll to zoom.
-          </p>
           <div
             style={{
               display: 'inline-flex',

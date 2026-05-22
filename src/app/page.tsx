@@ -52,17 +52,6 @@ export default function HomePage() {
             pointerEvents: 'none',
           }}
         >
-          <p
-            style={{
-              fontSize: '0.78rem',
-              letterSpacing: '0.32em',
-              textTransform: 'uppercase',
-              color: 'var(--gold)',
-              marginBottom: '1.25rem',
-            }}
-          >
-            Homeera — Volume Ⅰ
-          </p>
           <h1
             style={{
               fontStyle: 'italic',
@@ -70,7 +59,7 @@ export default function HomePage() {
               textShadow: '0 2px 40px rgba(0,0,0,0.65)',
             }}
           >
-            A quieter way <br /> to live with things.
+              HOME ERA <br /> SINCE 1960 
           </h1>
           <p
             style={{

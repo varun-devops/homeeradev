@@ -5,9 +5,6 @@ import Reveal from '@/components/Reveal';
 const EmblemHero3D = dynamic(() => import('@/components/EmblemHero3D'), {
   ssr: false,
 });
-const WaterRipple = dynamic(() => import('@/components/WaterRipple'), {
-  ssr: false,
-});
 
 export default function HomePage() {
   return (
@@ -16,32 +13,17 @@ export default function HomePage() {
         style={{
           minHeight: '100svh',
           display: 'grid',
-          placeItems: 'flex-end',
           padding: 'clamp(7rem, 14vh, 9rem) 1.25rem clamp(3rem, 8vh, 5rem)',
           position: 'relative',
           overflow: 'hidden',
           // transparent — the global ShardBackground shows through
           background: 'transparent',
+          alignContent: 'end',
+          justifyItems: 'center',
         }}
       >
-        {/* Interactive water-surface ripple — reacts to hover / touch */}
-        <WaterRipple />
-
         {/* Full-screen interactive 3D emblem */}
         <EmblemHero3D />
-
-        {/* Readability scrim — neutral black, no brown tint */}
-        <div
-          aria-hidden="true"
-          style={{
-            position: 'absolute',
-            inset: 0,
-            zIndex: 1,
-            pointerEvents: 'none',
-            background:
-              'radial-gradient(ellipse 62% 52% at 50% 44%, transparent 42%, rgba(0,0,0,0.5) 100%), linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, transparent 28%, transparent 60%, rgba(0,0,0,0.9) 100%)',
-          }}
-        />
 
         <div
           style={{

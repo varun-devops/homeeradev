@@ -148,7 +148,14 @@ export default function EmblemHero3D() {
         sheen: 0.5,
         sheenColor: new THREE.Color(0xeef0f4),
         sheenRoughness: 0.4,
-        transparent: true,
+        // NOT `transparent`: refraction comes from the transmission pass,
+        // not alpha blending. Flagging it transparent makes WebGL re-sort
+        // and blend the overlapping extruded petals every frame, and the
+        // sort order keeps swapping — that is the flicker. An opaque
+        // material with normal depth-write keeps each petal stable.
+        transparent: false,
+        depthWrite: true,
+        depthTest: true,
       });
 
       // Parse traced SVG and build the extruded 3D group.
@@ -200,18 +207,6 @@ export default function EmblemHero3D() {
       rawGroup.children.forEach((child) => {
         child.userData.basePos = child.position.clone();
       });
-
-      // Soft neutral halo behind the emblem (cool white, no gold/brown cast).
-      const haloMat = new THREE.MeshBasicMaterial({
-        color: 0xf2f4f8,
-        transparent: true,
-        opacity: 0,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false,
-      });
-      const halo = new THREE.Mesh(new THREE.PlaneGeometry(7, 7), haloMat);
-      halo.position.set(0, 0, -0.6);
-      scene.add(halo);
 
       // Post-processing: bloom for the metallic shimmer.
       const composer = new EffectComposer(renderer);
@@ -273,9 +268,6 @@ export default function EmblemHero3D() {
           child.position.y = basePos.y + (1 - t) * 30;
         });
         emblemGroup.rotation.y = (1 - easeOutCubic(p)) * 0.4;
-        const gT = THREE.MathUtils.clamp((p - 0.55) / 0.45, 0, 1);
-        haloMat.opacity = gT * 0.2;
-        halo.scale.setScalar(0.4 + gT * 1.4);
       };
       applyReveal(0);
 
@@ -355,7 +347,6 @@ export default function EmblemHero3D() {
           if (m.geometry) m.geometry.dispose();
         });
         whiteMat.dispose();
-        haloMat.dispose();
       };
     })();
 

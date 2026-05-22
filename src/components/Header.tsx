@@ -3,13 +3,6 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 
-const categories = [
-  { label: 'Living', href: '/shop?cat=living' },
-  { label: 'Decor', href: '/shop?cat=decor' },
-  { label: 'Lighting', href: '/shop?cat=lighting' },
-  { label: 'Outdoor', href: '/shop?cat=outdoor' },
-];
-
 // Primary links — shown inline on desktop, inside the hamburger drawer
 // on mobile.
 const primary = [
@@ -34,38 +27,22 @@ export default function Header() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // Lock body scroll while the mobile drawer is open.
+  // Lock body scroll while the mobile drawer is open, and close it on Escape.
   useEffect(() => {
     document.body.style.overflow = menuOpen ? 'hidden' : '';
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMenuOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
     return () => {
       document.body.style.overflow = '';
+      window.removeEventListener('keydown', onKey);
     };
   }, [menuOpen]);
 
   return (
-    <header
-      data-hidden={hidden}
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        zIndex: 100,
-        padding: '1rem clamp(1rem, 3vw, 2.5rem)',
-        display: 'grid',
-        gridTemplateColumns: '1fr auto 1fr',
-        alignItems: 'center',
-        gap: '1rem',
-        backdropFilter: 'blur(14px) saturate(140%)',
-        WebkitBackdropFilter: 'blur(14px) saturate(140%)',
-        background: 'rgba(10, 10, 10, 0.72)',
-        borderBottom: '1px solid var(--line)',
-        transform: hidden ? 'translateY(-100%)' : 'translateY(0)',
-        transition: 'transform 420ms cubic-bezier(0.16, 1, 0.3, 1)',
-        willChange: 'transform',
-      }}
-    >
-      {/* Breakpoint-driven show/hide — scoped to this component */}
+    <>
+      {/* Breakpoint-driven show/hide + drawer animation — scoped here */}
       <style>{`
         .heHeader-desktop { display: flex; }
         .heHeader-burger { display: none; }
@@ -73,146 +50,159 @@ export default function Header() {
           .heHeader-desktop { display: none !important; }
           .heHeader-burger { display: inline-flex !important; }
         }
+        /* Full-page drawer: starts clipped to a circle at the top-right
+           corner, expands to cover the whole viewport. */
+        .heHeader-drawer {
+          position: fixed;
+          inset: 0;
+          z-index: 95;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          background: var(--bg-deep, #0a0a0a);
+          clip-path: circle(0% at calc(100% - 2.5rem) 2.25rem);
+          transition: clip-path 560ms cubic-bezier(0.83, 0, 0.17, 1);
+          pointer-events: none;
+        }
+        .heHeader-drawer[data-open=true] {
+          clip-path: circle(150% at calc(100% - 2.5rem) 2.25rem);
+          pointer-events: auto;
+        }
+        /* Stagger each link in once the panel has opened. */
+        .heHeader-link {
+          opacity: 0;
+          transform: translateY(18px);
+          transition: opacity 420ms var(--ease-out), transform 420ms var(--ease-out);
+        }
+        .heHeader-drawer[data-open=true] .heHeader-link {
+          opacity: 1;
+          transform: translateY(0);
+        }
+        .heHeader-drawer[data-open=true] .heHeader-link:nth-child(1) { transition-delay: 220ms; }
+        .heHeader-drawer[data-open=true] .heHeader-link:nth-child(2) { transition-delay: 290ms; }
+        .heHeader-drawer[data-open=true] .heHeader-link:nth-child(3) { transition-delay: 360ms; }
+        .heHeader-drawer[data-open=true] .heHeader-link:nth-child(4) { transition-delay: 430ms; }
       `}</style>
 
-      <Link
-        href="/"
-        aria-label="Homeera home"
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '0.55rem',
-          fontFamily: 'var(--font-display)',
-          fontSize: '1.45rem',
-          letterSpacing: '0.02em',
-        }}
-      >
-        <span
-          style={{
-            display: 'inline-flex',
-            width: 30,
-            height: 30,
-            borderRadius: '50%',
-            overflow: 'hidden',
-          }}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/logo.jpeg"
-            alt="Homeera logo"
-            width={30}
-            height={30}
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-          />
-        </span>
-        Homeera
-      </Link>
-
-      {/* Center category nav — desktop only */}
-      <nav
-        aria-label="Categories"
-        className="heHeader-desktop"
-        style={{
-          gap: 'clamp(0.75rem, 2vw, 1.75rem)',
-          justifyContent: 'center',
-          fontSize: '0.82rem',
-          letterSpacing: '0.14em',
-          textTransform: 'uppercase',
-        }}
-      >
-        {categories.map((c) => (
-          <Link
-            key={c.label}
-            href={c.href}
-            data-hover
-            style={{
-              padding: '0.45rem 0.2rem',
-              position: 'relative',
-              color: 'var(--ink-soft)',
-              transition: 'color 240ms var(--ease-out)',
-            }}
-          >
-            {c.label}
-          </Link>
-        ))}
-      </nav>
-
-      {/* Primary nav — desktop only */}
-      <nav
-        aria-label="Primary"
-        className="heHeader-desktop"
-        style={{
-          gap: 'clamp(0.75rem, 2vw, 1.5rem)',
-          justifyContent: 'flex-end',
-          fontSize: '0.82rem',
-          letterSpacing: '0.14em',
-          textTransform: 'uppercase',
-        }}
-      >
-        {primary.map((p) => (
-          <Link key={p.label} href={p.href} data-hover>
-            {p.label}
-          </Link>
-        ))}
-      </nav>
-
-      {/* Hamburger button — mobile only, sits in the right grid column */}
-      <button
-        type="button"
-        className="heHeader-burger"
-        aria-label={menuOpen ? 'Close menu' : 'Open menu'}
-        aria-expanded={menuOpen}
-        onClick={() => setMenuOpen((v) => !v)}
-        style={{
-          gridColumn: 3,
-          justifySelf: 'end',
-          alignItems: 'center',
-          justifyContent: 'center',
-          width: 42,
-          height: 42,
-          background: 'transparent',
-          border: '1px solid var(--line)',
-          borderRadius: 10,
-          cursor: 'pointer',
-          padding: 0,
-        }}
-      >
-        <span
-          aria-hidden="true"
-          style={{
-            position: 'relative',
-            display: 'block',
-            width: 18,
-            height: 12,
-          }}
-        >
-          {/* Top / middle / bottom bars — animate into an X when open */}
-          <span style={burgerBar(menuOpen ? 'top-open' : 'top')} />
-          <span style={burgerBar(menuOpen ? 'mid-open' : 'mid')} />
-          <span style={burgerBar(menuOpen ? 'bot-open' : 'bot')} />
-        </span>
-      </button>
-
-      {/* Mobile drawer */}
-      <div
-        className="heHeader-burger"
-        aria-hidden={!menuOpen}
+      <header
+        data-hidden={hidden}
         style={{
           position: 'fixed',
-          inset: 0,
           top: 0,
-          zIndex: 99,
-          background: 'rgba(8, 8, 8, 0.96)',
-          backdropFilter: 'blur(18px)',
-          WebkitBackdropFilter: 'blur(18px)',
-          flexDirection: 'column',
+          left: 0,
+          right: 0,
+          zIndex: 100,
+          padding: '1rem clamp(1rem, 3vw, 2.5rem)',
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
           alignItems: 'center',
-          justifyContent: 'center',
-          gap: '1.75rem',
-          opacity: menuOpen ? 1 : 0,
-          pointerEvents: menuOpen ? 'auto' : 'none',
-          transition: 'opacity 320ms var(--ease-out)',
+          gap: '1rem',
+          // fully transparent — the page shows straight through
+          background: 'transparent',
+          transform: hidden ? 'translateY(-100%)' : 'translateY(0)',
+          transition: 'transform 420ms cubic-bezier(0.16, 1, 0.3, 1)',
+          willChange: 'transform',
         }}
+      >
+        <Link
+          href="/"
+          aria-label="Homeera home"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.55rem',
+            fontFamily: 'var(--font-display)',
+            fontSize: '1.45rem',
+            letterSpacing: '0.02em',
+          }}
+        >
+          <span
+            style={{
+              display: 'inline-flex',
+              width: 32,
+              height: 32,
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/favicon.png"
+              alt="Homeera logo"
+              width={32}
+              height={32}
+              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+            />
+          </span>
+          Homeera
+        </Link>
+
+        {/* Primary nav — desktop only */}
+        <nav
+          aria-label="Primary"
+          className="heHeader-desktop"
+          style={{
+            gap: 'clamp(0.75rem, 2vw, 1.5rem)',
+            justifyContent: 'flex-end',
+            fontSize: '0.82rem',
+            letterSpacing: '0.14em',
+            textTransform: 'uppercase',
+          }}
+        >
+          {primary.map((p) => (
+            <Link key={p.label} href={p.href} data-hover>
+              {p.label}
+            </Link>
+          ))}
+        </nav>
+
+        {/* Hamburger button — mobile only, sits in the right grid column */}
+        <button
+          type="button"
+          className="heHeader-burger"
+          aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+          aria-expanded={menuOpen}
+          aria-controls="heHeader-drawer"
+          onClick={() => setMenuOpen((v) => !v)}
+          style={{
+            gridColumn: 2,
+            justifySelf: 'end',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 42,
+            height: 42,
+            background: 'transparent',
+            border: '1px solid var(--line)',
+            borderRadius: 10,
+            cursor: 'pointer',
+            padding: 0,
+            position: 'relative',
+            zIndex: 110,
+          }}
+        >
+          <span
+            aria-hidden="true"
+            style={{
+              position: 'relative',
+              display: 'block',
+              width: 18,
+              height: 12,
+            }}
+          >
+            {/* Top / middle / bottom bars — animate into an X when open */}
+            <span style={burgerBar(menuOpen ? 'top-open' : 'top')} />
+            <span style={burgerBar(menuOpen ? 'mid-open' : 'mid')} />
+            <span style={burgerBar(menuOpen ? 'bot-open' : 'bot')} />
+          </span>
+        </button>
+      </header>
+
+      {/* Full-page mobile drawer — rendered as a sibling of <header> so it
+          is never affected by the header's grid layout. */}
+      <div
+        id="heHeader-drawer"
+        className="heHeader-drawer heHeader-burger"
+        data-open={menuOpen}
+        aria-hidden={!menuOpen}
         onClick={() => setMenuOpen(false)}
       >
         <nav
@@ -221,7 +211,7 @@ export default function Header() {
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            gap: '1.5rem',
+            gap: '1.75rem',
           }}
         >
           {primary.map((p) => (
@@ -229,10 +219,11 @@ export default function Header() {
               key={p.label}
               href={p.href}
               data-hover
+              className="heHeader-link"
               onClick={() => setMenuOpen(false)}
               style={{
                 fontFamily: 'var(--font-display)',
-                fontSize: '1.9rem',
+                fontSize: 'clamp(2rem, 9vw, 2.6rem)',
                 letterSpacing: '0.04em',
                 color: 'var(--ink)',
               }}
@@ -242,7 +233,7 @@ export default function Header() {
           ))}
         </nav>
       </div>
-    </header>
+    </>
   );
 }
 

@@ -34,17 +34,15 @@ export default function Footer() {
                 display: 'inline-flex',
                 width: 40,
                 height: 40,
-                borderRadius: '50%',
-                overflow: 'hidden',
               }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src="/logo.jpeg"
+                src="/favicon.png"
                 alt="Homeera logo"
                 width={40}
                 height={40}
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
               />
             </span>
             Homeera

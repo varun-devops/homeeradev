@@ -83,15 +83,24 @@ export default function EmblemHero3D() {
       const camera = new THREE.PerspectiveCamera(32, w / h, 0.1, 100);
       camera.position.set(0, 0, 9);
 
-      // Distance the camera so the emblem stays fully framed at any
-      // aspect ratio: portrait/mobile screens pull back, wide pull in.
+      // The emblem's world span is known and fixed (see `targetHeight`
+      // below). `fitDistance` computes — geometrically, not by guesswork —
+      // the exact camera distance that frames that span at the current
+      // aspect ratio, so the emblem stays perfectly centred and fully
+      // visible on any screen: tall phones, tablets, ultrawide desktops.
+      const EMBLEM_SPAN = 2.4; // matches `targetHeight`
+      const FRAME_PAD = 1.32;  // breathing room around the emblem
       const fitDistance = () => {
         const aspect = w / h;
-        // base distance for a comfortable desktop frame
-        let d = 9;
-        if (aspect < 1) d = 9 + (1 - aspect) * 6; // taller-than-wide → back off
-        else if (aspect > 1.9) d = 8.4; // ultra-wide → ease in slightly
-        return THREE.MathUtils.clamp(d, 7.5, 15);
+        const vFov = (camera.fov * Math.PI) / 180;
+        const hFov = 2 * Math.atan(Math.tan(vFov / 2) * aspect);
+        // Distance needed to fit the span vertically vs. horizontally;
+        // take the larger so the emblem fits on the *tighter* axis —
+        // that is what keeps portrait phones from cropping it.
+        const distV = EMBLEM_SPAN / (2 * Math.tan(vFov / 2));
+        const distH = EMBLEM_SPAN / (2 * Math.tan(hFov / 2));
+        const d = Math.max(distV, distH) * FRAME_PAD;
+        return THREE.MathUtils.clamp(d, 6.5, 18);
       };
 
       const pmrem = new THREE.PMREMGenerator(renderer);
@@ -225,8 +234,10 @@ export default function EmblemHero3D() {
       controls.enableDamping = true;
       controls.dampingFactor = 0.07;
       controls.enablePan = false;
-      controls.minDistance = 6;
-      controls.maxDistance = 16;
+      // Zoom bounds bracket the full `fitDistance` range (6.5–18) so the
+      // auto-fit framing is never clamped on extreme aspect ratios.
+      controls.minDistance = 5.5;
+      controls.maxDistance = 19;
       controls.target.set(0, 0, 0);
       controls.autoRotate = true;
       controls.autoRotateSpeed = 0.5;

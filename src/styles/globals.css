@@ -16,6 +16,16 @@
   --maxw: 1320px;
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* ---- Responsive spacing scale --------------------------------
+     One source of truth for layout rhythm. Each token scales
+     fluidly with the viewport via clamp(), so there are no hard
+     breakpoint jumps — mobile gets tight, comfortable spacing and
+     desktop opens up, with everything in between interpolated.   */
+  --pad-x: clamp(1.15rem, 4vw, 2.5rem);   /* page side gutter      */
+  --section-y: clamp(3.25rem, 9vw, 6rem); /* vertical section pad  */
+  --gap: clamp(1rem, 2.5vw, 1.5rem);      /* grid / flex gap       */
+  --gap-lg: clamp(1.5rem, 4vw, 3rem);     /* large layout gap      */
 }
 
 * { box-sizing: border-box; }
@@ -60,7 +70,13 @@ p { margin: 0 0 1rem; }
   width: 100%;
   max-width: var(--maxw);
   margin: 0 auto;
-  padding: 0 clamp(1rem, 3vw, 2.5rem);
+  padding: 0 var(--pad-x);
+}
+
+/* Vertical rhythm for full-width page sections. Pair with .container
+   for content that also needs the horizontal gutter + max-width. */
+.section {
+  padding-block: var(--section-y);
 }
 
 button {

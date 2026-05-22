@@ -13,7 +13,8 @@ export default function HomePage() {
         style={{
           minHeight: '100svh',
           display: 'grid',
-          padding: 'clamp(7rem, 14vh, 9rem) 1.25rem clamp(3rem, 8vh, 5rem)',
+          padding:
+            'clamp(6rem, 12vh, 9rem) var(--pad-x) clamp(2.5rem, 7vh, 5rem)',
           position: 'relative',
           overflow: 'hidden',
           // transparent — the global ShardBackground shows through
@@ -28,6 +29,7 @@ export default function HomePage() {
         <div
           style={{
             textAlign: 'center',
+            width: '100%',
             maxWidth: 980,
             position: 'relative',
             zIndex: 2,
@@ -45,10 +47,11 @@ export default function HomePage() {
           </h1>
           <div
             style={{
-              display: 'inline-flex',
-              gap: '1rem',
+              display: 'flex',
+              gap: 'var(--gap)',
               flexWrap: 'wrap',
               justifyContent: 'center',
+              marginTop: 'clamp(1.25rem, 4vw, 2rem)',
               pointerEvents: 'auto',
             }}
           >
@@ -56,14 +59,15 @@ export default function HomePage() {
               href="/shop"
               data-hover
               style={{
-                padding: '0.95rem 1.8rem',
+                padding: 'clamp(0.8rem, 2.6vw, 0.95rem) clamp(1.3rem, 5vw, 1.8rem)',
                 background: 'var(--gold)',
                 color: 'var(--bg-deep)',
                 borderRadius: 999,
-                fontSize: '0.82rem',
-                letterSpacing: '0.18em',
+                fontSize: 'clamp(0.74rem, 2.4vw, 0.82rem)',
+                letterSpacing: '0.16em',
                 textTransform: 'uppercase',
                 fontWeight: 500,
+                whiteSpace: 'nowrap',
                 transition: 'transform 280ms var(--ease-out), background 280ms var(--ease-out)',
               }}
             >
@@ -73,13 +77,14 @@ export default function HomePage() {
               href="/journal"
               data-hover
               style={{
-                padding: '0.95rem 1.8rem',
+                padding: 'clamp(0.8rem, 2.6vw, 0.95rem) clamp(1.3rem, 5vw, 1.8rem)',
                 border: '1px solid var(--line-strong)',
                 color: 'var(--ink)',
                 borderRadius: 999,
-                fontSize: '0.82rem',
-                letterSpacing: '0.18em',
+                fontSize: 'clamp(0.74rem, 2.4vw, 0.82rem)',
+                letterSpacing: '0.16em',
                 textTransform: 'uppercase',
+                whiteSpace: 'nowrap',
                 backdropFilter: 'blur(6px)',
                 WebkitBackdropFilter: 'blur(6px)',
               }}
@@ -109,7 +114,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="container" style={{ padding: '6rem 0' }}>
+      <section className="container section">
         <Reveal>
           <p
             style={{
@@ -124,15 +129,15 @@ export default function HomePage() {
           </p>
         </Reveal>
         <Reveal delay={80}>
-          <h2 style={{ maxWidth: 780, marginBottom: '3rem' }}>
+          <h2 style={{ maxWidth: 780, marginBottom: 'var(--gap-lg)' }}>
             Four corners of a slower home.
           </h2>
         </Reveal>
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-            gap: '1.25rem',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(240px, 100%), 1fr))',
+            gap: 'var(--gap)',
           }}
         >
           {[
@@ -186,12 +191,12 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="container" style={{ padding: '6rem 0' }}>
+      <section className="container section">
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-            gap: '3rem',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))',
+            gap: 'var(--gap-lg)',
             alignItems: 'center',
           }}
         >

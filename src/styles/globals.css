@@ -1,0 +1,206 @@
+:root {
+  --bg: #0a0a0a;
+  --bg-deep: #050505;
+  --bg-elev: #141414;
+  --ink: #f5f1e8;
+  --ink-soft: #b8b2a3;
+  --ink-mute: #7a7568;
+  --leaf: #d4b574;
+  --leaf-bright: #e8c885;
+  --accent: #d4b574;
+  --gold: #d4b574;
+  --gold-bright: #e8c885;
+  --line: rgba(212, 181, 116, 0.18);
+  --line-strong: rgba(212, 181, 116, 0.35);
+  --radius: 14px;
+  --maxw: 1320px;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-display, 'Cormorant Garamond'), 'Times New Roman', serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+body {
+  font-family: var(--font-sans, 'Inter'), system-ui, -apple-system, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+a { color: inherit; text-decoration: none; }
+
+img, svg, video { display: block; max-width: 100%; }
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display, 'Cormorant Garamond'), serif;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  margin: 0;
+  line-height: 1.05;
+  color: var(--ink);
+}
+
+h1 { font-size: clamp(3rem, 9vw, 8rem); }
+h2 { font-size: clamp(2rem, 5vw, 4rem); }
+h3 { font-size: clamp(1.25rem, 2.5vw, 1.75rem); }
+
+p { margin: 0 0 1rem; }
+
+.container {
+  width: 100%;
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: 0 clamp(1rem, 3vw, 2.5rem);
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+  background: none;
+  border: none;
+  color: inherit;
+}
+
+::selection { background: var(--gold); color: var(--bg-deep); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================================
+   PAGE NAVIGATION TRANSITIONS — GSAP curtain-panel system
+   ============================================================
+   A Barba-style choreographed transition driven entirely by GSAP
+   (see CurtainTransition.tsx): on navigation a row of vertical panels
+   sweeps in to cover the screen (leave), the route is swapped behind
+   them, then the panels sweep out (enter). Next's router does the
+   actual navigation; GSAP owns the choreography. */
+
+/* The curtain layer sits above everything except the loading gate. */
+.curtain {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  display: grid;
+  pointer-events: none;
+}
+.curtain__panel {
+  position: relative;
+  height: 100%;
+  width: 100%;
+  /* GSAP animates scaleY; start collapsed at the bottom */
+  transform: scaleY(0);
+  transform-origin: bottom;
+  background: linear-gradient(180deg, #141414 0%, #050505 100%);
+  border-right: 1px solid rgba(212, 181, 116, 0.06);
+}
+.curtain__panel::before {
+  /* a faint champagne edge-glow along the leading edge of each panel */
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(212, 181, 116, 0.5),
+    transparent
+  );
+}
+.curtain__panel:last-child {
+  border-right: none;
+}
+
+/* Clip-path wipe sheet — used for about / contact / journal routes.
+   GSAP animates its clip-path so an angled edge sweeps across. */
+.curtain-wipe {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  pointer-events: none;
+  background: linear-gradient(115deg, #161616 0%, #050505 100%);
+}
+.curtain-wipe::after {
+  /* faint champagne glow riding the angled leading edge */
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    115deg,
+    transparent 0%,
+    rgba(212, 181, 116, 0.14) 48%,
+    rgba(212, 181, 116, 0.32) 50%,
+    transparent 53%
+  );
+}
+
+/* The brand mark shown centred while the curtain is closed. */
+.curtain__mark {
+  position: fixed;
+  inset: 0;
+  z-index: 9001;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  opacity: 0;
+}
+.curtain__mark img {
+  width: clamp(54px, 9vw, 96px);
+  height: auto;
+  filter: drop-shadow(0 0 24px rgba(212, 181, 116, 0.35));
+}
+
+/* While a transition runs the page underneath shouldn't scroll. */
+html[data-transition='active'] {
+  overflow: hidden;
+}
+
+.cursor-dot {
+  position: fixed;
+  top: 0; left: 0;
+  width: 8px; height: 8px;
+  background: var(--gold);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+  mix-blend-mode: screen;
+  transform: translate(-50%, -50%);
+  transition: transform 0.18s var(--ease-out), width 0.25s var(--ease-out), height 0.25s var(--ease-out);
+  will-change: transform;
+  box-shadow: 0 0 12px rgba(212, 181, 116, 0.5);
+}
+.cursor-dot.hover { width: 56px; height: 56px; background: rgba(212, 181, 116, 0.25); }
+
+.prose h2 { font-size: 1.7rem; margin: 2.5rem 0 1rem; font-style: italic; color: var(--ink); }
+.prose h3 { font-size: 1.25rem; margin: 2rem 0 0.75rem; color: var(--ink); }
+.prose p { margin: 0 0 1.1rem; color: var(--ink-soft); }
+.prose a { border-bottom: 1px solid var(--line); color: var(--gold); }
+.prose a:hover { border-color: var(--gold); }
+.prose ul, .prose ol { padding-left: 1.25rem; margin: 0 0 1.25rem; color: var(--ink-soft); }
+.prose blockquote {
+  margin: 1.5rem 0;
+  padding-left: 1.25rem;
+  border-left: 2px solid var(--gold);
+  font-style: italic;
+  color: var(--ink-soft);
+}
+.prose code {
+  background: var(--bg-elev);
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.92em;
+  color: var(--gold);
+}

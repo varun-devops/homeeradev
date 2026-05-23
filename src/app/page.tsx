@@ -94,12 +94,12 @@ export default function HomePage() {
             style={{
               fontFamily: 'var(--font-display)',
               fontStyle: 'italic',
-              fontWeight: 400,
-              fontSize: 'clamp(0.95rem, 2.6vw, 1.4rem)',
+              fontWeight: 500,
+              fontSize: 'clamp(1.5rem, 2.6vw, 1.4rem)',
               letterSpacing: '0.32em',
               textTransform: 'uppercase',
               color: 'var(--ink)',
-              margin: 0,
+              marginBottom: 10,
               lineHeight: 1.4,
               textShadow: '0 2px 24px rgba(0,0,0,0.55)',
             }}
@@ -109,7 +109,7 @@ export default function HomePage() {
         </div>
 
         {/* Scroll cue */}
-        <div
+        {/* <div
           aria-hidden="true"
           style={{
             position: 'absolute',
@@ -125,7 +125,7 @@ export default function HomePage() {
           }}
         >
           Scroll
-        </div>
+        </div> */}
       </section>
 
       {/* Full-screen, vertically-swipeable category cards. The deck takes

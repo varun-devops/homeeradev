@@ -82,24 +82,42 @@ export default function LoadingGate() {
         willChange: 'opacity, transform',
       }}
     >
-      <video
-        ref={videoRef}
-        muted
-        playsInline
-        autoPlay
-        preload="auto"
+      {/* Cropped frame — the video is over-sized then scaled inside this
+          square viewport so the empty margins around the logo are clipped
+          away (a CSS-only zoom-in crop, no re-encode needed). */}
+      <div
         style={{
-          width: 'min(48vw, 420px)',
-          height: 'auto',
-          // `screen` blend drops black pixels; raising contrast and
-          // pulling brightness down first crushes the video's dark-grey
-          // backing to true black so no box shows behind the logo.
-          mixBlendMode: 'screen',
-          filter: 'brightness(1.05) contrast(1.5) saturate(1.1)',
+          width: 'min(56vw, 520px)',
+          aspectRatio: '1 / 1',
+          overflow: 'hidden',
+          display: 'grid',
+          placeItems: 'center',
         }}
       >
-        <source src="/video/loading.mp4" type="video/mp4" />
-      </video>
+        <video
+          ref={videoRef}
+          muted
+          playsInline
+          autoPlay
+          preload="auto"
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            // Scale > 1 zooms into the centre of the frame, cropping the
+            // surrounding negative space so the logo fills the viewport.
+            transform: 'scale(1.55)',
+            transformOrigin: 'center center',
+            // `screen` blend drops black pixels; raising contrast and
+            // pulling brightness down first crushes the video's dark-grey
+            // backing to true black so no box shows behind the logo.
+            mixBlendMode: 'screen',
+            filter: 'brightness(1.05) contrast(1.5) saturate(1.1)',
+          }}
+        >
+          <source src="/video/loading.mp4" type="video/mp4" />
+        </video>
+      </div>
     </div>
   );
 }

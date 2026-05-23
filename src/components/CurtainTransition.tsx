@@ -70,8 +70,13 @@ export default function CurtainTransition() {
       layer.querySelectorAll<HTMLElement>('.curtain__panel')
     );
 
-    const heroCanvases = () =>
-      Array.from(document.querySelectorAll<HTMLElement>('main canvas'));
+    // The hero canvas is intentionally excluded from transition tweens.
+    // Three.js owns its own size + camera framing through a ResizeObserver,
+    // and CSS-scaling the canvas during the leave/enter timeline causes
+    // it to remount at a stale transform — that was the "emblem drifts
+    // after navigation" bug. Animations now run on <main> only; the
+    // canvas handles its own visibility through the main wrapper.
+    const heroCanvases = (): HTMLElement[] => [];
 
     /** Wait for the route to commit, then for one paint. */
     const swapRoute = async (href: string) => {

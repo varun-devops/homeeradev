@@ -74,7 +74,10 @@ export default function EmblemHero3D() {
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2));
       renderer.setSize(w, h, false);
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      renderer.toneMappingExposure = 0.95;
+      // Pulled down so the emblem reads as a calm cut gem rather than a
+      // bright, sparkling object. Light comes from the facets, not from
+      // overall scene brightness.
+      renderer.toneMappingExposure = 0.72;
       renderer.outputColorSpace = THREE.SRGBColorSpace;
 
       const scene = new THREE.Scene();
@@ -89,7 +92,10 @@ export default function EmblemHero3D() {
       // aspect ratio, so the emblem stays perfectly centred and fully
       // visible on any screen: tall phones, tablets, ultrawide desktops.
       const EMBLEM_SPAN = 2.4; // matches `targetHeight`
-      const FRAME_PAD = 1.32;  // breathing room around the emblem
+      // Slightly more breathing room: the bulkier diamond extrusion adds
+      // visual depth, so we pull the camera back a touch to keep the
+      // emblem comfortably framed during rotation.
+      const FRAME_PAD = 1.42;
       const fitDistance = () => {
         const aspect = w / h;
         const vFov = (camera.fov * Math.PI) / 180;
@@ -106,65 +112,82 @@ export default function EmblemHero3D() {
       const pmrem = new THREE.PMREMGenerator(renderer);
       scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
 
-      // Neutral, cool-white lighting so the emblem reads as bright
-      // silver-white (no warm/brown cast).
-      const key = new THREE.DirectionalLight(0xffffff, 1.6);
-      key.position.set(3, 4, 5);
+      // Cut-gem lighting: a single firm key, a tight cool rim that
+      // catches the bevel edges, and very low ambient. This is what
+      // makes each facet read as its own plane of light instead of the
+      // whole emblem glowing uniformly.
+      const key = new THREE.DirectionalLight(0xffffff, 1.1);
+      key.position.set(3.5, 4, 5);
       scene.add(key);
-      const rim = new THREE.DirectionalLight(0xeef0f4, 0.55);
-      rim.position.set(-4, 3, -3);
+      const rim = new THREE.DirectionalLight(0xdde2ea, 0.65);
+      rim.position.set(-4, 2.5, -3);
       scene.add(rim);
-      const fillLight = new THREE.PointLight(0xffffff, 0.7, 14);
-      fillLight.position.set(0, -2, 4);
-      scene.add(fillLight);
-      scene.add(new THREE.AmbientLight(0x202024, 0.35));
+      scene.add(new THREE.AmbientLight(0x14161a, 0.45));
 
-      // Glass dispersion material — the emblem reads as a solid block
-      // of clear glass. Light refracts through it (high IOR + thickness)
-      // and a faint inner emissive makes it glow from within without the
-      // glow escaping the surface — the total-internal-reflection look.
+      // Transparent diamond PBR.
       //
-      // The spectral "dispersion" colour split at the edges is produced
-      // by `iridescence` (three r160 has no native `dispersion`; a thin-
-      // film iridescent edge reads the same prismatic way). Mobile gets
-      // a lighter variant so the costly transmission pass stays cheap.
+      // The goal is a clear, broken-glass / cut-diamond look:
+      //  • You can see *through* the emblem, but light bends inside it
+      //    (high IOR + thick body = visible internal refraction).
+      //  • As the emblem rotates, prismatic colour splits flicker along
+      //    the refractive edges — the "dispersion" of a real diamond.
+      //  • Each flat face is a discrete reflective plane (flatShading
+      //    + sharp non-bevelled corners), so light snaps from facet to
+      //    facet rather than smoothly sliding across a curve.
       //
-      // Kept fully neutral: no warm attenuation, emissive or sheen tint,
-      // so the emblem reads as clean clear/white glass with no brown
-      // cast as it revolves.
+      // Notes:
+      //  • `dispersion` is a real MeshPhysicalMaterial property only in
+      //    three r167+. This project is on r160, so we approximate the
+      //    same prismatic edge using a thin-film `iridescence` layer
+      //    tuned to the visible spectrum. The visual result reads the
+      //    same: a coloured colour-split that rides the refractive edges
+      //    as the emblem turns.
+      //  • Mobile gets a lighter spec because transmission + iridescence
+      //    is GPU-heavy — the dispersion still reads clearly, just less
+      //    saturated.
       const whiteMat = new THREE.MeshPhysicalMaterial({
         color: 0xffffff,
         metalness: 0,
-        roughness: isMobile ? 0.1 : 0.06,
-        // transmission turns the solid into refractive glass
+        // Very low roughness → crisp mirror-bright refractive edges,
+        // which is what carries the dispersion colour split.
+        roughness: isMobile ? 0.04 : 0.02,
+
+        // ——— Transmission stack: the "see-through diamond" ———
         transmission: 1,
-        ior: 1.7,
-        thickness: isMobile ? 1.4 : 2.6,
-        // neutral attenuation — no warm cream tint through the glass
+        // IOR 2.4 is real diamond. The high value is what creates the
+        // strong internal bend / TIR sparkle as the emblem rotates.
+        ior: 2.42,
+        // Thick body so refraction travels visibly inside the emblem
+        // instead of looking like a thin glass shell.
+        thickness: isMobile ? 1.8 : 3.2,
         attenuationColor: new THREE.Color(0xffffff),
-        attenuationDistance: 3.5,
-        envMapIntensity: 2.0,
+        attenuationDistance: 4.5,
+        envMapIntensity: 1.4,
+
+        // ——— Surface coat for facet highlights ———
         clearcoat: 1,
-        clearcoatRoughness: 0.04,
-        // thin-film iridescence → the prismatic spectral edge ("dispersion")
-        iridescence: isMobile ? 0.4 : 0.85,
-        iridescenceIOR: 1.45,
-        iridescenceThicknessRange: [120, 560],
-        // faint neutral inner glow — trapped light, no brown tint
-        emissive: new THREE.Color(0x2a2a2e),
-        emissiveIntensity: 0.5,
-        // a touch of cool-white sheen at grazing angles (no gold cast)
-        sheen: 0.5,
-        sheenColor: new THREE.Color(0xeef0f4),
-        sheenRoughness: 0.4,
-        // NOT `transparent`: refraction comes from the transmission pass,
-        // not alpha blending. Flagging it transparent makes WebGL re-sort
-        // and blend the overlapping extruded petals every frame, and the
-        // sort order keeps swapping — that is the flicker. An opaque
-        // material with normal depth-write keeps each petal stable.
+        clearcoatRoughness: 0.02,
+        reflectivity: 0.6,
+
+        // ——— Prismatic dispersion (r160 stand-in for `dispersion`) ——
+        // Thin-film iridescence with a wide thickness range yields the
+        // rainbow colour-split along refractive edges that reads as the
+        // diamond's spectral dispersion.
+        iridescence: isMobile ? 0.55 : 0.9,
+        iridescenceIOR: 1.5,
+        iridescenceThicknessRange: [100, 720],
+
+        // Per-face flat shading → every triangle of the extrusion is its
+        // own reflective plane. Combined with no bevel (see extrude
+        // settings) this gives a sharp-cornered, faceted diamond body.
+        flatShading: true,
+
+        // Transmission renders via its own pass; alpha-blend transparent
+        // would re-sort the overlapping petals every frame and flicker.
         transparent: false,
         depthWrite: true,
         depthTest: true,
+        side: THREE.DoubleSide,
       });
 
       // Parse traced SVG and build the extruded 3D group.
@@ -174,12 +197,21 @@ export default function EmblemHero3D() {
       // inner tips last, stem early-ish.
       const revealDelays = [0.05, 0.3, 0.3, 0.5, 0.5, 0.15];
 
+      // Sharp-cornered diamond extrusion.
+      //
+      // bevelEnabled is OFF: bevels round the silhouette and soften the
+      // refractive edges — the opposite of what a cut-diamond profile
+      // should do. With no bevel the SVG's vector corners stay razor-
+      // sharp and every edge becomes a hard refractive boundary, which
+      // is exactly where the iridescent dispersion splits the colour.
+      //
+      // curveSegments is kept moderate so any curved parts of the SVG
+      // still tessellate into discrete short straight segments — those
+      // become the diamond's "facets" when combined with flatShading.
       const extrudeSettings = {
-        depth: 18,
-        bevelEnabled: true,
-        bevelThickness: 4,
-        bevelSize: 3,
-        bevelSegments: 4,
+        depth: 28,
+        bevelEnabled: false,
+        curveSegments: 5,
       };
 
       const rawGroup = new THREE.Group();
@@ -217,15 +249,18 @@ export default function EmblemHero3D() {
         child.userData.basePos = child.position.clone();
       });
 
-      // Post-processing: bloom for the metallic shimmer.
+      // Post-processing: bloom is intentionally near-zero strength so
+      // the emblem doesn't glow or sparkle — diamond cuts read by hard
+      // facet contrast, not by haze. The pass is kept in the chain so
+      // future tuning (or a "shine" mode) can dial it back up cheaply.
       const composer = new EffectComposer(renderer);
       composer.setSize(w, h);
       composer.addPass(new RenderPass(scene, camera));
       const bloomPass = new UnrealBloomPass(
         new THREE.Vector2(w, h),
-        0.35,
-        0.7,
-        0.25
+        0.0,   // strength
+        0.4,   // radius
+        1.0    // threshold — high enough that nothing bloom-qualifies
       );
       composer.addPass(bloomPass);
       composer.addPass(new OutputPass());
@@ -313,6 +348,18 @@ export default function EmblemHero3D() {
       const ro = new ResizeObserver(resize);
       ro.observe(wrap);
       window.addEventListener('resize', resize);
+
+      // If the visitor navigates away and comes back, the canvas can be
+      // remounted while inline transforms from the page-transition
+      // timeline are still on the element. Clear them and force a
+      // re-fit on the next two frames so the camera frames the emblem
+      // dead-centre in the freshly-mounted section regardless of any
+      // residual CSS state.
+      canvas.style.transform = '';
+      canvas.style.opacity = '';
+      requestAnimationFrame(() => {
+        requestAnimationFrame(resize);
+      });
 
       const onVisibility = () => {
         // Pause heavy work when the tab is hidden.

@@ -27,15 +27,20 @@ export default function Header() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // Lock body scroll while the mobile drawer is open, and close it on Escape.
+  // Lock body scroll while the mobile drawer is open, close it on Escape,
+  // and flag <html> so the hero text can hide itself (see the global
+  // [data-menu-open=true] rule in the scoped <style> block below).
   useEffect(() => {
     document.body.style.overflow = menuOpen ? 'hidden' : '';
+    if (menuOpen) document.documentElement.dataset.menuOpen = 'true';
+    else delete document.documentElement.dataset.menuOpen;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setMenuOpen(false);
     };
     window.addEventListener('keydown', onKey);
     return () => {
       document.body.style.overflow = '';
+      delete document.documentElement.dataset.menuOpen;
       window.removeEventListener('keydown', onKey);
     };
   }, [menuOpen]);
@@ -44,14 +49,60 @@ export default function Header() {
     <>
       {/* Breakpoint-driven show/hide + drawer animation — scoped here */}
       <style>{`
-        .heHeader-desktop { display: flex; }
-        .heHeader-burger { display: none; }
-        @media (max-width: 860px) {
-          .heHeader-desktop { display: none !important; }
-          .heHeader-burger { display: inline-flex !important; }
+        /* Hamburger drawer is the navigation at every breakpoint.
+           The inline desktop link row is permanently hidden, so the
+           hamburger button + full-page drawer are shown on every
+           viewport size. */
+        .heHeader-desktop { display: none !important; }
+        .heHeader-burger { display: inline-flex !important; }
+
+        /* Brand mark — favicon + collapsed wordmark.
+           The wordmark is hidden by default (max-width: 0, opacity 0)
+           and slides out from behind the logo on hover/focus.
+           Width is animated rather than display so the slide feels
+           continuous; visibility flips to hidden at rest so screen
+           readers don't double-announce the brand. */
+        .heHeader-brand {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.55rem;
+          height: 38px;
+          color: var(--ink);
+          text-decoration: none;
         }
-        /* Full-page drawer: starts clipped to a circle at the top-right
-           corner, expands to cover the whole viewport. */
+        .heHeader-brand-mark {
+          display: inline-flex;
+          flex: 0 0 38px;
+          width: 38px;
+          height: 38px;
+        }
+        .heHeader-brand-word {
+          font-family: var(--font-display);
+          font-size: 1.45rem;
+          letter-spacing: 0.02em;
+          line-height: 1;
+          white-space: nowrap;
+          /* Collapsed state */
+          max-width: 0;
+          opacity: 0;
+          transform: translateX(-8px);
+          overflow: hidden;
+          transition:
+            max-width 380ms var(--ease-out),
+            opacity 240ms var(--ease-out),
+            transform 380ms var(--ease-out);
+        }
+        .heHeader-brand:hover .heHeader-brand-word,
+        .heHeader-brand:focus-visible .heHeader-brand-word {
+          /* Generous ceiling — content is one short word, so any
+             value past its natural width is fine. The animation reads
+             as a smooth reveal because the actual word width is the
+             true stopping point. */
+          max-width: 12rem;
+          opacity: 1;
+          transform: translateX(0);
+        }
+
         .heHeader-drawer {
           position: fixed;
           inset: 0;
@@ -60,13 +111,28 @@ export default function Header() {
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          background: var(--bg-deep, #0a0a0a);
-          clip-path: circle(0% at calc(100% - 2.5rem) 2.25rem);
+          background: transparent;
+          backdrop-filter: blur(5px) saturate(230%);
+          -webkit-backdrop-filter: blur(22px) saturate(140%);
+          clip-path: circle(0% at calc(100% - var(--pad-x) - 21px) 2.25rem);
           transition: clip-path 560ms cubic-bezier(0.83, 0, 0.17, 1);
           pointer-events: none;
         }
+
+        /* While the drawer is open, hide the hero caption underneath so
+           it doesn't bleed through the transparent panel and crowd the
+           menu links. Selector is namespaced to the home hero only —
+           it targets the first <p> of the first <section>, which is
+           where the HOME ERA · SINCE 1960 caption lives. */
+        html[data-menu-open='true'] main > section:first-of-type p {
+          opacity: 0;
+          transition: opacity 220ms var(--ease-out);
+        }
+        main > section:first-of-type p {
+          transition: opacity 360ms var(--ease-out) 240ms;
+        }
         .heHeader-drawer[data-open=true] {
-          clip-path: circle(150% at calc(100% - 2.5rem) 2.25rem);
+          clip-path: circle(150% at calc(100% - var(--pad-x) - 21px) 2.25rem);
           pointer-events: auto;
         }
         /* Stagger each link in once the panel has opened. */
@@ -93,7 +159,7 @@ export default function Header() {
           left: 0,
           right: 0,
           zIndex: 100,
-          padding: '1rem clamp(1rem, 3vw, 2.5rem)',
+          padding: '1rem var(--pad-x)',
           display: 'grid',
           gridTemplateColumns: '1fr 1fr',
           alignItems: 'center',
@@ -105,35 +171,30 @@ export default function Header() {
           willChange: 'transform',
         }}
       >
+        {/* Logo mark with a hidden wordmark that slides in on hover.
+            The wordmark is collapsed (`max-width: 0`, opacity 0) by
+            default, then expands on hover/focus of the brand link
+            (see the `.heHeader-brand` rule in the scoped <style> block
+            above). The link itself stays narrow when at rest so it
+            doesn't push other layout. */}
         <Link
           href="/"
           aria-label="Homeera home"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '0.55rem',
-            fontFamily: 'var(--font-display)',
-            fontSize: '1.45rem',
-            letterSpacing: '0.02em',
-          }}
+          className="heHeader-brand"
         >
-          <span
-            style={{
-              display: 'inline-flex',
-              width: 32,
-              height: 32,
-            }}
-          >
+          <span className="heHeader-brand-mark">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/favicon.png"
-              alt="Homeera logo"
-              width={32}
-              height={32}
+              alt=""
+              width={38}
+              height={38}
               style={{ width: '100%', height: '100%', objectFit: 'contain' }}
             />
           </span>
-          Homeera
+          <span className="heHeader-brand-word" aria-hidden="true">
+            Homeera
+          </span>
         </Link>
 
         {/* Primary nav — desktop only */}
@@ -170,9 +231,10 @@ export default function Header() {
             justifyContent: 'center',
             width: 42,
             height: 42,
+            // bare icon — no border, no background, fully transparent
             background: 'transparent',
-            border: '1px solid var(--line)',
-            borderRadius: 10,
+            border: 'none',
+            borderRadius: 0,
             cursor: 'pointer',
             padding: 0,
             position: 'relative',

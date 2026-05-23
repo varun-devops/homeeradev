@@ -7,7 +7,7 @@ export default function Footer() {
         marginTop: '8rem',
         background: 'var(--bg-deep)',
         borderTop: '1px solid var(--line)',
-        padding: 'clamp(3rem, 7vw, 6rem) clamp(1rem, 3vw, 2.5rem) 2rem',
+        padding: 'clamp(3rem, 7vw, 6rem) 0 2rem',
       }}
     >
       <div

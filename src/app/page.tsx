@@ -1,7 +1,15 @@
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import Reveal from '@/components/Reveal';
+// Imported as a normal client component — it's small and uses no heavy
+// browser-only deps, so there's nothing to gain from a lazy chunk and
+// avoiding `next/dynamic` here sidesteps the webpack chunk-init race
+// that produced the "Cannot read properties of undefined" runtime
+// error after the file was first added.
+import ShopCategoryDeck from '@/components/ShopCategoryDeck';
 
+// EmblemHero3D *does* need ssr:false — it imports three.js, which has
+// no SSR fallback. The dynamic chunk is correct here.
 const EmblemHero3D = dynamic(() => import('@/components/EmblemHero3D'), {
   ssr: false,
 });
@@ -13,19 +21,65 @@ export default function HomePage() {
         style={{
           minHeight: '100svh',
           display: 'grid',
+          // Three-row layout: top CTA · flexible middle (the emblem) · bottom caption.
+          // The emblem itself is absolutely positioned across the whole
+          // section (see the `inset: 0` on the wrapper inside
+          // EmblemHero3D), so the rows only govern where the text /
+          // link blocks sit.
+          gridTemplateRows: 'auto 1fr auto',
           padding:
             'clamp(6rem, 12vh, 9rem) var(--pad-x) clamp(2.5rem, 7vh, 5rem)',
           position: 'relative',
           overflow: 'hidden',
           // transparent — the global ShardBackground shows through
           background: 'transparent',
-          alignContent: 'end',
           justifyItems: 'center',
         }}
       >
         {/* Full-screen interactive 3D emblem */}
         <EmblemHero3D />
 
+        {/* Top CTA — bare transparent link with an underline, sits in
+            row 1 above the emblem. `position: relative` + zIndex keeps
+            it above the canvas; pointerEvents on the wrapper is none so
+            the canvas stays draggable, but the link itself opts back in
+            so it remains clickable. */}
+        <div
+          style={{
+            position: 'relative',
+            zIndex: 2,
+            pointerEvents: 'none',
+          }}
+        >
+          <Link
+            href="/shop"
+            data-hover
+            style={{
+              pointerEvents: 'auto',
+              display: 'inline-block',
+              background: 'transparent',
+              border: 'none',
+              padding: '0.4rem 0.1rem',
+              color: 'var(--ink)',
+              fontSize: 'clamp(0.72rem, 2vw, 0.82rem)',
+              letterSpacing: '0.24em',
+              textTransform: 'uppercase',
+              borderBottom: '1px solid var(--ink)',
+              textShadow: '0 2px 18px rgba(0,0,0,0.55)',
+              transition: 'opacity 240ms var(--ease-out)',
+            }}
+          >
+            Browse shop
+          </Link>
+        </div>
+
+        {/* Middle row is the emblem's visual home — kept empty so the
+            grid reserves space for the absolutely-positioned canvas. */}
+        <div aria-hidden="true" />
+
+        {/* Quiet hero caption — small, centred, in the bottom row.
+            No CTA buttons; the visitor is invited into the scrollable
+            shop deck below. */}
         <div
           style={{
             textAlign: 'center',
@@ -36,62 +90,22 @@ export default function HomePage() {
             pointerEvents: 'none',
           }}
         >
-          <h1
+          <p
             style={{
+              fontFamily: 'var(--font-display)',
               fontStyle: 'italic',
               fontWeight: 400,
-              textShadow: '0 2px 40px rgba(0,0,0,0.65)',
+              fontSize: 'clamp(0.95rem, 2.6vw, 1.4rem)',
+              letterSpacing: '0.32em',
+              textTransform: 'uppercase',
+              color: 'var(--ink)',
+              margin: 0,
+              lineHeight: 1.4,
+              textShadow: '0 2px 24px rgba(0,0,0,0.55)',
             }}
           >
-              HOME ERA <br /> SINCE 1960 
-          </h1>
-          <div
-            style={{
-              display: 'flex',
-              gap: 'var(--gap)',
-              flexWrap: 'wrap',
-              justifyContent: 'center',
-              marginTop: 'clamp(1.25rem, 4vw, 2rem)',
-              pointerEvents: 'auto',
-            }}
-          >
-            <Link
-              href="/shop"
-              data-hover
-              style={{
-                padding: 'clamp(0.8rem, 2.6vw, 0.95rem) clamp(1.3rem, 5vw, 1.8rem)',
-                background: 'var(--gold)',
-                color: 'var(--bg-deep)',
-                borderRadius: 999,
-                fontSize: 'clamp(0.74rem, 2.4vw, 0.82rem)',
-                letterSpacing: '0.16em',
-                textTransform: 'uppercase',
-                fontWeight: 500,
-                whiteSpace: 'nowrap',
-                transition: 'transform 280ms var(--ease-out), background 280ms var(--ease-out)',
-              }}
-            >
-              Browse the shop
-            </Link>
-            <Link
-              href="/journal"
-              data-hover
-              style={{
-                padding: 'clamp(0.8rem, 2.6vw, 0.95rem) clamp(1.3rem, 5vw, 1.8rem)',
-                border: '1px solid var(--line-strong)',
-                color: 'var(--ink)',
-                borderRadius: 999,
-                fontSize: 'clamp(0.74rem, 2.4vw, 0.82rem)',
-                letterSpacing: '0.16em',
-                textTransform: 'uppercase',
-                whiteSpace: 'nowrap',
-                backdropFilter: 'blur(6px)',
-                WebkitBackdropFilter: 'blur(6px)',
-              }}
-            >
-              Read the journal
-            </Link>
-          </div>
+            HOME ERA · SINCE 1960
+          </p>
         </div>
 
         {/* Scroll cue */}
@@ -114,82 +128,10 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="container section">
-        <Reveal>
-          <p
-            style={{
-              fontSize: '0.78rem',
-              letterSpacing: '0.28em',
-              textTransform: 'uppercase',
-              color: 'var(--ink-soft)',
-              marginBottom: '1rem',
-            }}
-          >
-            Categories
-          </p>
-        </Reveal>
-        <Reveal delay={80}>
-          <h2 style={{ maxWidth: 780, marginBottom: 'var(--gap-lg)' }}>
-            Four corners of a slower home.
-          </h2>
-        </Reveal>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(min(240px, 100%), 1fr))',
-            gap: 'var(--gap)',
-          }}
-        >
-          {[
-            { label: 'Living', desc: 'Sofas, throws, soft places to land.', tone: 'rgba(212,181,116,0.07)' },
-            { label: 'Decor', desc: 'Vessels, mirrors, framed quiet.', tone: 'rgba(212,181,116,0.11)' },
-            { label: 'Lighting', desc: 'Lamps that hold the evening.', tone: 'rgba(212,181,116,0.15)' },
-            { label: 'Outdoor', desc: 'Garden objects and patio calm.', tone: 'rgba(212,181,116,0.09)' },
-          ].map((c, i) => (
-            <Reveal key={c.label} delay={i * 90}>
-              <Link
-                href={`/shop?cat=${c.label.toLowerCase()}`}
-                data-hover
-                style={{
-                  display: 'block',
-                  borderRadius: 'var(--radius)',
-                  aspectRatio: '4 / 5',
-                  padding: '1.5rem',
-                  background: c.tone,
-                  border: '1px solid var(--line)',
-                  position: 'relative',
-                  overflow: 'hidden',
-                  transition: 'transform 600ms var(--ease-out)',
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: '0.72rem',
-                    letterSpacing: '0.22em',
-                    textTransform: 'uppercase',
-                    color: 'var(--gold)',
-                  }}
-                >
-                  0{i + 1}
-                </span>
-                <div
-                  style={{
-                    position: 'absolute',
-                    inset: 'auto 1.5rem 1.5rem',
-                  }}
-                >
-                  <div style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', color: 'var(--ink)' }}>
-                    {c.label}
-                  </div>
-                  <div style={{ color: 'var(--ink-soft)', fontSize: '0.92rem' }}>
-                    {c.desc}
-                  </div>
-                </div>
-              </Link>
-            </Reveal>
-          ))}
-        </div>
-      </section>
+      {/* Full-screen, vertically-swipeable category cards. The deck takes
+          over the viewport while it's in view and snaps one card per
+          screen as the visitor scrolls. */}
+      <ShopCategoryDeck />
 
       <section className="container section">
         <div

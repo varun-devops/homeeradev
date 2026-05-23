@@ -82,15 +82,26 @@ export default function Header() {
           letter-spacing: 0.02em;
           line-height: 1;
           white-space: nowrap;
-          /* Collapsed state */
+          /* Collapsed state — fully hidden, no layout footprint, and
+             marked visibility:hidden so screen readers don't read
+             a phantom node and so the collapsed letters can't trap
+             focus or selection. */
           max-width: 0;
           opacity: 0;
-          transform: translateX(-8px);
+          transform: translateX(-10px);
           overflow: hidden;
+          visibility: hidden;
+          /* All three properties share the same easing + duration so
+             they finish on the same frame — that is what makes the
+             reveal feel like one motion rather than three layered
+             transitions. Visibility has its own short transition
+             so the element flips visible the instant the reveal
+             starts and only flips hidden once the close has finished. */
           transition:
-            max-width 380ms var(--ease-out),
-            opacity 240ms var(--ease-out),
-            transform 380ms var(--ease-out);
+            max-width 480ms var(--ease-out),
+            opacity 480ms var(--ease-out),
+            transform 480ms var(--ease-out),
+            visibility 0s linear 480ms;
         }
         .heHeader-brand:hover .heHeader-brand-word,
         .heHeader-brand:focus-visible .heHeader-brand-word {
@@ -101,6 +112,13 @@ export default function Header() {
           max-width: 12rem;
           opacity: 1;
           transform: translateX(0);
+          visibility: visible;
+          /* Visibility flips on at the START of the open transition. */
+          transition:
+            max-width 480ms var(--ease-out),
+            opacity 480ms var(--ease-out),
+            transform 480ms var(--ease-out),
+            visibility 0s linear 0s;
         }
 
         .heHeader-drawer {

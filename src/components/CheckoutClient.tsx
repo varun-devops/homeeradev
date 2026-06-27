@@ -15,7 +15,7 @@ type Item = {
 type Props = {
   items: Item[];
   total: number;
-  defaults: { full_name: string; phone: string; email: string };
+  defaults: { full_name: string; phone: string; address: string; email: string };
 };
 
 declare global {
@@ -41,7 +41,7 @@ export default function CheckoutClient({ items, total, defaults }: Props) {
   const [form, setForm] = useState({
     full_name: defaults.full_name,
     phone: defaults.phone,
-    address: '',
+    address: defaults.address,
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);

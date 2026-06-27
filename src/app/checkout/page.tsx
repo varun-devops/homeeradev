@@ -39,7 +39,7 @@ export default async function CheckoutPage() {
 
   const { data: profile } = await sb
     .from('profiles')
-    .select('full_name, phone')
+    .select('full_name, phone, address')
     .eq('id', user.id)
     .maybeSingle();
 
@@ -52,6 +52,7 @@ export default async function CheckoutPage() {
       defaults={{
         full_name: profile?.full_name ?? '',
         phone: profile?.phone ?? '',
+        address: profile?.address ?? '',
         email: user.email ?? '',
       }}
     />

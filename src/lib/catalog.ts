@@ -26,6 +26,8 @@ export type DBProduct = {
   weight_kg: number | null;
   price: number;
   image_url: string | null;
+  gallery_urls: string[] | null;
+  video_url: string | null;
   is_active: boolean;
 };
 

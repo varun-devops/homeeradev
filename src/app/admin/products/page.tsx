@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { createServiceClient } from '@/lib/supabase/server';
 import AdminProductsTable from '@/components/admin/AdminProductsTable';
 
@@ -26,9 +27,20 @@ export default async function AdminProductsPage() {
 
   return (
     <div>
-      <h1 style={{ fontStyle: 'italic', fontSize: '2rem', marginBottom: '0.5rem' }}>Products</h1>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
+        <h1 style={{ fontStyle: 'italic', fontSize: '2rem', margin: 0 }}>Products</h1>
+        <Link
+          href="/admin/products/new"
+          style={{
+            padding: '0.7rem 1.4rem', borderRadius: 8, background: 'var(--gold)', color: '#0e0e0e',
+            fontWeight: 600, fontSize: '0.78rem', letterSpacing: '0.12em', textTransform: 'uppercase',
+          }}
+        >
+          + New product
+        </Link>
+      </div>
       <p style={{ color: 'var(--ink-soft)', marginBottom: '2rem' }}>
-        {products.length} products · toggle visibility or edit the price inline.
+        {products.length} products · click a row to edit, or toggle visibility / price inline.
       </p>
       <AdminProductsTable products={products} />
     </div>

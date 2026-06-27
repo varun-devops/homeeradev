@@ -2,11 +2,15 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import NotificationBell from '@/components/NotificationBell';
 
 // Primary links — shown inline on desktop, inside the hamburger drawer
 // on mobile.
 const primary = [
   { label: 'Shop', href: '/shop' },
+  { label: 'Favourites', href: '/favourites' },
+  { label: 'Cart', href: '/cart' },
+  { label: 'Profile', href: '/profile' },
   { label: 'About', href: '/about' },
   { label: 'Contact', href: '/contact' },
   { label: 'Journal', href: '/journal' },
@@ -224,31 +228,39 @@ export default function Header() {
           ))}
         </nav>
 
-        {/* Hamburger button — mobile only, sits in the right grid column */}
-        <button
-          type="button"
-          className="heHeader-burger"
-          aria-label={menuOpen ? 'Close menu' : 'Open menu'}
-          aria-expanded={menuOpen}
-          aria-controls="heHeader-drawer"
-          onClick={() => setMenuOpen((v) => !v)}
+        {/* Right cluster: notification bell + hamburger */}
+        <div
           style={{
             gridColumn: 2,
             justifySelf: 'end',
+            display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            width: 42,
-            height: 42,
-            // bare icon — no border, no background, fully transparent
-            background: 'transparent',
-            border: 'none',
-            borderRadius: 0,
-            cursor: 'pointer',
-            padding: 0,
+            gap: '0.25rem',
             position: 'relative',
             zIndex: 110,
           }}
         >
+          <NotificationBell />
+          <button
+            type="button"
+            className="heHeader-burger"
+            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={menuOpen}
+            aria-controls="heHeader-drawer"
+            onClick={() => setMenuOpen((v) => !v)}
+            style={{
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 42,
+              height: 42,
+              background: 'transparent',
+              border: 'none',
+              borderRadius: 0,
+              cursor: 'pointer',
+              padding: 0,
+              position: 'relative',
+            }}
+          >
           <span
             aria-hidden="true"
             style={{
@@ -263,7 +275,8 @@ export default function Header() {
             <span style={burgerBar(menuOpen ? 'mid-open' : 'mid')} />
             <span style={burgerBar(menuOpen ? 'bot-open' : 'bot')} />
           </span>
-        </button>
+          </button>
+        </div>
       </header>
 
       {/* Full-page mobile drawer — rendered as a sibling of <header> so it

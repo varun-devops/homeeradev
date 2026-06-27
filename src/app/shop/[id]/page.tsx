@@ -2,7 +2,10 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { getProductBySlug, getAllProductSlugs, formatINR } from '@/lib/catalog';
+import { createClient } from '@/lib/supabase/server';
 import AddToCart from '@/components/AddToCart';
+import ProductGallery from '@/components/ProductGallery';
+import FavouriteButton from '@/components/FavouriteButton';
 
 export async function generateStaticParams() {
   const slugs = await getAllProductSlugs();
@@ -33,6 +36,22 @@ export async function generateMetadata({
 export default async function ProductPage({ params }: { params: { id: string } }) {
   const p = await getProductBySlug(params.id);
   if (!p) notFound();
+
+  // Is this product already in the signed-in user's favourites?
+  const sb = createClient();
+  const {
+    data: { user },
+  } = await sb.auth.getUser();
+  let isFav = false;
+  if (user) {
+    const { data: fav } = await sb
+      .from('favourites')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('product_id', p.id)
+      .maybeSingle();
+    isFav = Boolean(fav);
+  }
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -79,23 +98,12 @@ export default async function ProductPage({ params }: { params: { id: string } }
           alignItems: 'start',
         }}
       >
-        <div
-          style={{
-            aspectRatio: '4 / 5',
-            background: '#15140f',
-            borderRadius: 'var(--radius)',
-            overflow: 'hidden',
-          }}
-        >
-          {p.image_url && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={p.image_url}
-              alt={p.name}
-              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-            />
-          )}
-        </div>
+        <ProductGallery
+          name={p.name}
+          image={p.image_url}
+          gallery={p.gallery_urls ?? []}
+          video={p.video_url}
+        />
 
         <div>
           <p
@@ -156,8 +164,9 @@ export default async function ProductPage({ params }: { params: { id: string } }
             </dl>
           )}
 
-          <div style={{ marginTop: '2rem' }}>
+          <div style={{ marginTop: '2rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
             <AddToCart productId={p.id} />
+            <FavouriteButton productId={p.id} initial={isFav} />
           </div>
         </div>
       </div>

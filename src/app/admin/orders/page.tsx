@@ -1,21 +1,15 @@
 import { createServiceClient } from '@/lib/supabase/server';
 import { formatINR } from '@/lib/format';
+import OrderStatusControl from '@/components/admin/OrderStatusControl';
 
 export const metadata = { title: 'Orders' };
 export const dynamic = 'force-dynamic';
-
-const statusColor: Record<string, string> = {
-  paid: 'var(--gold)',
-  created: 'var(--ink-soft)',
-  failed: '#e08a8a',
-  cancelled: 'var(--ink-mute)',
-};
 
 export default async function AdminOrdersPage() {
   const svc = createServiceClient();
   const { data } = await svc
     .from('orders')
-    .select('id, email, full_name, phone, amount, status, razorpay_payment_id, created_at, order_items(name, quantity, price)')
+    .select('id, email, full_name, phone, shipping_address, amount, status, razorpay_payment_id, created_at, order_items(name, quantity, price)')
     .order('created_at', { ascending: false });
 
   const orders = (data ?? []) as {
@@ -23,6 +17,7 @@ export default async function AdminOrdersPage() {
     email: string | null;
     full_name: string | null;
     phone: string | null;
+    shipping_address: string | null;
     amount: number;
     status: string;
     razorpay_payment_id: string | null;
@@ -63,21 +58,11 @@ export default async function AdminOrdersPage() {
                     {o.razorpay_payment_id ? ` · ${o.razorpay_payment_id}` : ''}
                   </p>
                 </div>
-                <div style={{ textAlign: 'right' }}>
+                <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
                   <p style={{ margin: 0, fontSize: '1.2rem', color: 'var(--gold)', fontVariantNumeric: 'tabular-nums' }}>
                     {formatINR(o.amount)}
                   </p>
-                  <p
-                    style={{
-                      margin: '0.3rem 0 0',
-                      fontSize: '0.72rem',
-                      letterSpacing: '0.12em',
-                      textTransform: 'uppercase',
-                      color: statusColor[o.status] ?? 'var(--ink-soft)',
-                    }}
-                  >
-                    {o.status}
-                  </p>
+                  <OrderStatusControl orderId={o.id} status={o.status} />
                 </div>
               </div>
 
@@ -92,6 +77,13 @@ export default async function AdminOrdersPage() {
                     </li>
                   ))}
                 </ul>
+              )}
+
+              {o.shipping_address && (
+                <p style={{ margin: '0.85rem 0 0', fontSize: '0.78rem', color: 'var(--ink-mute)', whiteSpace: 'pre-wrap' }}>
+                  <span style={{ color: 'var(--ink-soft)', textTransform: 'uppercase', letterSpacing: '0.1em', fontSize: '0.68rem' }}>Ship to: </span>
+                  {o.shipping_address}
+                </p>
               )}
             </div>
           ))}

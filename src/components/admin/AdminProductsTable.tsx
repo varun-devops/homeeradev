@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState, useTransition } from 'react';
 import { formatINR } from '@/lib/format';
 import { setProductActive, setProductPrice } from '@/app/admin/actions';
@@ -68,6 +69,7 @@ export default function AdminProductsTable({ products }: { products: Row[] }) {
               <th style={th}>SKU</th>
               <th style={{ ...th, textAlign: 'right' }}>Price ₹</th>
               <th style={{ ...th, textAlign: 'center' }}>Visible</th>
+              <th style={{ ...th, textAlign: 'center' }}>Edit</th>
             </tr>
           </thead>
           <tbody>
@@ -141,6 +143,23 @@ export default function AdminProductsTable({ products }: { products: Row[] }) {
                       }}
                     />
                   </button>
+                </td>
+                <td style={{ ...td, textAlign: 'center' }}>
+                  <Link
+                    href={`/admin/products/${r.id}`}
+                    style={{
+                      display: 'inline-block',
+                      padding: '0.4rem 0.85rem',
+                      borderRadius: 6,
+                      border: '1px solid var(--line-strong)',
+                      color: 'var(--ink)',
+                      fontSize: '0.72rem',
+                      letterSpacing: '0.1em',
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    Edit
+                  </Link>
                 </td>
               </tr>
             ))}

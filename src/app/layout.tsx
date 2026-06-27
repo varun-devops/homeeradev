@@ -1,19 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter, Cormorant_Garamond } from 'next/font/google';
-import dynamic from 'next/dynamic';
 import '../styles/globals.css';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
-import LoadingGate from '@/components/LoadingGate';
-import CurtainTransition from '@/components/CurtainTransition';
-
-// Purely-decorative client components — split out of the critical bundle
-// and loaded after the first paint so they never delay content or
-// hydration. None render meaningful UI, so there is no layout shift.
-const SmoothScroll = dynamic(() => import('@/components/SmoothScroll'));
-const Cursor = dynamic(() => import('@/components/Cursor'));
-const ShardBackground = dynamic(() => import('@/components/ShardBackground'));
-const GrainOverlay = dynamic(() => import('@/components/GrainOverlay'));
+import Chrome from '@/components/Chrome';
 
 const sans = Inter({
   subsets: ['latin'],
@@ -120,15 +108,7 @@ export default function RootLayout({
         />
       </head>
       <body>
-        <ShardBackground />
-        <LoadingGate />
-        <SmoothScroll />
-        <Cursor />
-        <CurtainTransition />
-        <Header />
-        <main>{children}</main>
-        <Footer />
-        <GrainOverlay />
+        <Chrome>{children}</Chrome>
       </body>
     </html>
   );

@@ -2,18 +2,8 @@
 
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
-import {
-  AnimatePresence,
-  motion,
-  useReducedMotion,
-} from 'framer-motion';
-import {
-  formatINR,
-  type Collection,
-  type SubCollection,
-  type Product,
-  type CollectionSlug,
-} from '@/lib/products';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { formatINR } from '@/lib/format';
 
 // Price sort options shown inside an expanded collection.
 type SortMode = 'featured' | 'price-asc' | 'price-desc';
@@ -23,92 +13,82 @@ const SORTS: { value: SortMode; label: string }[] = [
   { value: 'price-desc', label: 'Price: High to Low' },
 ];
 
-/**
- * Full-screen collection deck for the shop.
- *
- * The shop landing is the two top-level collections — Home Decor and
- * Home & Garden — each a full-bleed photo card filling the viewport,
- * swiped vertically with Resn-style parallax (the photo drifts slower
- * than the foreground).
- *
- * Tapping a collection card expands it to full screen with a Framer-Motion
- * shared-element transition: the card's photo background carries a
- * `layoutId`, so the closed card *morphs* into the full-screen view rather
- * than a new panel fading in. Inside the expanded view a price-sort
- * dropdown sits above the product grid; products animate in with a stagger.
- * Closing morphs the full-screen view back down into the card.
- */
-
-type Group = { collection: Collection; children: SubCollection[] };
-
-type Props = {
-  groups: Group[];
-  products: Product[];
+export type LiteProduct = {
+  id: string;
+  slug: string;
+  name: string;
+  price: number;
+  image_url: string | null;
+  category_slug: string;
+  sub_category: string;
+  sub_category_slug: string;
+  vendor: string | null;
 };
 
-export default function ShopCollectionDeck({ groups, products }: Props) {
+export type Collection = {
+  slug: string;
+  label: string;
+  image: string | null;
+  count: number;
+  subCollections: { slug: string; label: string; count: number }[];
+};
+
+type Props = {
+  collections: Collection[];
+  products: LiteProduct[];
+};
+
+/**
+ * Full-screen collection deck for the shop, driven by the live catalogue.
+ *
+ * Landing = the top-level collections, each a full-bleed photo card filling
+ * the viewport, swiped vertically with parallax. Tapping a collection
+ * morphs it to full screen (Framer-Motion shared-element `layoutId`) and
+ * reveals its products with a price-sort dropdown + staggered reveal.
+ */
+export default function ShopCollectionDeck({ collections, products }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
-  const [openSlug, setOpenSlug] = useState<CollectionSlug | null>(null);
+  const [openSlug, setOpenSlug] = useState<string | null>(null);
   const [active, setActive] = useState(0);
   const [sort, setSort] = useState<SortMode>('featured');
   const reduce = useReducedMotion();
 
-  const openGroup = groups.find((g) => g.collection.slug === openSlug) ?? null;
+  const openCol = collections.find((c) => c.slug === openSlug) ?? null;
 
-  // Which sub-collection slugs belong to each collection — used to pick the
-  // products shown inside an expanded card.
-  const childSlugsByCollection = new Map<CollectionSlug, Set<string>>(
-    groups.map((g) => [
-      g.collection.slug,
-      new Set(g.children.map((c) => c.slug)),
-    ]),
-  );
-
-  const productsFor = (slug: CollectionSlug) => {
-    const slugs = childSlugsByCollection.get(slug);
-    const items = slugs ? products.filter((p) => slugs.has(p.category)) : [];
+  const productsFor = (catSlug: string) => {
+    const items = products.filter((p) => p.category_slug === catSlug);
     if (sort === 'price-asc') return [...items].sort((a, b) => a.price - b.price);
     if (sort === 'price-desc') return [...items].sort((a, b) => b.price - a.price);
     return items;
   };
 
-  // Reset sort to "All" whenever a different collection is opened.
   useEffect(() => {
     setSort('featured');
   }, [openSlug]);
 
-  // Parallax + active-panel tracking — one rAF loop, paused while expanded.
+  // Parallax + active-panel tracking — paused while expanded.
   useEffect(() => {
     const root = rootRef.current;
     if (!root || openSlug) return;
-
-    const sections = Array.from(
-      root.querySelectorAll<HTMLElement>('[data-panel]'),
-    );
-    const contents = sections.map((s) =>
-      s.querySelector<HTMLElement>('[data-content]'),
-    );
+    const sections = Array.from(root.querySelectorAll<HTMLElement>('[data-panel]'));
+    const contents = sections.map((s) => s.querySelector<HTMLElement>('[data-content]'));
 
     let raf = 0;
     let lastActive = -1;
-
     const update = () => {
       const vh = window.innerHeight;
       const mid = vh / 2;
       let bestIdx = 0;
       let bestDist = Infinity;
-
       sections.forEach((section, i) => {
         const rect = section.getBoundingClientRect();
         const sectionMid = rect.top + rect.height / 2;
         const phase = (sectionMid - mid) / vh;
-
         const dist = Math.abs(phase);
         if (dist < bestDist) {
           bestDist = dist;
           bestIdx = i;
         }
-
         if (reduce) return;
         const content = contents[i];
         if (content) {
@@ -118,19 +98,17 @@ export default function ShopCollectionDeck({ groups, products }: Props) {
           content.style.opacity = String(Math.max(0, visible));
         }
       });
-
       if (bestIdx !== lastActive) {
         lastActive = bestIdx;
         setActive(bestIdx);
       }
       raf = requestAnimationFrame(update);
     };
-
     raf = requestAnimationFrame(update);
     return () => cancelAnimationFrame(raf);
   }, [openSlug, reduce]);
 
-  // Lock page scroll + close on Escape while expanded.
+  // Lock scroll + Escape close while expanded.
   useEffect(() => {
     document.body.style.overflow = openSlug ? 'hidden' : '';
     const onKey = (e: KeyboardEvent) => {
@@ -144,48 +122,46 @@ export default function ShopCollectionDeck({ groups, products }: Props) {
   }, [openSlug]);
 
   const scrollToPanel = (idx: number) => {
-    const panel = rootRef.current?.querySelector<HTMLElement>(
-      `[data-idx="${idx}"]`,
-    );
-    panel?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    rootRef.current
+      ?.querySelector<HTMLElement>(`[data-idx="${idx}"]`)
+      ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
-  const items = openGroup ? productsFor(openGroup.collection.slug) : [];
+  const items = openCol ? productsFor(openCol.slug) : [];
 
   return (
     <section ref={rootRef} aria-label="Shop collections" className="heShop">
       <style>{styles}</style>
 
       {/* ============ COLLECTION SWIPE DECK ============ */}
-      {groups.map((g, i) => (
+      {collections.map((c, i) => (
         <article
-          key={g.collection.slug}
+          key={c.slug}
           data-panel
           data-idx={i}
           className="heShop-panel"
-          onClick={() => setOpenSlug(g.collection.slug)}
+          onClick={() => setOpenSlug(c.slug)}
         >
-          {/* Shared element: this photo morphs into the full-screen view.
-              Hidden (opacity 0) while THIS card is the open one, so the
-              expanded copy is the only visible instance during the morph. */}
           <motion.div
-            layoutId={`card-bg-${g.collection.slug}`}
+            layoutId={`card-bg-${c.slug}`}
             className="heShop-bg"
-            style={{ backgroundImage: `url(${g.collection.image})` }}
-            animate={{ opacity: openSlug === g.collection.slug ? 0 : 1 }}
+            style={c.image ? { backgroundImage: `url(${c.image})` } : { background: '#1a1916' }}
+            animate={{ opacity: openSlug === c.slug ? 0 : 1 }}
             transition={{ duration: 0.2 }}
           />
           <div className="heShop-scrim" aria-hidden="true" />
           <div data-content className="heShop-content">
             <span className="heShop-kicker">
               <span className="heShop-index">
-                {String(i + 1).padStart(2, '0')} /{' '}
-                {String(groups.length).padStart(2, '0')}
+                {String(i + 1).padStart(2, '0')} / {String(collections.length).padStart(2, '0')}
               </span>
-              {'  ·  '}Collection
+              {'  ·  '}
+              {c.count} pieces
             </span>
-            <h2 className="heShop-title">{g.collection.label}</h2>
-            <p className="heShop-copy">{g.collection.copy}</p>
+            <h2 className="heShop-title">{c.label}</h2>
+            <p className="heShop-copy">
+              {c.subCollections.map((s) => s.label).join(' · ')}
+            </p>
             <span className="heShop-open">View collection</span>
           </div>
         </article>
@@ -193,34 +169,37 @@ export default function ShopCollectionDeck({ groups, products }: Props) {
 
       {/* Index rail */}
       <nav className="heShop-rail" aria-label="Collection index">
-        {groups.map((g, i) => (
+        {collections.map((c, i) => (
           <button
-            key={g.collection.slug}
+            key={c.slug}
             type="button"
             className="heShop-dot"
             data-on={active === i && !openSlug}
-            aria-label={`Go to ${g.collection.label}`}
+            aria-label={`Go to ${c.label}`}
             onClick={() => scrollToPanel(i)}
           />
         ))}
       </nav>
 
-      {/* ============ EXPANDED FULL-SCREEN VIEW (morphs from card) ======= */}
+      {/* ============ EXPANDED FULL-SCREEN VIEW ============ */}
       <AnimatePresence>
-        {openGroup && (
+        {openCol && (
           <motion.div
-            key={`ov-${openGroup.collection.slug}`}
+            key={`ov-${openCol.slug}`}
             className="heShop-overlay"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
           >
-            {/* The morphing photo — same layoutId as the tapped card. */}
             <motion.div
-              layoutId={`card-bg-${openGroup.collection.slug}`}
+              layoutId={`card-bg-${openCol.slug}`}
               className="heShop-overlayBg"
-              style={{ backgroundImage: `url(${openGroup.collection.image})` }}
+              style={
+                openCol.image
+                  ? { backgroundImage: `url(${openCol.image})` }
+                  : { background: '#1a1916' }
+              }
               transition={{ type: 'spring', stiffness: 200, damping: 30 }}
             />
             <div className="heShop-overlayTint" aria-hidden="true" />
@@ -245,14 +224,11 @@ export default function ShopCollectionDeck({ groups, products }: Props) {
                 transition={{ delay: 0.12 }}
               >
                 <span className="heShop-kicker">
-                  <span className="heShop-index">Collection</span>
+                  <span className="heShop-index">{openCol.count} pieces</span>
                 </span>
-                <h2 className="heShop-overlayTitle">
-                  {openGroup.collection.label}
-                </h2>
+                <h2 className="heShop-overlayTitle">{openCol.label}</h2>
               </motion.div>
 
-              {/* Price filter — DROPDOWN. */}
               {items.length > 0 && (
                 <motion.div
                   className="heShop-filterRow"
@@ -265,22 +241,16 @@ export default function ShopCollectionDeck({ groups, products }: Props) {
               )}
 
               {items.length === 0 ? (
-                <div className="heShop-empty">
-                  No pieces in this collection yet.
-                </div>
+                <div className="heShop-empty">No pieces in this collection yet.</div>
               ) : (
                 <motion.div
                   className="heShop-grid"
-                  // Re-key on sort so the stagger replays when the order
-                  // changes via the dropdown.
                   key={sort}
                   initial="hidden"
                   animate="show"
                   variants={{
                     hidden: {},
-                    show: {
-                      transition: { staggerChildren: 0.05, delayChildren: 0.22 },
-                    },
+                    show: { transition: { staggerChildren: 0.04, delayChildren: 0.22 } },
                   }}
                 >
                   {items.map((p) => (
@@ -292,26 +262,23 @@ export default function ShopCollectionDeck({ groups, products }: Props) {
                       }}
                       transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
                     >
-                      <Link
-                        href={`/shop/${p.id}`}
-                        data-hover
-                        className="heShop-card"
-                      >
-                        <div
-                          className="heShop-cardImg"
-                          style={{ backgroundColor: p.tone }}
-                        >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={p.image}
-                            alt={p.name}
-                            loading="lazy"
-                            className="heShop-cardPhoto"
-                          />
+                      <Link href={`/shop/${p.slug}`} data-hover className="heShop-card">
+                        <div className="heShop-cardImg">
+                          {p.image_url ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={p.image_url}
+                              alt={p.name}
+                              loading="lazy"
+                              className="heShop-cardPhoto"
+                            />
+                          ) : (
+                            <div className="heShop-cardPhoto heShop-cardNoimg" />
+                          )}
                         </div>
                         <div className="heShop-cardMeta">
                           <p className="heShop-cardTitle">{p.name}</p>
-                          <p className="heShop-cardSub">{p.maker}</p>
+                          {p.vendor && <p className="heShop-cardSub">{p.vendor}</p>}
                           <p className="heShop-cardPrice">{formatINR(p.price)}</p>
                         </div>
                       </Link>
@@ -328,8 +295,6 @@ export default function ShopCollectionDeck({ groups, products }: Props) {
 }
 
 // ──────────────────────────────────────────────────────────────────
-// Price-sort dropdown
-// ──────────────────────────────────────────────────────────────────
 function SortDropdown({
   value,
   onChange,
@@ -341,7 +306,6 @@ function SortDropdown({
   const ref = useRef<HTMLDivElement>(null);
   const current = SORTS.find((s) => s.value === value) ?? SORTS[0];
 
-  // Close on outside click / Escape.
   useEffect(() => {
     if (!open) return;
     const onDoc = (e: MouseEvent) => {
@@ -377,7 +341,6 @@ function SortDropdown({
           <polyline points="6 9 12 15 18 9" />
         </svg>
       </button>
-
       <AnimatePresence>
         {open && (
           <motion.ul
@@ -413,24 +376,15 @@ function SortDropdown({
 }
 
 // ──────────────────────────────────────────────────────────────────
-// Styles
-// ──────────────────────────────────────────────────────────────────
 const styles = `
   .heShop { position: relative; width: 100%; }
-
-  /* ============ FULL-SCREEN COLLECTION PANEL ============ */
   .heShop-panel {
-    position: relative;
-    height: 100svh; width: 100%;
-    overflow: hidden;
-    display: grid; place-items: center;
-    cursor: pointer;
+    position: relative; height: 100svh; width: 100%;
+    overflow: hidden; display: grid; place-items: center; cursor: pointer;
   }
   .heShop-bg {
-    position: absolute; inset: 0;
-    height: 100%; width: 100%;
-    background-size: cover; background-position: center;
-    z-index: 0;
+    position: absolute; inset: 0; height: 100%; width: 100%;
+    background-size: cover; background-position: center; z-index: 0;
   }
   .heShop-scrim {
     position: absolute; inset: 0; z-index: 1; pointer-events: none;
@@ -439,68 +393,49 @@ const styles = `
       linear-gradient(180deg, rgba(0,0,0,0.35), transparent 28%, transparent 64%, rgba(0,0,0,0.55));
   }
   .heShop-content {
-    position: relative; z-index: 2;
-    max-width: 820px; text-align: center;
+    position: relative; z-index: 2; max-width: 820px; text-align: center;
     padding: clamp(2rem, 6vw, 4rem) var(--pad-x);
-    will-change: transform, opacity;
-    pointer-events: none;
+    will-change: transform, opacity; pointer-events: none;
   }
   .heShop-kicker {
-    display: inline-block;
-    font-size: 0.72rem; letter-spacing: 0.36em; text-transform: uppercase;
-    color: var(--ink-soft); margin-bottom: 0.9rem;
+    display: inline-block; font-size: 0.72rem; letter-spacing: 0.36em;
+    text-transform: uppercase; color: var(--ink-soft); margin-bottom: 0.9rem;
   }
   .heShop-index { color: var(--gold); }
   .heShop-title {
-    font-style: italic; margin: 0;
-    font-size: clamp(2.8rem, 11vw, 6.5rem);
+    font-style: italic; margin: 0; font-size: clamp(2.8rem, 11vw, 6.5rem);
     line-height: 0.98; letter-spacing: -0.02em;
   }
   .heShop-copy {
-    color: var(--ink-soft); margin: 1.3rem auto 1.9rem; max-width: 540px;
-    font-size: clamp(1rem, 2.4vw, 1.2rem);
+    color: var(--ink-soft); margin: 1.3rem auto 1.9rem; max-width: 600px;
+    font-size: clamp(0.9rem, 2.2vw, 1.05rem); letter-spacing: 0.04em;
   }
   .heShop-open {
     display: inline-block; pointer-events: auto;
     padding: clamp(0.8rem, 2vw, 0.95rem) clamp(1.5rem, 4vw, 2.1rem);
-    border: 1px solid var(--line-strong); color: var(--ink);
-    border-radius: 999px;
-    font-size: clamp(0.74rem, 2vw, 0.82rem);
-    letter-spacing: 0.2em; text-transform: uppercase;
+    border: 1px solid var(--line-strong); color: var(--ink); border-radius: 999px;
+    font-size: clamp(0.74rem, 2vw, 0.82rem); letter-spacing: 0.2em; text-transform: uppercase;
     background: rgba(0,0,0,0.18);
     transition: background 280ms var(--ease-out), border-color 280ms var(--ease-out);
   }
   .heShop-open:hover { background: rgba(212,181,116,0.16); border-color: var(--gold); }
 
-  /* ============ INDEX RAIL ============ */
   .heShop-rail {
-    position: fixed; right: clamp(0.75rem, 2.5vw, 1.75rem);
-    top: 50%; transform: translateY(-50%);
-    display: flex; flex-direction: column; gap: 0.8rem; z-index: 40;
+    position: fixed; right: clamp(0.75rem, 2.5vw, 1.75rem); top: 50%;
+    transform: translateY(-50%); display: flex; flex-direction: column; gap: 0.8rem; z-index: 40;
   }
   .heShop-dot {
-    width: 8px; height: 8px; border-radius: 50%;
-    border: 1px solid var(--line-strong); background: transparent;
-    padding: 0; cursor: pointer;
+    width: 8px; height: 8px; border-radius: 50%; border: 1px solid var(--line-strong);
+    background: transparent; padding: 0; cursor: pointer;
     transition: background 280ms var(--ease-out), transform 280ms var(--ease-out);
   }
   .heShop-dot[data-on='true'] { background: var(--gold); transform: scale(1.3); }
   @media (max-width: 720px) {
-    .heShop-rail {
-      top: auto; bottom: clamp(1rem, 4vh, 2rem);
-      right: 50%; transform: translateX(50%); flex-direction: row;
-    }
+    .heShop-rail { top: auto; bottom: clamp(1rem, 4vh, 2rem); right: 50%; transform: translateX(50%); flex-direction: row; }
   }
 
-  /* ============ EXPANDED OVERLAY ============ */
-  .heShop-overlay {
-    position: fixed; inset: 0; z-index: 90;
-    overflow-y: auto; -webkit-overflow-scrolling: touch;
-  }
-  .heShop-overlayBg {
-    position: fixed; inset: 0; z-index: 0;
-    background-size: cover; background-position: center;
-  }
+  .heShop-overlay { position: fixed; inset: 0; z-index: 90; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .heShop-overlayBg { position: fixed; inset: 0; z-index: 0; background-size: cover; background-position: center; }
   .heShop-overlayTint {
     position: fixed; inset: 0; z-index: 1; pointer-events: none;
     background: linear-gradient(180deg, rgba(8,8,8,0.80), rgba(8,8,8,0.93) 42%, #080808 80%);
@@ -511,37 +446,26 @@ const styles = `
   }
   .heShop-overlayHead { text-align: center; margin-bottom: clamp(1.5rem, 4vh, 2.25rem); }
   .heShop-overlayTitle {
-    font-style: italic; margin: 0.4rem 0 0;
-    font-size: clamp(2.4rem, 9vw, 5rem); line-height: 1; letter-spacing: -0.02em;
+    font-style: italic; margin: 0.4rem 0 0; font-size: clamp(2.4rem, 9vw, 5rem);
+    line-height: 1; letter-spacing: -0.02em;
   }
   .heShop-back {
-    position: fixed; top: clamp(1.1rem, 3vh, 1.6rem);
-    left: 50%; transform: translateX(-50%); z-index: 5;
+    position: fixed; top: clamp(1.1rem, 3vh, 1.6rem); left: 50%; transform: translateX(-50%); z-index: 5;
     display: inline-flex; align-items: center; gap: 0.5rem;
-    background: rgba(0,0,0,0.35); border: 1px solid var(--line-strong);
-    color: var(--ink); border-radius: 999px;
-    padding: 0.6rem 1.2rem; cursor: pointer;
+    background: rgba(0,0,0,0.35); border: 1px solid var(--line-strong); color: var(--ink);
+    border-radius: 999px; padding: 0.6rem 1.2rem; cursor: pointer;
     font-size: 0.74rem; letter-spacing: 0.2em; text-transform: uppercase;
     transition: background 240ms var(--ease-out), border-color 240ms var(--ease-out);
   }
   .heShop-back:hover { background: rgba(212,181,116,0.16); border-color: var(--gold); }
 
-  /* ============ FILTER DROPDOWN ============ */
-  .heShop-filterRow {
-    display: flex; justify-content: center;
-    margin: 0 auto clamp(2.5rem, 6vh, 3.5rem);
-  }
+  .heShop-filterRow { display: flex; justify-content: center; margin: 0 auto clamp(2.5rem, 6vh, 3.5rem); }
   .heSort { position: relative; display: inline-flex; align-items: center; gap: 0.75rem; }
-  .heSort-label {
-    font-size: 0.7rem; letter-spacing: 0.28em; text-transform: uppercase;
-    color: var(--ink-soft);
-  }
+  .heSort-label { font-size: 0.7rem; letter-spacing: 0.28em; text-transform: uppercase; color: var(--ink-soft); }
   .heSort-toggle {
-    display: inline-flex; align-items: center; gap: 0.6rem;
-    min-width: 200px; justify-content: space-between;
-    background: rgba(0,0,0,0.3); border: 1px solid var(--line-strong);
-    color: var(--ink); border-radius: 999px;
-    padding: 0.6rem 1.1rem; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 0.6rem; min-width: 200px; justify-content: space-between;
+    background: rgba(0,0,0,0.3); border: 1px solid var(--line-strong); color: var(--ink);
+    border-radius: 999px; padding: 0.6rem 1.1rem; cursor: pointer;
     font-size: 0.74rem; letter-spacing: 0.14em; text-transform: uppercase;
     transition: border-color 240ms var(--ease-out), background 240ms var(--ease-out);
   }
@@ -549,56 +473,47 @@ const styles = `
   .heSort-chev { transition: transform 260ms var(--ease-out); }
   .heSort-chev[data-open='true'] { transform: rotate(180deg); }
   .heSort-menu {
-    position: absolute; top: calc(100% + 0.5rem); right: 0;
-    z-index: 6; min-width: 220px; list-style: none; margin: 0; padding: 0.35rem;
+    position: absolute; top: calc(100% + 0.5rem); right: 0; z-index: 6; min-width: 220px;
+    list-style: none; margin: 0; padding: 0.35rem;
     background: rgba(14,14,14,0.96); backdrop-filter: blur(10px);
     border: 1px solid var(--line-strong); border-radius: 12px;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
-    transform-origin: top right;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5); transform-origin: top right;
   }
   .heSort-item {
-    display: block; width: 100%; text-align: left;
-    background: transparent; border: none; color: var(--ink-soft);
-    padding: 0.7rem 0.9rem; border-radius: 8px; cursor: pointer;
+    display: block; width: 100%; text-align: left; background: transparent; border: none;
+    color: var(--ink-soft); padding: 0.7rem 0.9rem; border-radius: 8px; cursor: pointer;
     font-size: 0.78rem; letter-spacing: 0.1em; text-transform: uppercase;
     transition: background 200ms var(--ease-out), color 200ms var(--ease-out);
   }
   .heSort-item:hover { background: rgba(255,255,255,0.05); color: var(--ink); }
   .heSort-item[data-on='true'] { color: var(--gold); }
 
-  /* ============ PRODUCT GRID ============ */
   .heShop-grid {
     display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: clamp(2rem, 4vw, 3rem) clamp(1.5rem, 3vw, 2.5rem);
-    max-width: 1100px; margin: 0 auto;
+    gap: clamp(2rem, 4vw, 3rem) clamp(1.5rem, 3vw, 2.5rem); max-width: 1100px; margin: 0 auto;
   }
   @media (max-width: 980px) { .heShop-grid { grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 620px) { .heShop-grid { grid-template-columns: 1fr; } }
 
   .heShop-card { display: block; }
   .heShop-cardImg {
-    aspect-ratio: 4 / 5; border-radius: 6px;
-    position: relative; overflow: hidden;
-    transition: transform 600ms var(--ease-out);
+    aspect-ratio: 4 / 5; border-radius: 6px; position: relative; overflow: hidden;
+    background: #15140f; transition: transform 600ms var(--ease-out);
   }
   .heShop-card:hover .heShop-cardImg { transform: translateY(-4px); }
   .heShop-cardPhoto {
-    position: absolute; inset: 0; width: 100%; height: 100%;
-    object-fit: cover; display: block;
+    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block;
     transition: transform 900ms var(--ease-out);
   }
+  .heShop-cardNoimg { background: linear-gradient(140deg, #2a2820, #14130f); }
   .heShop-card:hover .heShop-cardPhoto { transform: scale(1.05); }
   .heShop-cardMeta { margin-top: 1rem; text-align: center; }
-  .heShop-cardTitle {
-    font-size: 0.82rem; letter-spacing: 0.2em; text-transform: uppercase;
-    color: var(--ink); margin: 0;
-  }
-  .heShop-cardSub { margin-top: 0.4rem; font-size: 0.9rem; color: var(--ink-soft); }
+  .heShop-cardTitle { font-size: 0.82rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink); margin: 0; }
+  .heShop-cardSub { margin-top: 0.4rem; font-size: 0.84rem; color: var(--ink-soft); }
   .heShop-cardPrice { margin-top: 0.3rem; font-size: 0.86rem; color: var(--gold); }
 
   .heShop-empty {
-    text-align: center; color: var(--ink-soft);
-    letter-spacing: 0.18em; text-transform: uppercase; font-size: 0.95rem;
-    padding: clamp(2rem, 6vh, 4rem) 0;
+    text-align: center; color: var(--ink-soft); letter-spacing: 0.18em;
+    text-transform: uppercase; font-size: 0.95rem; padding: clamp(2rem, 6vh, 4rem) 0;
   }
 `;

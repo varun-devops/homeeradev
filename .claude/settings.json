@@ -2,7 +2,37 @@
   "permissions": {
     "allow": [
       "Bash(NODEDIR=\"/c/Users/varunsingh/AppData/Local/nvm/v20.19.4\" *)",
-      "Read(//c/Users/varunsingh/AppData/Local/nvm/v20.19.4/**)"
+      "Read(//c/Users/varunsingh/AppData/Local/nvm/v20.19.4/**)",
+      "Bash(mv -f lite-1.mp4 hero.mp4)",
+      "Bash(ffmpeg -y -i hero.mp4 -vf \"select=eq\\(n\\\\,30\\)\" -vframes 1 /tmp/heroframe.jpg)",
+      "Bash(curl -s -o /dev/null -w \"home: %{http_code}\\\\n\" http://localhost:3000/)",
+      "Bash(curl -s -o /dev/null -w \"video: %{http_code} %{size_download}b\\\\n\" http://localhost:3000/video/hero.mp4)",
+      "Bash(curl -s -o /dev/null -w \"home recheck: %{http_code}\\\\n\" --max-time 5 http://localhost:3000/)",
+      "Bash(curl -s __TRACKED_VAR__/rest/v1/products?select=count -H 'apikey: __TRACKED_VAR__' -H 'Authorization: Bearer __TRACKED_VAR__' -H 'Prefer: count=exact' -I)",
+      "Bash(curl -s -o /dev/null -w \"cloudinary image: %{http_code}  %{size_download}b  %{content_type}\\\\n\" \"https://res.cloudinary.com/dcdchbc8p/image/upload/v1782585833/homeera/products/HE-ASH-HD-ORN-1001.jpg\")",
+      "Bash(git checkout *)",
+      "Bash(curl -s --max-time 10 http://localhost:3000/shop)",
+      "Bash(curl -s --max-time 10 http://localhost:3000/shop/brass-ship-with-flag-he-ash-hd-orn-1001)",
+      "Bash(curl -s --max-time 10 -w \"\\\\nHTTP: %{http_code}\\\\n\" http://localhost:3000/shop/brass-ship-with-flag-he-ash-hd-orn-1001 -o /tmp/prod.html)",
+      "Bash(curl -s --max-time 10 -o /dev/null -w \"cart HTTP: %{http_code} -> %{redirect_url}\\\\n\" http://localhost:3000/cart)",
+      "Bash(curl -s --max-time 10 -o /dev/null -w \"shop: %{http_code}\\\\n\" http://localhost:3000/shop)",
+      "Bash(curl -s --max-time 10 -o /dev/null -w \"product: %{http_code}\\\\n\" http://localhost:3000/shop/brass-ship-with-flag-he-ash-hd-orn-1001)",
+      "Bash(curl -s --max-time 10 -o /dev/null -w \"cart: %{http_code}\\\\n\" http://localhost:3000/cart)",
+      "Bash(curl -s --max-time 10 -o /tmp/p.html -w \"product: %{http_code}\\\\n\" http://localhost:3000/shop/brass-ship-with-flag-he-ash-hd-orn-1001)",
+      "Bash(curl -s --max-time 10 -o /dev/null -w \"cart\\(noauth\\): %{http_code} %{redirect_url}\\\\n\" http://localhost:3000/cart)",
+      "Bash(curl -s -o /dev/null -w \"admin \\(no auth\\) -> %{http_code} %{redirect_url}\\\\n\" --max-time 10 http://localhost:3000/admin)",
+      "Bash(curl -s -o /dev/null -w \"admin/login -> %{http_code}\\\\n\" --max-time 10 http://localhost:3000/admin/login)",
+      "Bash(curl -s -o /dev/null -w \"auth/login -> %{http_code}\\\\n\" --max-time 10 http://localhost:3000/auth/login)",
+      "Bash(curl -s --max-time 10 http://localhost:3000/admin/login)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code} %{redirect_url}\\\\n\" --max-time 10 http://localhost:3000/checkout)",
+      "Bash(curl -s --max-time 10 -w \"\\\\nHTTP %{http_code}\\\\n\" -X POST http://localhost:3000/api/razorpay/order -H \"Content-Type: application/json\" -d '{}')",
+      "Bash(curl -s --max-time 10 -w \"\\\\nHTTP %{http_code}\\\\n\" -X POST http://localhost:3000/api/razorpay/verify -H \"Content-Type: application/json\" -d '{}')",
+      "Bash(powershell.exe -NoProfile -Command \"Get-NetTCPConnection -LocalPort 3000 -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique\")",
+      "Bash(powershell.exe -NoProfile -Command \"\\(Get-Process node -ErrorAction SilentlyContinue | Measure-Object\\).Count\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code} -> %{redirect_url}\\\\n\" --max-time 12 http://localhost:3000/checkout)",
+      "Bash(curl -s --max-time 12 -w \"  [HTTP %{http_code}]\\\\n\" -X POST http://localhost:3000/api/razorpay/order -H \"Content-Type: application/json\" -d '{}')",
+      "Bash(curl -s --max-time 12 -w \"  [HTTP %{http_code}]\\\\n\" -X POST http://localhost:3000/api/razorpay/verify -H \"Content-Type: application/json\" -d '{}')",
+      "Bash(curl -s -o /dev/null -w \"cart -> %{redirect_url}\\\\n\" --max-time 10 http://localhost:3000/cart)"
     ]
   }
 }

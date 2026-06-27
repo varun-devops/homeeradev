@@ -1,36 +1,48 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { products, getSubCollection, formatINR } from '@/lib/products';
+import { getProductBySlug, getAllProductSlugs, formatINR } from '@/lib/catalog';
+import AddToCart from '@/components/AddToCart';
 
-export function generateStaticParams() {
-  return products.map((p) => ({ id: p.id }));
+export async function generateStaticParams() {
+  const slugs = await getAllProductSlugs();
+  return slugs.map((id) => ({ id }));
 }
 
-export function generateMetadata({ params }: { params: { id: string } }): Metadata {
-  const p = products.find((x) => x.id === params.id);
+export const dynamic = 'force-dynamic';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: { id: string };
+}): Promise<Metadata> {
+  const p = await getProductBySlug(params.id);
   if (!p) return { title: 'Not found' };
   return {
-    title: `${p.name}`,
-    description: p.blurb,
-    alternates: { canonical: `/shop/${p.id}` },
-    openGraph: { title: p.name, description: p.blurb },
+    title: p.name,
+    description: p.description ?? p.name,
+    alternates: { canonical: `/shop/${p.slug}` },
+    openGraph: {
+      title: p.name,
+      description: p.description ?? p.name,
+      images: p.image_url ? [p.image_url] : [],
+    },
   };
 }
 
-export default function ProductPage({ params }: { params: { id: string } }) {
-  const p = products.find((x) => x.id === params.id);
+export default async function ProductPage({ params }: { params: { id: string } }) {
+  const p = await getProductBySlug(params.id);
   if (!p) notFound();
-
-  const subLabel = getSubCollection(p.category)?.label ?? p.category;
 
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Product',
     name: p.name,
-    description: p.blurb,
+    description: p.description ?? p.name,
+    sku: p.sku,
+    image: p.image_url ?? undefined,
     brand: { '@type': 'Brand', name: 'Homeera' },
-    category: p.category,
+    category: `${p.category} / ${p.sub_category}`,
     offers: {
       '@type': 'Offer',
       price: p.price,
@@ -70,18 +82,21 @@ export default function ProductPage({ params }: { params: { id: string } }) {
         <div
           style={{
             aspectRatio: '4 / 5',
-            background: p.tone,
+            background: '#15140f',
             borderRadius: 'var(--radius)',
             overflow: 'hidden',
           }}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={p.image}
-            alt={p.name}
-            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-          />
+          {p.image_url && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={p.image_url}
+              alt={p.name}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            />
+          )}
         </div>
+
         <div>
           <p
             style={{
@@ -92,7 +107,8 @@ export default function ProductPage({ params }: { params: { id: string } }) {
               marginBottom: '0.5rem',
             }}
           >
-            {subLabel} · made by {p.maker}
+            {p.sub_category}
+            {p.vendor ? ` · ${p.vendor}` : ''}
           </p>
           <h1 style={{ fontStyle: 'italic', fontSize: 'clamp(2rem, 4.5vw, 3.5rem)' }}>
             {p.name}
@@ -102,31 +118,47 @@ export default function ProductPage({ params }: { params: { id: string } }) {
               marginTop: '1.25rem',
               fontSize: '1.5rem',
               fontVariantNumeric: 'tabular-nums',
+              color: 'var(--gold)',
             }}
           >
             {formatINR(p.price)}
           </div>
-          <p style={{ marginTop: '1.5rem', color: 'var(--ink-soft)', fontSize: '1.05rem' }}>
-            {p.blurb}
-          </p>
-          <button
-            data-hover
-            style={{
-              marginTop: '2rem',
-              padding: '1rem 2rem',
-              borderRadius: 999,
-              background: 'var(--ink)',
-              color: 'var(--bg)',
-              fontSize: '0.82rem',
-              letterSpacing: '0.18em',
-              textTransform: 'uppercase',
-            }}
-          >
-            Add to bag
-          </button>
-          <p style={{ marginTop: '1rem', fontSize: '0.85rem', color: 'var(--ink-soft)' }}>
-            Showcase only — checkout opens later this season.
-          </p>
+
+          {(p.material || p.size || p.variant) && (
+            <dl
+              style={{
+                marginTop: '1.75rem',
+                display: 'grid',
+                gridTemplateColumns: 'auto 1fr',
+                gap: '0.5rem 1.5rem',
+                fontSize: '0.92rem',
+                color: 'var(--ink-soft)',
+              }}
+            >
+              {p.material && (
+                <>
+                  <dt style={{ textTransform: 'uppercase', letterSpacing: '0.12em', fontSize: '0.72rem' }}>Material</dt>
+                  <dd style={{ margin: 0 }}>{p.material}</dd>
+                </>
+              )}
+              {p.variant && (
+                <>
+                  <dt style={{ textTransform: 'uppercase', letterSpacing: '0.12em', fontSize: '0.72rem' }}>Finish</dt>
+                  <dd style={{ margin: 0 }}>{p.variant}</dd>
+                </>
+              )}
+              {p.size && (
+                <>
+                  <dt style={{ textTransform: 'uppercase', letterSpacing: '0.12em', fontSize: '0.72rem' }}>Size</dt>
+                  <dd style={{ margin: 0 }}>{p.size} cm</dd>
+                </>
+              )}
+            </dl>
+          )}
+
+          <div style={{ marginTop: '2rem' }}>
+            <AddToCart productId={p.id} />
+          </div>
         </div>
       </div>
     </article>

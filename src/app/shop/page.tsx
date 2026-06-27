@@ -1,27 +1,39 @@
 import type { Metadata } from 'next';
-import { collectionsWithChildren, products } from '@/lib/products';
+import { getActiveProducts, buildCollections } from '@/lib/catalog';
 import ShopCollectionDeck from '@/components/ShopFilterDeck';
 
 export const metadata: Metadata = {
   title: 'Shop — Considered objects for the home',
   description:
-    'Browse Homeera home decor and home & garden pieces — ornaments, table clocks, sculpture, pots & planters. Small-batch, slow-made, built to repair.',
+    'Browse Homeera brass, wood and marble pieces — ornaments, table clocks, sculptures, flower pots, planters and more. Hand-made, small-batch.',
   alternates: { canonical: '/shop' },
 };
 
+// Always reflect the live catalogue (admin show/hide, price edits).
+export const dynamic = 'force-dynamic';
+
 /**
- * Shop page.
- *
- * The shop is a full-screen, vertically-swiped deck of *collection* cards
- * (Home Decor / Home & Garden), each a full-bleed photo. Tapping a card
- * expands it in place to reveal that collection's products as cards — no
- * route change. All interactivity lives in <ShopCollectionDeck>.
- *
- * Products are passed grouped under their collection so the deck can show
- * the right pieces inside each expanded card.
+ * Shop page — full-screen, vertically-swiped deck of collection cards
+ * built from the live Supabase catalogue. Tapping a collection morphs it
+ * to full screen (Framer Motion) and reveals its products with a
+ * price-sort dropdown.
  */
-export default function ShopPage() {
-  return (
-    <ShopCollectionDeck groups={collectionsWithChildren} products={products} />
-  );
+export default async function ShopPage() {
+  const products = await getActiveProducts();
+  const collections = buildCollections(products);
+
+  // Shape the products for the client deck (only what it needs).
+  const lite = products.map((p) => ({
+    id: p.id,
+    slug: p.slug,
+    name: p.name,
+    price: p.price,
+    image_url: p.image_url,
+    category_slug: p.category_slug,
+    sub_category: p.sub_category,
+    sub_category_slug: p.sub_category_slug,
+    vendor: p.vendor,
+  }));
+
+  return <ShopCollectionDeck collections={collections} products={lite} />;
 }

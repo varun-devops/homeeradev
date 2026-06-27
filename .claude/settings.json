@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(NODEDIR=\"/c/Users/varunsingh/AppData/Local/nvm/v20.19.4\" *)",
+      "Read(//c/Users/varunsingh/AppData/Local/nvm/v20.19.4/**)"
+    ]
+  }
+}

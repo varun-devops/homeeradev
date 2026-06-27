@@ -1,11 +1,16 @@
 import type { Metadata } from 'next';
-import { products, categoriesList, type Category } from '@/lib/products';
+import {
+  products,
+  categoriesList,
+  collectionsWithChildren,
+  type Category,
+} from '@/lib/products';
 import ShopFilterDeck from '@/components/ShopFilterDeck';
 
 export const metadata: Metadata = {
   title: 'Shop — Considered objects for the home',
   description:
-    'Browse Homeera living, decor, lighting and outdoor pieces. Small-batch, slow-made, built to repair.',
+    'Browse Homeera home decor and home & garden pieces — ornaments, table clocks, sculpture, pots & planters. Small-batch, slow-made, built to repair.',
   alternates: { canonical: '/shop' },
 };
 
@@ -32,7 +37,12 @@ export default function ShopPage({
 }: {
   searchParams?: SearchParams;
 }) {
-  const active = (searchParams?.cat as Category | undefined) ?? null;
+  // `cat` may be a sub-collection slug (e.g. ?cat=ornaments) — only treat
+  // it as active if it is a real one, otherwise fall back to "all".
+  const requested = searchParams?.cat as Category | undefined;
+  const active = categoriesList.some((c) => c.slug === requested)
+    ? (requested as Category)
+    : null;
   const visible = active
     ? products.filter((p) => p.category === active)
     : products;
@@ -41,6 +51,7 @@ export default function ShopPage({
     <ShopFilterDeck
       active={active}
       categories={categoriesList}
+      groups={collectionsWithChildren}
       products={visible}
     />
   );

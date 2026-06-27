@@ -54,10 +54,10 @@ export default function Footer() {
         <FooterCol
           title="Shop"
           links={[
-            ['Living', '/shop?cat=living'],
-            ['Decor', '/shop?cat=decor'],
-            ['Lighting', '/shop?cat=lighting'],
-            ['Outdoor', '/shop?cat=outdoor'],
+            ['Ornaments', '/shop?cat=ornaments'],
+            ['Table Clock', '/shop?cat=table-clock'],
+            ['Sculpture', '/shop?cat=sculpture'],
+            ['Pots & Planter', '/shop?cat=pots-planter'],
           ]}
         />
         <FooterCol

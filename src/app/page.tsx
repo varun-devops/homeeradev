@@ -1,4 +1,3 @@
-import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import Reveal from '@/components/Reveal';
 // Imported as a normal client component — it's small and uses no heavy
@@ -8,12 +7,6 @@ import Reveal from '@/components/Reveal';
 // error after the file was first added.
 import ShopCategoryDeck from '@/components/ShopCategoryDeck';
 
-// EmblemHero3D *does* need ssr:false — it imports three.js, which has
-// no SSR fallback. The dynamic chunk is correct here.
-const EmblemHero3D = dynamic(() => import('@/components/EmblemHero3D'), {
-  ssr: false,
-});
-
 export default function HomePage() {
   return (
     <>
@@ -22,10 +15,9 @@ export default function HomePage() {
           minHeight: '100svh',
           display: 'grid',
           // Three-row layout: top CTA · flexible middle (the emblem) · bottom caption.
-          // The emblem itself is absolutely positioned across the whole
-          // section (see the `inset: 0` on the wrapper inside
-          // EmblemHero3D), so the rows only govern where the text /
-          // link blocks sit.
+          // The emblem image is absolutely positioned across the whole
+          // section (the `inset: 0` wrapper just below), so the rows only
+          // govern where the text / link blocks sit.
           gridTemplateRows: 'auto 1fr auto',
           padding:
             'clamp(6rem, 12vh, 9rem) var(--pad-x) clamp(2.5rem, 7vh, 5rem)',
@@ -36,8 +28,31 @@ export default function HomePage() {
           justifyItems: 'center',
         }}
       >
-        {/* Full-screen interactive 3D emblem */}
-        <EmblemHero3D />
+        {/* Static brand emblem — no 3D, no animation, no effects.
+            Centred across the whole hero (inset:0 wrapper) exactly where
+            the old interactive canvas sat, but it is just a plain image. */}
+        <div
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            display: 'grid',
+            placeItems: 'center',
+            pointerEvents: 'none',
+            zIndex: 1,
+          }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/favicon.png"
+            alt="Home Era"
+            style={{
+              width: 'clamp(180px, 42vw, 460px)',
+              height: 'auto',
+              objectFit: 'contain',
+            }}
+          />
+        </div>
 
         {/* Top CTA — bare transparent link with an underline, sits in
             row 1 above the emblem. `position: relative` + zIndex keeps

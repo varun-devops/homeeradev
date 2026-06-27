@@ -3,59 +3,54 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
-import type { Category, Product } from '@/lib/products';
+import { gsap } from 'gsap';
+import type { Category, Product, Collection, SubCollection } from '@/lib/products';
 
 /**
- * Resn-style filter deck for the shop page.
+ * Resn-style filter deck for the shop page, now driven by the two-tier
+ * collection model.
  *
- * Two stacked layers:
- *  • Header layer — a "FILTER" eyebrow, a giant headline with the
- *    active category name + chevron, and a top-right "Close All
- *    Projects" hint. Clicking the headline (or chevron) toggles a
- *    full-page dropdown listing every other category in muted
- *    display type; hover an item to preview, click to navigate.
- *  • Card layer — full-bleed product cards laid out in a 2-column
- *    grid (1 on mobile), each card a large image area + title +
- *    maker. Side arrows step the viewport up/down through the rows.
+ * Layers:
+ *  • Header — a "COLLECTION" eyebrow, a giant headline showing the active
+ *    sub-collection (or "All Pieces") with a chevron, and a top-right
+ *    "Close" hint. Clicking the headline opens a full-page dropdown that
+ *    lists every collection grouped under its parent (HOME DECOR /
+ *    HOME & GARDEN) in muted display type.
+ *  • Card deck — full-bleed product cards in a 2-up grid (1-up on mobile).
  *
- * The dropdown animates with a smooth max-height + opacity reveal;
- * the body's content slides + dims while the dropdown is open so it
- * reads as a takeover panel — the behaviour shown in the reference.
+ * Selecting a collection performs a smooth full-screen *card swipe*: a
+ * panel sweeps across the viewport, the route swaps behind it, then it
+ * sweeps off — so changing collection reads as one fluid swipe rather
+ * than a hard reload. (This is separate from the site-wide curtain, which
+ * only intercepts ordinary link clicks; the dropdown navigates
+ * programmatically, so it owns its own swipe here.)
  */
-
-type CategoryEntry = {
-  slug: Category;
-  label: string;
-  copy: string;
-};
 
 type Props = {
   active: Category | null;
-  categories: CategoryEntry[];
+  categories: { slug: Category; label: string; copy: string }[];
+  groups: { collection: Collection; children: SubCollection[] }[];
   products: Product[];
 };
 
-const ACTIVE_LABEL_ALL = 'All Projects';
+const ACTIVE_LABEL_ALL = 'All Pieces';
 
 export default function ShopFilterDeck({
   active,
   categories,
+  groups,
   products,
 }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [hoveredSlug, setHoveredSlug] = useState<Category | 'all' | null>(null);
   const scrollerRef = useRef<HTMLDivElement>(null);
+  const swipeRef = useRef<HTMLDivElement>(null);
+  const swiping = useRef(false);
 
   const activeLabel = active
     ? categories.find((c) => c.slug === active)?.label ?? ACTIVE_LABEL_ALL
     : ACTIVE_LABEL_ALL;
-
-  // The dropdown lists every category that is *not* currently active.
-  // The active one is already in the heading, so hiding it from the
-  // list keeps the takeover panel uncluttered (mirrors the reference).
-  const otherCategories = categories.filter((c) => c.slug !== active);
-  const showAllInDropdown = active !== null;
 
   // Close on Escape, lock body scroll while open.
   useEffect(() => {
@@ -70,14 +65,59 @@ export default function ShopFilterDeck({
     };
   }, [open]);
 
-  const goTo = (href: string) => {
+  /**
+   * Smooth full-screen card swipe → navigate → swipe away.
+   *
+   * The panel starts off the right edge, sweeps left to cover the screen,
+   * the route is pushed behind it, then it continues off the left edge
+   * revealing the freshly-filtered grid. Reduced-motion users just get a
+   * plain navigation.
+   */
+  const swipeTo = (href: string) => {
     setOpen(false);
-    // small delay so the close animation runs before the route swaps
-    window.setTimeout(() => router.push(href), 160);
+    const panel = swipeRef.current;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (!panel || reduce) {
+      router.push(href);
+      return;
+    }
+    if (swiping.current) return;
+    swiping.current = true;
+
+    gsap.killTweensOf(panel);
+    gsap.set(panel, {
+      display: 'block',
+      xPercent: 100,
+      clipPath: 'inset(0% 0% 0% 0%)',
+    });
+
+    const tl = gsap.timeline({
+      onComplete: () => {
+        gsap.set(panel, { display: 'none' });
+        swiping.current = false;
+      },
+    });
+    // sweep in to cover
+    tl.to(panel, {
+      xPercent: 0,
+      duration: 0.42,
+      ease: 'power3.inOut',
+    });
+    // swap the route while the screen is covered, reset scroll
+    tl.add(() => {
+      router.push(href);
+      window.scrollTo(0, 0);
+    });
+    // hold a beat so the new grid is painted underneath, then sweep off
+    tl.to(panel, {
+      xPercent: -100,
+      duration: 0.5,
+      ease: 'power3.inOut',
+    }, '+=0.08');
   };
 
-  // Side arrows — scroll one card row at a time. We measure the first
-  // card so the step size matches the actual rendered row height.
+  // Side arrows — scroll one card row at a time.
   const stepBy = (dir: 1 | -1) => {
     const scroller = scrollerRef.current;
     if (!scroller) return;
@@ -85,14 +125,14 @@ export default function ShopFilterDeck({
     const step = firstCard
       ? firstCard.getBoundingClientRect().height + 32
       : window.innerHeight * 0.6;
-    scroller.scrollBy({ top: dir * step, behavior: 'smooth' });
+    window.scrollBy({ top: dir * step, behavior: 'smooth' });
   };
 
   return (
     <div style={{ position: 'relative', minHeight: '100svh' }}>
       <style>{`
         /* ============================================================
-           HEADER LAYER — filter eyebrow, big headline, top-right hint
+           HEADER LAYER
            ============================================================ */
         .heShop-head {
           position: relative;
@@ -111,32 +151,25 @@ export default function ShopFilterDeck({
           margin: 0 0 0.6rem;
         }
         .heShop-headline {
-          /* The headline doubles as the dropdown toggle — large,
-             clickable, with a chevron that rotates when open. */
           display: inline-flex;
           align-items: center;
           gap: clamp(0.75rem, 2vw, 1.5rem);
-          padding: 0;
-          margin: 0;
-          background: transparent;
-          border: none;
+          padding: 0; margin: 0;
+          background: transparent; border: none;
           color: var(--ink);
           font-family: var(--font-display);
           font-weight: 400;
           font-size: clamp(2.5rem, 9vw, 6rem);
           line-height: 0.95;
           letter-spacing: -0.02em;
-          cursor: pointer;
-          text-align: left;
+          cursor: pointer; text-align: left;
         }
         .heShop-chevron {
           width: clamp(1.6rem, 3.5vw, 2.4rem);
           height: clamp(1.6rem, 3.5vw, 2.4rem);
           transition: transform 360ms var(--ease-out);
         }
-        .heShop-headline[aria-expanded='true'] .heShop-chevron {
-          transform: rotate(180deg);
-        }
+        .heShop-headline[aria-expanded='true'] .heShop-chevron { transform: rotate(180deg); }
         .heShop-close {
           font-size: 0.82rem;
           letter-spacing: 0.16em;
@@ -144,57 +177,47 @@ export default function ShopFilterDeck({
           color: var(--ink);
           align-self: end;
           padding-bottom: 0.5rem;
-          opacity: 0;
-          pointer-events: none;
+          opacity: 0; pointer-events: none;
           transition: opacity 240ms var(--ease-out);
         }
-        .heShop-close[data-on='true'] {
-          opacity: 1;
-          pointer-events: auto;
-        }
+        .heShop-close[data-on='true'] { opacity: 1; pointer-events: auto; }
 
         /* ============================================================
-           DROPDOWN PANEL — full-width takeover under the headline
+           DROPDOWN PANEL — grouped by collection
            ============================================================ */
         .heShop-dropdown {
           position: relative;
           z-index: 25;
           padding: 0 var(--pad-x);
-          /* Collapsed by default — animated on toggle. */
-          max-height: 0;
-          opacity: 0;
-          overflow: hidden;
+          max-height: 0; opacity: 0; overflow: hidden;
           transition:
             max-height 520ms cubic-bezier(0.83, 0, 0.17, 1),
             opacity 320ms var(--ease-out);
         }
-        .heShop-dropdown[data-open='true'] {
-          /* A generous ceiling so any number of categories fits.
-             The true stopping point is the content's natural height,
-             so the transition reads as a smooth open regardless. */
-          max-height: 80svh;
-          opacity: 1;
+        .heShop-dropdown[data-open='true'] { max-height: 88svh; opacity: 1; }
+        .heShop-list { list-style: none; margin: 0; padding: 0 0 clamp(2rem, 6vh, 4rem); }
+
+        .heShop-groupLabel {
+          font-size: 0.72rem;
+          letter-spacing: 0.34em;
+          text-transform: uppercase;
+          color: var(--gold);
+          margin: clamp(1.25rem, 3vw, 2rem) 0 0.5rem;
         }
-        .heShop-list {
-          list-style: none;
-          margin: 0;
-          padding: 0 0 clamp(2rem, 6vh, 4rem);
-          display: grid;
-          gap: clamp(0.25rem, 1vw, 0.75rem);
-        }
+        .heShop-groupLabel:first-child { margin-top: 0; }
+
         .heShop-listItem {
           display: block;
           width: max-content;
           color: var(--ink-mute);
           font-family: var(--font-display);
           font-weight: 400;
-          font-size: clamp(2rem, 7vw, 5rem);
-          line-height: 1.05;
+          font-size: clamp(1.7rem, 6vw, 4rem);
+          line-height: 1.08;
           letter-spacing: -0.01em;
           cursor: pointer;
-          background: transparent;
-          border: none;
-          padding: 0.25rem 0;
+          background: transparent; border: none;
+          padding: 0.1rem 0;
           text-align: left;
           transform: translateY(18px);
           opacity: 0;
@@ -203,129 +226,116 @@ export default function ShopFilterDeck({
             transform 480ms var(--ease-out),
             opacity 320ms var(--ease-out);
         }
-        .heShop-listItem:hover,
-        .heShop-listItem:focus-visible {
-          color: var(--ink);
+        .heShop-listItem:hover, .heShop-listItem:focus-visible { color: var(--ink); }
+        .heShop-dropdown[data-open='true'] .heShop-listItem,
+        .heShop-dropdown[data-open='true'] .heShop-groupLabel {
+          transform: translateY(0); opacity: 1;
         }
-        /* Stagger each list item in once the dropdown opens. */
-        .heShop-dropdown[data-open='true'] .heShop-listItem {
-          transform: translateY(0);
-          opacity: 1;
-        }
-        .heShop-dropdown[data-open='true'] .heShop-listItem:nth-child(1) { transition-delay: 80ms; }
-        .heShop-dropdown[data-open='true'] .heShop-listItem:nth-child(2) { transition-delay: 140ms; }
-        .heShop-dropdown[data-open='true'] .heShop-listItem:nth-child(3) { transition-delay: 200ms; }
-        .heShop-dropdown[data-open='true'] .heShop-listItem:nth-child(4) { transition-delay: 260ms; }
-        .heShop-dropdown[data-open='true'] .heShop-listItem:nth-child(5) { transition-delay: 320ms; }
+        /* Stagger items in (up to ~8 rows incl. group labels). */
+        .heShop-dropdown[data-open='true'] .heShop-row:nth-child(1) { transition-delay: 70ms; }
+        .heShop-dropdown[data-open='true'] .heShop-row:nth-child(2) { transition-delay: 120ms; }
+        .heShop-dropdown[data-open='true'] .heShop-row:nth-child(3) { transition-delay: 170ms; }
+        .heShop-dropdown[data-open='true'] .heShop-row:nth-child(4) { transition-delay: 220ms; }
+        .heShop-dropdown[data-open='true'] .heShop-row:nth-child(5) { transition-delay: 270ms; }
+        .heShop-dropdown[data-open='true'] .heShop-row:nth-child(6) { transition-delay: 320ms; }
+        .heShop-dropdown[data-open='true'] .heShop-row:nth-child(7) { transition-delay: 370ms; }
+        .heShop-dropdown[data-open='true'] .heShop-row:nth-child(8) { transition-delay: 420ms; }
 
-        /* Backdrop — dims the cards underneath while the dropdown is
-           open so the takeover reads cleanly. Click anywhere on it
-           to close, like a real overlay panel. */
+        /* group labels share the lift-in too */
+        .heShop-groupLabel { transform: translateY(18px); opacity: 0;
+          transition: transform 480ms var(--ease-out), opacity 320ms var(--ease-out); }
+
         .heShop-scrim {
-          position: fixed;
-          inset: 0;
-          z-index: 20;
+          position: fixed; inset: 0; z-index: 20;
           background: rgba(5, 5, 5, 0.72);
-          backdrop-filter: blur(6px);
-          -webkit-backdrop-filter: blur(6px);
-          opacity: 0;
-          pointer-events: none;
+          backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+          opacity: 0; pointer-events: none;
           transition: opacity 320ms var(--ease-out);
         }
-        .heShop-scrim[data-on='true'] {
-          opacity: 1;
-          pointer-events: auto;
+        .heShop-scrim[data-on='true'] { opacity: 1; pointer-events: auto; }
+
+        /* ============================================================
+           FULL-SCREEN SWIPE PANEL (collection change)
+           ============================================================ */
+        .heShop-swipe {
+          position: fixed;
+          inset: 0;
+          z-index: 80;
+          display: none;
+          background: linear-gradient(135deg, #161616 0%, #050505 100%);
+          will-change: transform;
+          pointer-events: none;
+        }
+        .heShop-swipe::after {
+          /* champagne edge-glow on the leading edge of the swipe */
+          content: '';
+          position: absolute; inset: 0;
+          background: linear-gradient(
+            100deg,
+            transparent 0%,
+            rgba(212,181,116,0.10) 46%,
+            rgba(212,181,116,0.30) 50%,
+            transparent 54%);
+        }
+        .heShop-swipeMark {
+          position: absolute; inset: 0;
+          display: grid; place-items: center;
+        }
+        .heShop-swipeMark img {
+          width: clamp(48px, 8vw, 84px); height: auto;
+          filter: drop-shadow(0 0 24px rgba(212,181,116,0.35));
         }
 
         /* ============================================================
-           CARD DECK — full-bleed scroller with side arrows
+           CARD DECK
            ============================================================ */
-        .heShop-deck {
-          position: relative;
-          padding: 0 var(--pad-x) clamp(4rem, 10vh, 7rem);
-        }
-        .heShop-scroller {
-          /* The deck doesn't enforce its own height — it grows with
-             content and uses the page's normal scroll. The side arrows
-             call scrollBy on the *page* container, which is the body. */
-        }
+        .heShop-deck { position: relative; padding: 0 var(--pad-x) clamp(4rem, 10vh, 7rem); }
         .heShop-grid {
           display: grid;
           grid-template-columns: repeat(2, minmax(0, 1fr));
           gap: clamp(2rem, 4vw, 3rem) clamp(1.5rem, 3vw, 2.5rem);
         }
-        @media (max-width: 720px) {
-          .heShop-grid { grid-template-columns: 1fr; }
-        }
+        @media (max-width: 720px) { .heShop-grid { grid-template-columns: 1fr; } }
 
         .heShop-card { display: block; }
         .heShop-cardImg {
           aspect-ratio: 16 / 10;
           border-radius: 6px;
-          position: relative;
-          overflow: hidden;
+          position: relative; overflow: hidden;
           transition: transform 600ms var(--ease-out);
         }
-        .heShop-card:hover .heShop-cardImg {
-          transform: translateY(-4px);
-        }
-        .heShop-cardMeta {
-          margin-top: 1.25rem;
-          text-align: center;
-        }
+        .heShop-card:hover .heShop-cardImg { transform: translateY(-4px); }
+        .heShop-cardMeta { margin-top: 1.25rem; text-align: center; }
         .heShop-cardTitle {
-          font-size: 0.84rem;
-          letter-spacing: 0.22em;
-          text-transform: uppercase;
-          color: var(--ink);
-          margin: 0;
+          font-size: 0.84rem; letter-spacing: 0.22em; text-transform: uppercase;
+          color: var(--ink); margin: 0;
         }
-        .heShop-cardSub {
-          margin-top: 0.5rem;
-          font-size: 0.92rem;
-          color: var(--ink-soft);
-        }
+        .heShop-cardSub { margin-top: 0.5rem; font-size: 0.92rem; color: var(--ink-soft); }
 
-        /* Side step arrows — fixed at vertical centre, hidden on small
-           screens (touch users scroll normally). */
         .heShop-arrow {
-          position: fixed;
-          top: 50%;
-          transform: translateY(-50%);
-          z-index: 60;
-          width: 44px;
-          height: 44px;
-          display: grid;
-          place-items: center;
-          background: transparent;
-          border: none;
-          cursor: pointer;
-          color: var(--ink);
-          opacity: 0.7;
+          position: fixed; top: 50%; transform: translateY(-50%);
+          z-index: 60; width: 44px; height: 44px;
+          display: grid; place-items: center;
+          background: transparent; border: none; cursor: pointer;
+          color: var(--ink); opacity: 0.7;
           transition: opacity 240ms var(--ease-out);
         }
         .heShop-arrow:hover { opacity: 1; }
         .heShop-arrow[data-side='left']  { left:  clamp(0.5rem, 1.2vw, 1.25rem); }
         .heShop-arrow[data-side='right'] { right: clamp(0.5rem, 1.2vw, 1.25rem); }
-        @media (max-width: 860px) {
-          .heShop-arrow { display: none; }
-        }
+        @media (max-width: 860px) { .heShop-arrow { display: none; } }
 
-        /* Empty state */
         .heShop-empty {
-          padding: clamp(2rem, 6vh, 4rem) 0;
-          text-align: center;
-          color: var(--ink-soft);
-          font-size: 0.95rem;
-          letter-spacing: 0.18em;
-          text-transform: uppercase;
+          padding: clamp(2rem, 6vh, 4rem) 0; text-align: center;
+          color: var(--ink-soft); font-size: 0.95rem;
+          letter-spacing: 0.18em; text-transform: uppercase;
         }
       `}</style>
 
       {/* ============ HEADER ============ */}
       <div className="heShop-head">
         <div>
-          <p className="heShop-eyebrow">Filter</p>
+          <p className="heShop-eyebrow">Collection</p>
           <button
             type="button"
             className="heShop-headline"
@@ -346,11 +356,11 @@ export default function ShopFilterDeck({
           data-hover
           onClick={() => setOpen(false)}
         >
-          Close {activeLabel}
+          Close
         </button>
       </div>
 
-      {/* ============ DROPDOWN ============ */}
+      {/* ============ DROPDOWN (grouped) ============ */}
       <div
         id="heShop-dropdown"
         className="heShop-dropdown"
@@ -358,42 +368,53 @@ export default function ShopFilterDeck({
         aria-hidden={!open}
       >
         <ul className="heShop-list" role="menu">
-          {showAllInDropdown && (
-            <li role="none">
-              <button
-                type="button"
-                role="menuitem"
-                className="heShop-listItem"
-                data-hover
-                onMouseEnter={() => setHoveredSlug('all')}
-                onMouseLeave={() => setHoveredSlug(null)}
-                onClick={() => goTo('/shop')}
-                style={hoveredSlug === 'all' ? { color: 'var(--ink)' } : undefined}
-              >
-                {ACTIVE_LABEL_ALL}
-              </button>
-            </li>
-          )}
-          {otherCategories.map((c) => (
-            <li key={c.slug} role="none">
-              <button
-                type="button"
-                role="menuitem"
-                className="heShop-listItem"
-                data-hover
-                onMouseEnter={() => setHoveredSlug(c.slug)}
-                onMouseLeave={() => setHoveredSlug(null)}
-                onClick={() => goTo(`/shop?cat=${c.slug}`)}
-                style={hoveredSlug === c.slug ? { color: 'var(--ink)' } : undefined}
-              >
-                {c.label}
-              </button>
+          {/* "All Pieces" always available to reset the filter. */}
+          <li className="heShop-row" role="none">
+            <button
+              type="button"
+              role="menuitem"
+              className="heShop-listItem"
+              data-hover
+              onMouseEnter={() => setHoveredSlug('all')}
+              onMouseLeave={() => setHoveredSlug(null)}
+              onClick={() => swipeTo('/shop')}
+              style={hoveredSlug === 'all' || active === null ? { color: 'var(--ink)' } : undefined}
+            >
+              {ACTIVE_LABEL_ALL}
+            </button>
+          </li>
+
+          {groups.map((g) => (
+            <li key={g.collection.slug} role="none">
+              <p className="heShop-groupLabel heShop-row">{g.collection.label}</p>
+              <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+                {g.children.map((c) => (
+                  <li key={c.slug} className="heShop-row" role="none">
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="heShop-listItem"
+                      data-hover
+                      onMouseEnter={() => setHoveredSlug(c.slug)}
+                      onMouseLeave={() => setHoveredSlug(null)}
+                      onClick={() => swipeTo(`/shop?cat=${c.slug}`)}
+                      style={
+                        hoveredSlug === c.slug || active === c.slug
+                          ? { color: 'var(--ink)' }
+                          : undefined
+                      }
+                    >
+                      {c.label}
+                    </button>
+                  </li>
+                ))}
+              </ul>
             </li>
           ))}
         </ul>
       </div>
 
-      {/* Backdrop — only catches clicks while the dropdown is open. */}
+      {/* Backdrop */}
       <div
         className="heShop-scrim"
         data-on={open}
@@ -401,10 +422,18 @@ export default function ShopFilterDeck({
         onClick={() => setOpen(false)}
       />
 
+      {/* ============ FULL-SCREEN SWIPE PANEL ============ */}
+      <div ref={swipeRef} className="heShop-swipe" aria-hidden="true">
+        <div className="heShop-swipeMark">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/favicon.png" alt="" width={84} height={84} />
+        </div>
+      </div>
+
       {/* ============ CARD DECK ============ */}
       <div className="heShop-deck" ref={scrollerRef}>
         {products.length === 0 ? (
-          <div className="heShop-empty">No pieces in this category yet.</div>
+          <div className="heShop-empty">No pieces in this collection yet.</div>
         ) : (
           <div className="heShop-grid">
             {products.map((p) => (
@@ -431,7 +460,7 @@ export default function ShopFilterDeck({
         )}
       </div>
 
-      {/* Side step arrows — keyboard-callable via aria-label */}
+      {/* Side step arrows */}
       <button
         type="button"
         className="heShop-arrow"
@@ -455,7 +484,7 @@ export default function ShopFilterDeck({
 }
 
 // ──────────────────────────────────────────────────────────────────
-// Inline icons — kept here so the component is fully self-contained.
+// Inline icons
 // ──────────────────────────────────────────────────────────────────
 
 function Chevron({ className }: { className?: string }) {

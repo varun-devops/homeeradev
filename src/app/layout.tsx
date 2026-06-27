@@ -39,7 +39,7 @@ export const metadata: Metadata = {
     template: '%s · Homeera',
   },
   description:
-    'Homeera designs calm, considered objects for the home. Living, decor, lighting and outdoor pieces — built to last, made to breathe.',
+    'Homeera designs calm, considered objects for the home. Home decor and home & garden pieces — built to last, made to breathe.',
   keywords: [
     'home decor',
     'sustainable home goods',
@@ -58,7 +58,7 @@ export const metadata: Metadata = {
     siteName: 'Homeera',
     title: 'Homeera — Quiet, considered home objects',
     description:
-      'Calm, considered objects for the home. Living, decor, lighting, outdoor.',
+      'Calm, considered objects for the home. Home decor, home & garden.',
     images: [{ url: '/og.jpg', width: 1200, height: 630, alt: 'Homeera' }],
   },
   twitter: {

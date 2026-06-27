@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { products } from '@/lib/products';
+import { products, getSubCollection } from '@/lib/products';
 
 export function generateStaticParams() {
   return products.map((p) => ({ id: p.id }));
@@ -21,6 +21,8 @@ export function generateMetadata({ params }: { params: { id: string } }): Metada
 export default function ProductPage({ params }: { params: { id: string } }) {
   const p = products.find((x) => x.id === params.id);
   if (!p) notFound();
+
+  const subLabel = getSubCollection(p.category)?.label ?? p.category;
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -82,7 +84,7 @@ export default function ProductPage({ params }: { params: { id: string } }) {
               marginBottom: '0.5rem',
             }}
           >
-            {p.category} · made by {p.maker}
+            {subLabel} · made by {p.maker}
           </p>
           <h1 style={{ fontStyle: 'italic', fontSize: 'clamp(2rem, 4.5vw, 3.5rem)' }}>
             {p.name}

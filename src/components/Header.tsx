@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 // Primary links — shown inline on desktop, inside the hamburger drawer
 // on mobile.
@@ -13,19 +13,13 @@ const primary = [
 ];
 
 export default function Header() {
-  const [hidden, setHidden] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const lastY = useRef(0);
 
-  useEffect(() => {
-    const onScroll = () => {
-      const y = window.scrollY;
-      setHidden(y > 80 && y > lastY.current);
-      lastY.current = y;
-    };
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+  // The header stays transparent and permanently fixed at the top — it
+  // never hides on scroll. With the full-screen collection deck the visitor
+  // is always one tap from the menu, and the brand mark stays present
+  // throughout the scroll experience (the "logo + hamburger transparent,
+  // fixed" requirement).
 
   // Lock body scroll while the mobile drawer is open, close it on Escape,
   // and flag <html> so the hero text can hide itself (see the global
@@ -170,7 +164,6 @@ export default function Header() {
       `}</style>
 
       <header
-        data-hidden={hidden}
         style={{
           position: 'fixed',
           top: 0,
@@ -184,9 +177,6 @@ export default function Header() {
           gap: '1rem',
           // fully transparent — the page shows straight through
           background: 'transparent',
-          transform: hidden ? 'translateY(-100%)' : 'translateY(0)',
-          transition: 'transform 420ms cubic-bezier(0.16, 1, 0.3, 1)',
-          willChange: 'transform',
         }}
       >
         {/* Logo mark with a hidden wordmark that slides in on hover.

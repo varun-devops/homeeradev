@@ -2,189 +2,258 @@
 
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
+import { collectionsWithChildren, type SubCollection } from '@/lib/products';
 
 /**
- * Full-screen, vertically-snapping shop category deck.
+ * Full-screen collection deck with Resn-style parallax + staggered scroll.
  *
- * Replaces the four small category cards on the home page with a stack
- * of full-viewport panels. Each panel is one category, and the visitor
- * moves through them by swiping / scrolling vertically — the container
- * uses CSS scroll-snap so each card locks into place one screen at a
- * time with the smooth-scroll behaviour CSS provides natively.
+ * (Reference: the mobile scroll feel of resn.co.nz/#!/work/.)
  *
- * The intersection observer tracks which card is in view so we can
- * advance the side index dot and apply the active-card parallax.
+ * Each browsable sub-collection (Ornaments, Table Clock, Sculpture,
+ * Pots & Planter) becomes a full-viewport panel. As the visitor scrolls:
+ *
+ *   • The full-bleed background translates *slower* than the page
+ *     (a classic depth-parallax — the image drifts up as you scroll past).
+ *   • The foreground content (eyebrow → title → copy → CTA) is offset and
+ *     fades/lifts in with a per-element stagger as the panel reaches centre.
+ *   • A subtle scale-settle on the active panel makes the swipe between
+ *     cards read as one continuous motion rather than discrete slides.
+ *
+ * All movement is driven from a single rAF loop that reads each panel's
+ * position relative to the viewport, so it rides on top of the global
+ * Lenis smooth-scroll seamlessly (no scroll-jacking, no nested scroller).
+ *
+ * The deck is full-screen on every breakpoint — on mobile the panel image
+ * fills the entire viewport behind the content, which is what the brief
+ * asks for ("show full screen … the category project image is fullscreen").
  */
 
-type Card = {
-  slug: string;
-  label: string;
-  caption: string;
-  copy: string;
-  tone: string;
-  accent: string;
-};
+// Flatten the grouped collections into an ordered list of panels, tagging
+// each with its parent collection so we can show the collection name as a
+// small kicker above the sub-collection title.
+type Panel = SubCollection & { collectionLabel: string };
 
-const cards: Card[] = [
-  {
-    slug: 'living',
-    label: 'Living',
-    caption: 'Soft places to land',
-    copy: 'Sofas, throws, and the quiet textiles that hold the room together.',
-    tone: 'linear-gradient(140deg, rgba(212,181,116,0.16), rgba(20,20,20,0.95))',
-    accent: '#d4b574',
-  },
-  {
-    slug: 'decor',
-    label: 'Decor',
-    caption: 'Framed quiet',
-    copy: 'Vessels, mirrors, and small objects that mark a slower kind of attention.',
-    tone: 'linear-gradient(140deg, rgba(212,181,116,0.22), rgba(20,20,20,0.95))',
-    accent: '#e8c885',
-  },
-  {
-    slug: 'lighting',
-    label: 'Lighting',
-    caption: 'How the evening lands',
-    copy: 'Lamps that warm a corner instead of flooding the room.',
-    tone: 'linear-gradient(140deg, rgba(212,181,116,0.28), rgba(20,20,20,0.95))',
-    accent: '#f0d090',
-  },
-  {
-    slug: 'outdoor',
-    label: 'Outdoor',
-    caption: 'Patio calm',
-    copy: 'Garden objects, planters, and pieces that weather slowly.',
-    tone: 'linear-gradient(140deg, rgba(212,181,116,0.20), rgba(20,20,20,0.95))',
-    accent: '#cba36a',
-  },
-];
+const panels: Panel[] = collectionsWithChildren.flatMap(({ collection, children }) =>
+  children.map((child) => ({ ...child, collectionLabel: collection.label })),
+);
 
 export default function ShopCategoryDeck() {
-  const scrollerRef = useRef<HTMLDivElement>(null);
+  // <section> is a plain HTMLElement (no dedicated DOM interface), so the
+  // ref must be typed HTMLElement — typing it HTMLDivElement would not be
+  // assignable to the section's ref prop.
+  const rootRef = useRef<HTMLElement>(null);
+  const railRef = useRef<HTMLElement>(null);
   const [active, setActive] = useState(0);
 
-  // Track which card is currently centred in the scroller so the side
-  // index and parallax can react to it.
+  // Parallax + reveal driver. One rAF loop reads every panel's offset from
+  // the viewport centre and writes transforms straight to the DOM — cheap,
+  // and it composes with Lenis because we only read layout, never scroll.
   useEffect(() => {
-    const root = scrollerRef.current;
+    const root = rootRef.current;
     if (!root) return;
-    const panels = Array.from(
-      root.querySelectorAll<HTMLElement>('[data-card]'),
-    );
-    if (panels.length === 0) return;
 
-    const io = new IntersectionObserver(
-      (entries) => {
-        // Pick the entry with the largest intersection ratio — that is
-        // the card currently snapped into the viewport.
-        let bestIdx = -1;
-        let bestRatio = 0;
-        entries.forEach((e) => {
-          if (e.intersectionRatio > bestRatio) {
-            bestRatio = e.intersectionRatio;
-            const idx = Number((e.target as HTMLElement).dataset.idx);
-            if (Number.isFinite(idx)) bestIdx = idx;
-          }
-        });
-        if (bestIdx >= 0) setActive(bestIdx);
-      },
-      {
-        root,
-        // fire as cards cross the middle of the viewport
-        threshold: [0.5, 0.7, 0.9],
-      },
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const sections = Array.from(
+      root.querySelectorAll<HTMLElement>('[data-panel]'),
     );
-    panels.forEach((p) => io.observe(p));
-    return () => io.disconnect();
+    const bgs = sections.map((s) => s.querySelector<HTMLElement>('[data-bg]'));
+    const contents = sections.map((s) =>
+      s.querySelector<HTMLElement>('[data-content]'),
+    );
+
+    let raf = 0;
+    let lastActive = -1;
+
+    const update = () => {
+      const vh = window.innerHeight;
+      const mid = vh / 2;
+
+      let bestIdx = 0;
+      let bestDist = Infinity;
+
+      sections.forEach((section, i) => {
+        const rect = section.getBoundingClientRect();
+        const sectionMid = rect.top + rect.height / 2;
+        // -1 when the panel sits a full viewport above centre, 0 at centre,
+        // +1 a viewport below. This is the panel's scroll "phase".
+        const phase = (sectionMid - mid) / vh;
+
+        // Nearest-to-centre panel drives the index rail + active styling.
+        const dist = Math.abs(phase);
+        if (dist < bestDist) {
+          bestDist = dist;
+          bestIdx = i;
+        }
+
+        if (reduce) return;
+
+        // ——— Background parallax ———
+        // The image is over-sized (height 120%) so it can drift within the
+        // panel without exposing an edge. Move it opposite to the scroll so
+        // it reads as deeper than the foreground.
+        const bg = bgs[i];
+        if (bg) {
+          const drift = phase * vh * 0.18; // px
+          bg.style.transform = `translate3d(0, ${(-drift).toFixed(2)}px, 0) scale(1.08)`;
+        }
+
+        // ——— Foreground reveal + counter-parallax ———
+        // Content rises slightly faster than scroll and fades as it leaves
+        // the centre band, so each card "presents" itself at centre.
+        const content = contents[i];
+        if (content) {
+          const lift = phase * vh * 0.06; // px, opposite drift → depth
+          const visible = 1 - Math.min(1, Math.abs(phase) / 0.72);
+          content.style.transform = `translate3d(0, ${lift.toFixed(2)}px, 0)`;
+          content.style.opacity = String(Math.max(0, visible));
+        }
+      });
+
+      if (bestIdx !== lastActive) {
+        lastActive = bestIdx;
+        setActive(bestIdx);
+      }
+
+      // The index rail is position:fixed, so it must only show while the
+      // deck actually occupies the viewport — otherwise it would float over
+      // the sections above and below. Fade it out once the deck has scrolled
+      // past in either direction.
+      const rail = railRef.current;
+      if (rail) {
+        const deckRect = root.getBoundingClientRect();
+        const inView = deckRect.top < vh * 0.5 && deckRect.bottom > vh * 0.5;
+        rail.style.opacity = inView ? '1' : '0';
+        rail.style.pointerEvents = inView ? 'auto' : 'none';
+      }
+
+      raf = requestAnimationFrame(update);
+    };
+
+    raf = requestAnimationFrame(update);
+    return () => cancelAnimationFrame(raf);
   }, []);
 
-  const scrollToCard = (idx: number) => {
-    const root = scrollerRef.current;
-    if (!root) return;
-    const panel = root.querySelector<HTMLElement>(`[data-idx="${idx}"]`);
+  const scrollToPanel = (idx: number) => {
+    const root = rootRef.current;
+    const panel = root?.querySelector<HTMLElement>(`[data-idx="${idx}"]`);
     panel?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   return (
-    <section
-      aria-label="Shop by category"
-      style={{
-        position: 'relative',
-        width: '100%',
-        // The deck is one screen tall — visitors scroll *inside* it
-        // through the cards, then the page continues below.
-      }}
-    >
+    <section ref={rootRef} aria-label="Shop by collection" className="heDeck">
       <style>{`
-        .heDeck-scroller {
-          height: 100svh;
-          overflow-y: scroll;
-          overflow-x: hidden;
-          scroll-snap-type: y mandatory;
-          scroll-behavior: smooth;
-          /* Hide the scrollbar — the side index is the indicator instead. */
-          scrollbar-width: none;
-          -ms-overflow-style: none;
-          /* Keep momentum scrolling on touch devices smooth. */
-          -webkit-overflow-scrolling: touch;
-          overscroll-behavior: contain;
-        }
-        .heDeck-scroller::-webkit-scrollbar { display: none; }
+        .heDeck { position: relative; width: 100%; }
 
-        .heDeck-card {
+        .heDeck-panel {
+          position: relative;
           height: 100svh;
           width: 100%;
-          scroll-snap-align: start;
-          scroll-snap-stop: always;
-          position: relative;
+          overflow: hidden;
           display: grid;
           place-items: center;
-          padding: clamp(2rem, 6vw, 4rem) var(--pad-x);
-          overflow: hidden;
+          /* Each panel fills a full screen, so scrolling moves one card per
+             viewport — the swipe-per-card feel. We deliberately do NOT use
+             CSS scroll-snap here: the page is driven by Lenis smooth-scroll,
+             and mandatory snap fights Lenis (and would trap the hero and the
+             sections below the deck). The full-height panels + parallax give
+             the one-card-per-screen rhythm without scroll-jacking. */
         }
 
-        /* The contents lift in as the card enters the viewport — the
-           IntersectionObserver toggles data-active on the panel. */
-        .heDeck-content {
-          opacity: 0;
-          transform: translateY(28px);
-          transition:
-            opacity 700ms var(--ease-out),
-            transform 900ms var(--ease-out);
-          transition-delay: 60ms;
-          will-change: opacity, transform;
-        }
-        .heDeck-card[data-active='true'] .heDeck-content {
-          opacity: 1;
-          transform: translateY(0);
-        }
-
-        /* Index rail — desktop right side, mobile bottom. */
-        .heDeck-rail {
+        /* Full-bleed background — over-sized so the parallax drift never
+           uncovers an edge. This is the layer that becomes a photo later. */
+        .heDeck-bg {
           position: absolute;
+          inset: -12% 0;
+          height: 124%;
+          width: 100%;
+          will-change: transform;
+          z-index: 0;
+        }
+        /* Edge vignette so each panel reads as its own room and the text
+           stays legible over any future photo. */
+        .heDeck-panel::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          z-index: 1;
+          pointer-events: none;
+          background:
+            radial-gradient(ellipse 90% 65% at 50% 50%, transparent 50%, rgba(0,0,0,0.6) 100%),
+            linear-gradient(180deg, rgba(0,0,0,0.25), transparent 30%, transparent 70%, rgba(0,0,0,0.35));
+        }
+
+        .heDeck-content {
+          position: relative;
+          z-index: 2;
+          max-width: 820px;
+          text-align: center;
+          padding: clamp(2rem, 6vw, 4rem) var(--pad-x);
+          will-change: transform, opacity;
+        }
+        .heDeck-kicker {
+          display: inline-block;
+          font-size: 0.7rem;
+          letter-spacing: 0.36em;
+          text-transform: uppercase;
+          color: var(--ink-soft);
+          margin-bottom: 0.9rem;
+        }
+        .heDeck-index {
+          color: var(--gold);
+        }
+        .heDeck-title {
+          font-style: italic;
+          font-size: clamp(2.8rem, 12vw, 6.5rem);
+          margin: 0;
+          line-height: 0.98;
+          letter-spacing: -0.02em;
+        }
+        .heDeck-copy {
+          color: var(--ink-soft);
+          font-size: clamp(1rem, 2.4vw, 1.2rem);
+          margin: 1.4rem auto 2.1rem;
+          max-width: 540px;
+        }
+        .heDeck-cta {
+          display: inline-block;
+          padding: clamp(0.8rem, 2vw, 0.95rem) clamp(1.5rem, 4vw, 2.1rem);
+          border: 1px solid var(--line-strong);
+          color: var(--ink);
+          border-radius: 999px;
+          font-size: clamp(0.74rem, 2vw, 0.82rem);
+          letter-spacing: 0.2em;
+          text-transform: uppercase;
+          transition: background 280ms var(--ease-out), border-color 280ms var(--ease-out);
+        }
+        .heDeck-cta:hover { background: rgba(212,181,116,0.12); border-color: var(--gold); }
+
+        /* Index rail — right side on desktop, bottom-centre on mobile. */
+        .heDeck-rail {
+          position: fixed;
           right: clamp(0.75rem, 2.5vw, 1.75rem);
           top: 50%;
           transform: translateY(-50%);
           display: flex;
           flex-direction: column;
-          gap: 0.85rem;
-          z-index: 4;
+          gap: 0.8rem;
+          z-index: 40;
+          pointer-events: auto;
+          /* Faded in/out by the rAF loop depending on whether the deck is
+             in view (it is position:fixed, so it must not float over the
+             sections above/below the deck). */
+          opacity: 0;
+          transition: opacity 300ms var(--ease-out);
         }
         .heDeck-dot {
-          width: 8px;
-          height: 8px;
+          width: 8px; height: 8px;
           border-radius: 50%;
           border: 1px solid var(--line-strong);
           background: transparent;
-          padding: 0;
-          cursor: pointer;
+          padding: 0; cursor: pointer;
           transition: background 280ms var(--ease-out), transform 280ms var(--ease-out);
         }
-        .heDeck-dot[data-on='true'] {
-          background: var(--gold);
-          transform: scale(1.25);
-        }
+        .heDeck-dot[data-on='true'] { background: var(--gold); transform: scale(1.3); }
 
         @media (max-width: 720px) {
           .heDeck-rail {
@@ -197,111 +266,45 @@ export default function ShopCategoryDeck() {
         }
       `}</style>
 
-      <div ref={scrollerRef} className="heDeck-scroller">
-        {cards.map((c, i) => (
-          <article
-            key={c.slug}
-            data-card
-            data-idx={i}
-            data-active={active === i}
-            className="heDeck-card"
-            style={{ background: c.tone }}
-          >
-            <div
-              className="heDeck-content"
-              style={{
-                maxWidth: 820,
-                textAlign: 'center',
-                position: 'relative',
-                zIndex: 2,
-              }}
-            >
-              <span
-                style={{
-                  display: 'inline-block',
-                  fontSize: '0.72rem',
-                  letterSpacing: '0.32em',
-                  textTransform: 'uppercase',
-                  color: c.accent,
-                  marginBottom: '1rem',
-                }}
-              >
-                {String(i + 1).padStart(2, '0')} / {String(cards.length).padStart(2, '0')}
-                {'  ·  '}
-                {c.caption}
-              </span>
-              <h2
-                style={{
-                  fontStyle: 'italic',
-                  fontSize: 'clamp(2.8rem, 11vw, 6.5rem)',
-                  margin: 0,
-                  lineHeight: 1,
-                  letterSpacing: '-0.02em',
-                }}
-              >
-                {c.label}
-              </h2>
-              <p
-                style={{
-                  color: 'var(--ink-soft)',
-                  fontSize: 'clamp(1rem, 2.4vw, 1.2rem)',
-                  margin: '1.5rem auto 2.25rem',
-                  maxWidth: 560,
-                }}
-              >
-                {c.copy}
-              </p>
-              <Link
-                href={`/shop?cat=${c.slug}`}
-                data-hover
-                style={{
-                  display: 'inline-block',
-                  padding: 'clamp(0.8rem, 2vw, 0.95rem) clamp(1.4rem, 4vw, 2rem)',
-                  border: `1px solid ${c.accent}`,
-                  color: 'var(--ink)',
-                  borderRadius: 999,
-                  fontSize: 'clamp(0.74rem, 2vw, 0.82rem)',
-                  letterSpacing: '0.18em',
-                  textTransform: 'uppercase',
-                  transition:
-                    'background 280ms var(--ease-out), color 280ms var(--ease-out)',
-                }}
-              >
-                Browse {c.label.toLowerCase()}
-              </Link>
-            </div>
-
-            {/* faint edge vignette so each card reads as its own room */}
-            <div
-              aria-hidden="true"
-              style={{
-                position: 'absolute',
-                inset: 0,
-                background:
-                  'radial-gradient(ellipse 90% 60% at 50% 50%, transparent 55%, rgba(0,0,0,0.55) 100%)',
-                pointerEvents: 'none',
-              }}
-            />
-          </article>
-        ))}
-
-        {/* Side / bottom index — also clickable to jump between cards. */}
-        <nav
-          className="heDeck-rail"
-          aria-label="Category index"
+      {panels.map((p, i) => (
+        <article
+          key={p.slug}
+          data-panel
+          data-idx={i}
+          className="heDeck-panel"
         >
-          {cards.map((c, i) => (
-            <button
-              key={c.slug}
-              type="button"
-              className="heDeck-dot"
-              data-on={active === i}
-              aria-label={`Go to ${c.label}`}
-              onClick={() => scrollToCard(i)}
-            />
-          ))}
-        </nav>
-      </div>
+          <div data-bg className="heDeck-bg" style={{ background: p.tone }} />
+
+          <div data-content className="heDeck-content">
+            <span className="heDeck-kicker">
+              <span className="heDeck-index">
+                {String(i + 1).padStart(2, '0')} / {String(panels.length).padStart(2, '0')}
+              </span>
+              {'  ·  '}
+              {p.collectionLabel}
+            </span>
+            <h2 className="heDeck-title">{p.label}</h2>
+            <p className="heDeck-copy">{p.copy}</p>
+            <Link href={`/shop?cat=${p.slug}`} data-hover className="heDeck-cta">
+              View {p.label.toLowerCase()}
+            </Link>
+          </div>
+        </article>
+      ))}
+
+      {/* Index — also clickable to jump between panels. */}
+      <nav ref={railRef} className="heDeck-rail" aria-label="Collection index">
+        {panels.map((p, i) => (
+          <button
+            key={p.slug}
+            type="button"
+            className="heDeck-dot"
+            data-on={active === i}
+            aria-label={`Go to ${p.label}`}
+            onClick={() => scrollToPanel(i)}
+          />
+        ))}
+      </nav>
     </section>
   );
 }

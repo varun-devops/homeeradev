@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { products, getSubCollection } from '@/lib/products';
+import { products, getSubCollection, formatINR } from '@/lib/products';
 
 export function generateStaticParams() {
   return products.map((p) => ({ id: p.id }));
@@ -34,7 +34,7 @@ export default function ProductPage({ params }: { params: { id: string } }) {
     offers: {
       '@type': 'Offer',
       price: p.price,
-      priceCurrency: 'USD',
+      priceCurrency: 'INR',
       availability: 'https://schema.org/InStock',
     },
   };
@@ -72,8 +72,16 @@ export default function ProductPage({ params }: { params: { id: string } }) {
             aspectRatio: '4 / 5',
             background: p.tone,
             borderRadius: 'var(--radius)',
+            overflow: 'hidden',
           }}
-        />
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={p.image}
+            alt={p.name}
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+          />
+        </div>
         <div>
           <p
             style={{
@@ -96,7 +104,7 @@ export default function ProductPage({ params }: { params: { id: string } }) {
               fontVariantNumeric: 'tabular-nums',
             }}
           >
-            ${p.price}
+            {formatINR(p.price)}
           </div>
           <p style={{ marginTop: '1.5rem', color: 'var(--ink-soft)', fontSize: '1.05rem' }}>
             {p.blurb}

@@ -1,11 +1,6 @@
 import type { Metadata } from 'next';
-import {
-  products,
-  categoriesList,
-  collectionsWithChildren,
-  type Category,
-} from '@/lib/products';
-import ShopFilterDeck from '@/components/ShopFilterDeck';
+import { collectionsWithChildren, products } from '@/lib/products';
+import ShopCollectionDeck from '@/components/ShopFilterDeck';
 
 export const metadata: Metadata = {
   title: 'Shop — Considered objects for the home',
@@ -14,45 +9,19 @@ export const metadata: Metadata = {
   alternates: { canonical: '/shop' },
 };
 
-type SearchParams = { cat?: string };
-
 /**
  * Shop page.
  *
- * Layout follows the Resn-style filter deck supplied in the brief:
- *   • A large headline with the active category name and a chevron;
- *     clicking the chevron opens a full-page dropdown listing every
- *     other category in muted display type. Hover a category to
- *     activate it.
- *   • Beneath the headline, the page is a vertical scroller of
- *     full-bleed product cards in a 2-up grid (1-up on mobile),
- *     with a "Close all projects" affordance on the right.
+ * The shop is a full-screen, vertically-swiped deck of *collection* cards
+ * (Home Decor / Home & Garden), each a full-bleed photo. Tapping a card
+ * expands it in place to reveal that collection's products as cards — no
+ * route change. All interactivity lives in <ShopCollectionDeck>.
  *
- * All animation + interactivity lives in <ShopFilterDeck>, which is a
- * client component. Page-level data (products + active filter) is
- * resolved server-side here from the `?cat=` query.
+ * Products are passed grouped under their collection so the deck can show
+ * the right pieces inside each expanded card.
  */
-export default function ShopPage({
-  searchParams,
-}: {
-  searchParams?: SearchParams;
-}) {
-  // `cat` may be a sub-collection slug (e.g. ?cat=ornaments) — only treat
-  // it as active if it is a real one, otherwise fall back to "all".
-  const requested = searchParams?.cat as Category | undefined;
-  const active = categoriesList.some((c) => c.slug === requested)
-    ? (requested as Category)
-    : null;
-  const visible = active
-    ? products.filter((p) => p.category === active)
-    : products;
-
+export default function ShopPage() {
   return (
-    <ShopFilterDeck
-      active={active}
-      categories={categoriesList}
-      groups={collectionsWithChildren}
-      products={visible}
-    />
+    <ShopCollectionDeck groups={collectionsWithChildren} products={products} />
   );
 }

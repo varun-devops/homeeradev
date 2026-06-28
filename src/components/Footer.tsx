@@ -54,26 +54,17 @@ export default function Footer() {
         <FooterCol
           title="Shop"
           links={[
-            ['Ornaments', '/shop?cat=ornaments'],
-            ['Table Clock', '/shop?cat=table-clock'],
-            ['Sculpture', '/shop?cat=sculpture'],
-            ['Pots & Planter', '/shop?cat=pots-planter'],
+            ['All pieces', '/shop'],
+            ['Favourites', '/favourites'],
+            ['Your bag', '/cart'],
           ]}
         />
         <FooterCol
-          title="Studio"
+          title="Account"
           links={[
-            ['About', '/about'],
-            ['Journal', '/journal'],
+            ['Profile', '/profile'],
+            ['Orders', '/profile'],
             ['Contact', '/contact'],
-          ]}
-        />
-        <FooterCol
-          title="Care"
-          links={[
-            ['Shipping', '/shipping'],
-            ['Returns', '/returns'],
-            ['Privacy', '/privacy'],
           ]}
         />
       </div>
@@ -94,7 +85,6 @@ export default function Footer() {
         }}
       >
         <span>© {new Date().getFullYear()} Homeera</span>
-        <span>Designed slowly. Shipped quietly.</span>
       </div>
     </footer>
   );
@@ -105,8 +95,8 @@ function FooterCol({ title, links }: { title: string; links: [string, string][] 
     <div>
       <h4
         style={{
-          fontFamily: 'var(--font-sans)',
-          fontSize: '0.75rem',
+          fontFamily: 'var(--font-display)',
+          fontSize: '0.95rem',
           letterSpacing: '0.18em',
           textTransform: 'uppercase',
           color: 'var(--ink-soft)',

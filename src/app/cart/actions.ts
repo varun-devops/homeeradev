@@ -43,6 +43,45 @@ export async function addToCart(productId: string, quantity = 1): Promise<Result
   return { ok: true };
 }
 
+/**
+ * Set the ABSOLUTE quantity of a product in the cart by product id.
+ * 0 (or less) removes it. Used by the product-page stepper which syncs the
+ * cart live. Returns the new quantity.
+ */
+export async function setCartQuantity(
+  productId: string,
+  quantity: number,
+): Promise<Result & { quantity?: number }> {
+  const sb = createClient();
+  const {
+    data: { user },
+  } = await sb.auth.getUser();
+  if (!user) return { ok: false, reason: 'auth' };
+
+  const { data: existing } = await sb
+    .from('cart_items')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('product_id', productId)
+    .maybeSingle();
+
+  if (quantity <= 0) {
+    if (existing) await sb.from('cart_items').delete().eq('id', existing.id);
+    revalidatePath('/cart');
+    return { ok: true, quantity: 0 };
+  }
+
+  if (existing) {
+    const { error } = await sb.from('cart_items').update({ quantity }).eq('id', existing.id);
+    if (error) return { ok: false, reason: 'error', message: error.message };
+  } else {
+    const { error } = await sb.from('cart_items').insert({ user_id: user.id, product_id: productId, quantity });
+    if (error) return { ok: false, reason: 'error', message: error.message };
+  }
+  revalidatePath('/cart');
+  return { ok: true, quantity };
+}
+
 export async function updateQuantity(itemId: string, quantity: number): Promise<Result> {
   const sb = createClient();
   if (quantity <= 0) return removeFromCart(itemId);

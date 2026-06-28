@@ -1,10 +1,11 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { getProductBySlug, getAllProductSlugs, formatINR } from '@/lib/catalog';
+import { getProductBySlug, getAllProductSlugs, getReviews, formatINR } from '@/lib/catalog';
 import { createClient } from '@/lib/supabase/server';
 import AddToCart from '@/components/AddToCart';
 import ProductGallery from '@/components/ProductGallery';
+import ProductReviews, { Stars } from '@/components/ProductReviews';
 
 export async function generateStaticParams() {
   const slugs = await getAllProductSlugs();
@@ -42,15 +43,29 @@ export default async function ProductPage({ params }: { params: { id: string } }
     data: { user },
   } = await sb.auth.getUser();
   let isFav = false;
+  let canReview = false;
+  let cartQty = 0;
+  let myReview: { rating: number; body: string | null } | null = null;
   if (user) {
-    const { data: fav } = await sb
-      .from('favourites')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('product_id', p.id)
-      .maybeSingle();
+    const [{ data: fav }, { data: bought }, { data: mine }, { data: cartItem }] = await Promise.all([
+      sb.from('favourites').select('id').eq('user_id', user.id).eq('product_id', p.id).maybeSingle(),
+      sb
+        .from('order_items')
+        .select('id, orders!inner(user_id, status)')
+        .eq('product_id', p.id)
+        .eq('orders.user_id', user.id)
+        .eq('orders.status', 'paid')
+        .limit(1),
+      sb.from('reviews').select('rating, body').eq('user_id', user.id).eq('product_id', p.id).maybeSingle(),
+      sb.from('cart_items').select('quantity').eq('user_id', user.id).eq('product_id', p.id).maybeSingle(),
+    ]);
     isFav = Boolean(fav);
+    canReview = Boolean(bought && bought.length > 0);
+    myReview = mine ?? null;
+    cartQty = cartItem?.quantity ?? 0;
   }
+
+  const { reviews, average, count } = await getReviews(p.id);
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -120,6 +135,11 @@ export default async function ProductPage({ params }: { params: { id: string } }
           <h1 style={{ fontStyle: 'italic', fontSize: 'clamp(2rem, 4.5vw, 3.5rem)' }}>
             {p.name}
           </h1>
+          {count > 0 && (
+            <div style={{ marginTop: '0.6rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--ink-soft)', fontSize: '0.85rem' }}>
+              <Stars value={average} size={15} /> {average.toFixed(1)} ({count})
+            </div>
+          )}
           <div
             style={{
               marginTop: '1.25rem',
@@ -164,10 +184,22 @@ export default async function ProductPage({ params }: { params: { id: string } }
           )}
 
           <div style={{ marginTop: '2rem' }}>
-            <AddToCart productId={p.id} favourited={isFav} />
+            <AddToCart productId={p.id} favourited={isFav} initialQty={cartQty} />
           </div>
         </div>
       </div>
+
+      <ProductReviews
+        productId={p.id}
+        slug={p.slug}
+        reviews={reviews}
+        average={average}
+        count={count}
+        canReview={canReview}
+        myRating={myReview?.rating}
+        myBody={myReview?.body ?? ''}
+        signedIn={Boolean(user)}
+      />
     </article>
   );
 }

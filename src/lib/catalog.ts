@@ -66,6 +66,28 @@ export async function getProductBySlug(slug: string): Promise<DBProduct | null> 
   return (data as DBProduct) ?? null;
 }
 
+export type Review = {
+  id: string;
+  rating: number;
+  body: string | null;
+  author_name: string | null;
+  created_at: string;
+};
+
+/** Reviews for a product + the average rating. */
+export async function getReviews(productId: string): Promise<{ reviews: Review[]; average: number; count: number }> {
+  const svc = createServiceClient();
+  const { data } = await svc
+    .from('reviews')
+    .select('id, rating, body, author_name, created_at')
+    .eq('product_id', productId)
+    .order('created_at', { ascending: false });
+  const reviews = (data ?? []) as Review[];
+  const count = reviews.length;
+  const average = count ? reviews.reduce((s, r) => s + r.rating, 0) / count : 0;
+  return { reviews, average, count };
+}
+
 /** Active product slugs — for generateStaticParams. */
 export async function getAllProductSlugs(): Promise<string[]> {
   const sb = createServiceClient();

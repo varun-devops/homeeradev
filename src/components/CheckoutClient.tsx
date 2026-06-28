@@ -162,7 +162,7 @@ export default function CheckoutClient({ items, total, defaults }: Props) {
             {busy ? 'Processing…' : `Pay ${formatINR(total)}`}
           </button>
           <p style={{ fontSize: '0.78rem', color: 'var(--ink-mute)', textAlign: 'center', margin: 0 }}>
-            Secured by Razorpay. Cards, UPI, netbanking & wallets.
+            Secure checkout. Cards, UPI, netbanking &amp; wallets.
           </p>
         </form>
 

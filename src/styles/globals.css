@@ -22,12 +22,11 @@
      fluidly with the viewport via clamp(), so there are no hard
      breakpoint jumps — mobile gets tight, comfortable spacing and
      desktop opens up, with everything in between interpolated.   */
-  /* Page side gutter — wider ceiling so tablet/desktop content has
-     real breathing room instead of grazing the viewport edge.
-     Floor:  1.75rem (28px) — comfortable on the narrowest phones.
-     Slope:  5.5vw       — scales noticeably as the viewport grows.
+  /* Page side gutter — left/right margin for every .container.
+     Floor:  1rem (16px) — minimum gutter on the narrowest phones.
+     Slope:  5.5vw       — scales as the viewport grows.
      Cap:    5rem (80px) — generous editorial margin on desktop. */
-  --pad-x: clamp(1.75rem, 5.5vw, 5rem);
+  --pad-x: clamp(1rem, 5.5vw, 5rem);
   --section-y: clamp(3.25rem, 9vw, 6rem); /* vertical section pad  */
   --gap: clamp(1rem, 2.5vw, 1.5rem);      /* grid / flex gap       */
   --gap-lg: clamp(1.5rem, 4vw, 3rem);     /* large layout gap      */

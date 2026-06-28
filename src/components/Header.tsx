@@ -11,9 +11,7 @@ const primary = [
   { label: 'Favourites', href: '/favourites' },
   { label: 'Cart', href: '/cart' },
   { label: 'Profile', href: '/profile' },
-  { label: 'About', href: '/about' },
   { label: 'Contact', href: '/contact' },
-  { label: 'Journal', href: '/journal' },
 ];
 
 export default function Header() {

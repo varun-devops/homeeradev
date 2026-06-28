@@ -12,10 +12,10 @@ import { AnimatePresence, motion } from 'framer-motion';
  * We pick the source from a media query after mount so only one video ever
  * loads. Delivered with `q_auto,f_auto` for fast, well-compressed streaming.
  *
- * The favicon emblem stays centred at all times. The wordmark ("HOME ERA /
- * SINCE 1960") shows on load, then auto-hides after 10s with a fade-out — and
- * hides immediately if the visitor taps/clicks the screen. The video keeps
- * playing underneath.
+ * The wordmark ("HOME ERA / SINCE 1960") shows on load and auto-hides after
+ * 10s (fade-out); the centred favicon emblem lingers until 20s, then vanishes
+ * with a scale-up + blur "blast". A tap/click dismisses both immediately. The
+ * video keeps playing underneath.
  *
  * Fully responsive: sized in svh/dvh, video covers via object-fit, fluid type.
  */
@@ -27,13 +27,15 @@ const base = (id: string) =>
 const DESKTOP_URL = base('clip');
 const MOBILE_URL = base('slim');
 
-/** How long the wordmark stays before auto-hiding. */
+/** Wordmark auto-hides after this; the logo lingers until LOGO_MS. */
 const REVEAL_MS = 10000;
+const LOGO_MS = 20000;
 
 export default function HeroVideo() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [ready, setReady] = useState(false);
   const [showWord, setShowWord] = useState(true);
+  const [showLogo, setShowLogo] = useState(true);
   // Decide the source from the viewport. Default to desktop for SSR; corrected
   // on mount before paint so phones/tablets get the portrait `slim` clip.
   const [src, setSrc] = useState(DESKTOP_URL);
@@ -61,17 +63,27 @@ export default function HeroVideo() {
     return () => v.removeEventListener('canplay', onCanPlay);
   }, [src]);
 
-  // Auto-hide the wordmark after REVEAL_MS.
+  // Auto-hide the wordmark after REVEAL_MS, then the logo after LOGO_MS.
   useEffect(() => {
-    const t = setTimeout(() => setShowWord(false), REVEAL_MS);
-    return () => clearTimeout(t);
+    const t1 = setTimeout(() => setShowWord(false), REVEAL_MS);
+    const t2 = setTimeout(() => setShowLogo(false), LOGO_MS);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
   }, []);
+
+  // A tap/click dismisses both immediately.
+  const dismiss = () => {
+    setShowWord(false);
+    setShowLogo(false);
+  };
 
   return (
     <section
       className="heHero"
       aria-label="Home Era"
-      onClick={() => setShowWord(false)}
+      onClick={dismiss}
     >
       <style>{`
         .heHero {
@@ -202,16 +214,21 @@ export default function HeroVideo() {
       <div className="heHero-scrim" aria-hidden="true" />
 
       <div className="heHero-center">
-        {/* Persistent logo — always centred, never hidden. */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <motion.img
-          className="heHero-emblem"
-          src="/favicon.png"
-          alt="Home Era"
-          initial={{ opacity: 0, y: 16, scale: 0.96 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
-        />
+        {/* Logo — centred; vanishes (scale-up + fade + blur) after 20s or tap. */}
+        <AnimatePresence>
+          {showLogo && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <motion.img
+              className="heHero-emblem"
+              src="/favicon.png"
+              alt="Home Era"
+              initial={{ opacity: 0, y: 16, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, scale: 1.6, filter: 'blur(10px)', transition: { duration: 0.6, ease: 'easeIn' } }}
+              transition={{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
+            />
+          )}
+        </AnimatePresence>
 
         {/* Wordmark — shows on load, auto-hides after 10s or on tap. */}
         <AnimatePresence>

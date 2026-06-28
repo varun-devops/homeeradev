@@ -3,60 +3,144 @@
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { addToCart } from '@/app/cart/actions';
+import { toggleFavourite } from '@/app/favourites/actions';
 
 /**
- * Add-to-cart button. Calls the server action; if the user isn't signed
- * in it redirects to login (preserving where they came from). Shows a
- * brief "Added ✓" confirmation on success.
+ * Product purchase block: quantity stepper, "Add to bag", "Buy now", and a
+ * favourite (save) toggle — all aligned in one cohesive control so the
+ * buying flow reads like a real store.
+ *
+ *  • Quantity +/- adjusts how many units are added.
+ *  • Add to bag → adds & shows "Added ✓", with a "View bag" follow-up.
+ *  • Buy now → adds then goes straight to /checkout.
+ *  • Save (heart) → toggles favourite.
+ * Guests are sent to login (returning to this product afterwards).
  */
-export default function AddToCart({ productId }: { productId: string }) {
+export default function AddToCart({
+  productId,
+  favourited = false,
+}: {
+  productId: string;
+  favourited?: boolean;
+}) {
   const router = useRouter();
-  const [pending, startTransition] = useTransition();
-  const [done, setDone] = useState(false);
+  const [pending, start] = useTransition();
+  const [qty, setQty] = useState(1);
+  const [added, setAdded] = useState(false);
+  const [fav, setFav] = useState(favourited);
   const [err, setErr] = useState<string | null>(null);
 
-  const onAdd = () => {
+  const goLogin = () =>
+    router.push(`/auth/login?next=${encodeURIComponent(location.pathname)}`);
+
+  const add = (then?: () => void) => {
     setErr(null);
-    startTransition(async () => {
-      const res = await addToCart(productId, 1);
+    start(async () => {
+      const res = await addToCart(productId, qty);
       if (res.ok) {
-        setDone(true);
-        setTimeout(() => setDone(false), 2000);
+        setAdded(true);
+        router.refresh();
+        then?.();
       } else if (res.reason === 'auth') {
-        router.push(`/auth/login?next=${encodeURIComponent(location.pathname)}`);
+        goLogin();
       } else {
-        setErr(res.message ?? 'Could not add to cart');
+        setErr(res.message ?? 'Could not add to bag');
+      }
+    });
+  };
+
+  const buyNow = () => add(() => router.push('/checkout'));
+
+  const toggleFav = () => {
+    const next = !fav;
+    setFav(next);
+    start(async () => {
+      const res = await toggleFavourite(productId);
+      if (!res.ok) {
+        setFav(!next);
+        if (res.reason === 'auth') goLogin();
+      } else {
+        setFav(res.favourited ?? next);
       }
     });
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-      <button
-        type="button"
-        data-hover
-        onClick={onAdd}
-        disabled={pending}
-        style={{
-          padding: '1rem 2rem',
-          borderRadius: 999,
-          background: done ? 'var(--gold)' : 'var(--ink)',
-          color: done ? '#0e0e0e' : 'var(--bg)',
-          fontSize: '0.82rem',
-          letterSpacing: '0.18em',
-          textTransform: 'uppercase',
-          border: 'none',
-          cursor: pending ? 'wait' : 'pointer',
-          opacity: pending ? 0.7 : 1,
-          transition: 'background 240ms ease, color 240ms ease',
-        }}
-      >
-        {done ? 'Added ✓' : pending ? 'Adding…' : 'Add to bag'}
-      </button>
-      {err && <p style={{ color: '#e08a8a', fontSize: '0.82rem' }}>{err}</p>}
-      <p style={{ fontSize: '0.82rem', color: 'var(--ink-soft)' }}>
-        Secure checkout with Razorpay.
-      </p>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      {/* Quantity + Save, same row, aligned */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+        <div style={stepper}>
+          <button type="button" aria-label="Decrease quantity" onClick={() => setQty((q) => Math.max(1, q - 1))} style={stepBtn}>−</button>
+          <span style={{ minWidth: 28, textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{qty}</span>
+          <button type="button" aria-label="Increase quantity" onClick={() => setQty((q) => Math.min(99, q + 1))} style={stepBtn}>+</button>
+        </div>
+
+        <button
+          type="button"
+          onClick={toggleFav}
+          disabled={pending}
+          aria-pressed={fav}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: '0.5rem', height: 48,
+            padding: '0 1.25rem', borderRadius: 999, background: 'transparent',
+            border: '1px solid var(--line-strong)', color: fav ? 'var(--gold)' : 'var(--ink)',
+            fontSize: '0.78rem', letterSpacing: '0.14em', textTransform: 'uppercase', cursor: 'pointer',
+          }}
+        >
+          <Heart filled={fav} /> {fav ? 'Saved' : 'Save'}
+        </button>
+      </div>
+
+      {/* Primary actions */}
+      <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+        <button
+          type="button"
+          onClick={() => add()}
+          disabled={pending}
+          data-hover
+          style={{ ...actionBtn, flex: '1 1 180px', background: added ? 'var(--gold)' : 'transparent', color: added ? '#0e0e0e' : 'var(--ink)', border: '1px solid var(--line-strong)' }}
+        >
+          {added ? 'Added ✓' : pending ? 'Adding…' : 'Add to bag'}
+        </button>
+        <button
+          type="button"
+          onClick={buyNow}
+          disabled={pending}
+          data-hover
+          style={{ ...actionBtn, flex: '1 1 180px', background: 'var(--ink)', color: 'var(--bg)', border: 'none' }}
+        >
+          Buy now
+        </button>
+      </div>
+
+      {added && (
+        <button type="button" onClick={() => router.push('/cart')} style={{ alignSelf: 'flex-start', background: 'none', border: 'none', color: 'var(--gold)', fontSize: '0.8rem', letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer', padding: 0 }}>
+          View bag →
+        </button>
+      )}
+      {err && <p style={{ color: '#e08a8a', fontSize: '0.82rem', margin: 0 }}>{err}</p>}
+      <p style={{ fontSize: '0.8rem', color: 'var(--ink-soft)', margin: 0 }}>Secure checkout with Razorpay.</p>
     </div>
   );
 }
+
+function Heart({ filled }: { filled: boolean }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill={filled ? 'var(--gold)' : 'none'} stroke={filled ? 'var(--gold)' : 'currentColor'} strokeWidth="1.6" aria-hidden="true">
+      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+    </svg>
+  );
+}
+
+const stepper: React.CSSProperties = {
+  display: 'inline-flex', alignItems: 'center', gap: '0.25rem', height: 48,
+  border: '1px solid var(--line-strong)', borderRadius: 999, padding: '0 0.4rem',
+};
+const stepBtn: React.CSSProperties = {
+  width: 36, height: 36, borderRadius: '50%', border: 'none', background: 'transparent',
+  color: 'var(--ink)', fontSize: '1.25rem', lineHeight: 1, cursor: 'pointer',
+};
+const actionBtn: React.CSSProperties = {
+  height: 52, padding: '0 1.75rem', borderRadius: 999, fontSize: '0.82rem',
+  letterSpacing: '0.16em', textTransform: 'uppercase', cursor: 'pointer',
+};

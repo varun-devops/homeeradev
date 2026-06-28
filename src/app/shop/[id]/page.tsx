@@ -5,7 +5,6 @@ import { getProductBySlug, getAllProductSlugs, formatINR } from '@/lib/catalog';
 import { createClient } from '@/lib/supabase/server';
 import AddToCart from '@/components/AddToCart';
 import ProductGallery from '@/components/ProductGallery';
-import FavouriteButton from '@/components/FavouriteButton';
 
 export async function generateStaticParams() {
   const slugs = await getAllProductSlugs();
@@ -164,9 +163,8 @@ export default async function ProductPage({ params }: { params: { id: string } }
             </dl>
           )}
 
-          <div style={{ marginTop: '2rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
-            <AddToCart productId={p.id} />
-            <FavouriteButton productId={p.id} initial={isFav} />
+          <div style={{ marginTop: '2rem' }}>
+            <AddToCart productId={p.id} favourited={isFav} />
           </div>
         </div>
       </div>

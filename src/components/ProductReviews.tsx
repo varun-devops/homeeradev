@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { submitReview } from '@/app/shop/review-actions';
 import type { Review } from '@/lib/catalog';
+import AuthModal from '@/components/AuthModal';
 
 /** Read-only star row. */
 export function Stars({ value, size = 16 }: { value: number; size?: number }) {
@@ -43,6 +44,23 @@ export default function ProductReviews({ productId, slug, reviews, average, coun
   const [hover, setHover] = useState(0);
   const [body, setBody] = useState(myBody ?? '');
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  // The write form is revealed only once the user taps "Write a review"
+  // (or if they already have a review). Logged-out taps open the auth modal.
+  const [writing, setWriting] = useState(Boolean(myRating));
+  const [authOpen, setAuthOpen] = useState(false);
+
+  const onWriteClick = () => {
+    setMsg(null);
+    if (!signedIn) {
+      setAuthOpen(true);
+      return;
+    }
+    if (!canReview) {
+      setMsg({ ok: false, text: 'Only verified buyers can review this product.' });
+      return;
+    }
+    setWriting(true);
+  };
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,7 +69,7 @@ export default function ProductReviews({ productId, slug, reviews, average, coun
     start(async () => {
       const res = await submitReview({ productId, slug, rating, body });
       if (res.ok) { setMsg({ ok: true, text: 'Thanks for your review!' }); router.refresh(); }
-      else if (res.reason === 'auth') router.push(`/auth/login?next=/shop/${slug}`);
+      else if (res.reason === 'auth') { setWriting(false); setAuthOpen(true); }
       else setMsg({ ok: false, text: res.message ?? 'Could not submit review.' });
     });
   };
@@ -67,8 +85,8 @@ export default function ProductReviews({ productId, slug, reviews, average, coun
         )}
       </div>
 
-      {/* Write form — only for verified buyers */}
-      {canReview ? (
+      {/* Write form — shown once the user taps "Write a review" (and can). */}
+      {writing && canReview ? (
         <form onSubmit={submit} style={{ marginTop: '1.75rem', maxWidth: 560, display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
           <p style={{ margin: 0, fontSize: '0.78rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-soft)' }}>
             {myRating ? 'Update your review' : 'Rate this product'}
@@ -87,10 +105,25 @@ export default function ProductReviews({ productId, slug, reviews, average, coun
           </button>
         </form>
       ) : (
-        <p style={{ marginTop: '1.25rem', fontSize: '0.85rem', color: 'var(--ink-mute)' }}>
-          {signedIn ? 'Only verified buyers can review this product.' : 'Sign in and purchase to leave a review.'}
-        </p>
+        // Always-visible prompt: an empty star row + a "Write a review" button.
+        // Tapping it opens the auth modal when signed out.
+        <div style={{ marginTop: '1.75rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+          <Stars value={0} size={26} />
+          <button
+            type="button"
+            onClick={onWriteClick}
+            data-hover
+            style={{ padding: '0.7rem 1.6rem', borderRadius: 999, background: 'var(--ink)', color: 'var(--bg)', fontSize: '0.78rem', letterSpacing: '0.16em', textTransform: 'uppercase', border: 'none', cursor: 'pointer' }}
+          >
+            Write a review
+          </button>
+          {msg && !msg.ok && (
+            <span style={{ fontSize: '0.82rem', color: 'var(--ink-mute)' }}>{msg.text}</span>
+          )}
+        </div>
       )}
+
+      <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} onSuccess={() => router.refresh()} />
 
       {/* Review list */}
       {count > 0 && (

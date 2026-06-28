@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { motion } from 'framer-motion';
 
 /**
  * Single full-screen hero with an autoplaying, looping background video.
@@ -133,16 +134,46 @@ export default function HeroVideo() {
 
       <div className="heHero-inner">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img className="heHero-emblem" src="/favicon.png" alt="Home Era" />
-        <p className="heHero-word">Home Era · Since 1960</p>
-        <a href="/shop" data-hover className="heHero-cta">
+        <motion.img
+          className="heHero-emblem"
+          src="/favicon.png"
+          alt="Home Era"
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
+        />
+        <motion.p
+          className="heHero-word"
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1], delay: 0.25 }}
+        >
+          Home Era · Since 1960
+        </motion.p>
+        <motion.a
+          href="/shop"
+          data-hover
+          className="heHero-cta"
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1], delay: 0.4 }}
+        >
           Enter the shop
-        </a>
+        </motion.a>
       </div>
 
-      <span className="heHero-scroll" aria-hidden="true">
+      <motion.span
+        className="heHero-scroll"
+        aria-hidden="true"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1, y: [0, 6, 0] }}
+        transition={{
+          opacity: { duration: 0.8, delay: 0.8 },
+          y: { duration: 1.8, repeat: Infinity, ease: 'easeInOut' },
+        }}
+      >
         Scroll
-      </span>
+      </motion.span>
     </section>
   );
 }

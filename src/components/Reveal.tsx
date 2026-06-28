@@ -1,42 +1,51 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { motion, useReducedMotion, type Variants } from 'framer-motion';
 
 type Props = {
   children: React.ReactNode;
+  /** Stagger delay in ms (kept for API compatibility with old usages). */
   delay?: number;
+  /** Initial downward offset in px. */
   y?: number;
+  /** Which element to render. */
   as?: keyof JSX.IntrinsicElements;
+  className?: string;
+  style?: React.CSSProperties;
 };
 
-export default function Reveal({ children, delay = 0, y = 24, as: Tag = 'div' }: Props) {
-  const ref = useRef<HTMLElement>(null);
+/**
+ * Framer Motion scroll-reveal.
+ *
+ * Fades + rises into place the first time it scrolls into view (`whileInView`
+ * with `once`). Replaces the old IntersectionObserver/CSS implementation so all
+ * scroll animations run through Framer Motion — the site's single animation lib.
+ * Respects prefers-reduced-motion (renders with no movement).
+ */
+export default function Reveal({ children, delay = 0, y = 24, as = 'div', className, style }: Props) {
+  const reduce = useReducedMotion();
 
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    el.style.opacity = '0';
-    el.style.transform = `translateY(${y}px)`;
-    el.style.transition = `opacity 800ms cubic-bezier(0.16, 1, 0.3, 1) ${delay}ms, transform 1000ms cubic-bezier(0.16, 1, 0.3, 1) ${delay}ms`;
+  const variants: Variants = {
+    hidden: { opacity: 0, y: reduce ? 0 : y },
+    show: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: delay / 1000 },
+    },
+  };
 
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const e of entries) {
-          if (e.isIntersecting) {
-            (e.target as HTMLElement).style.opacity = '1';
-            (e.target as HTMLElement).style.transform = 'translateY(0)';
-            io.unobserve(e.target);
-          }
-        }
-      },
-      { threshold: 0.12, rootMargin: '0px 0px -10% 0px' },
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, [delay, y]);
+  const MotionTag = motion[as as 'div'];
 
   return (
-    // @ts-expect-error - dynamic tag ref typing
-    <Tag ref={ref}>{children}</Tag>
+    <MotionTag
+      className={className}
+      style={style}
+      variants={variants}
+      initial="hidden"
+      whileInView="show"
+      viewport={{ once: true, amount: 0.2, margin: '0px 0px -10% 0px' }}
+    >
+      {children}
+    </MotionTag>
   );
 }

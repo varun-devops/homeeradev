@@ -1,32 +1,34 @@
 'use client';
 
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { usePathname } from 'next/navigation';
 
 /**
  * Framer Motion page transition.
  *
- * Replaces the old GSAP curtain/wipe choreography with a single, simple
- * cross-fade keyed on the pathname. Next handles routing; Framer Motion owns
- * the fade in/out. `mode="wait"` lets the outgoing page finish fading before
- * the new one fades in, so there's no overlap flash.
+ * On every route change the `key` flips, which remounts the wrapper and
+ * replays its `initial → animate` enter animation (a soft fade + rise). We use
+ * a keyed remount rather than `AnimatePresence` exit, because in the Next App
+ * Router the router swaps children before an exit can run — so an enter-only
+ * transition is the reliable, always-visible choice.
  *
- * This is the ONLY route-level animation now — no GSAP, no link interception.
+ * Renders a plain <div> (not <main>) so pages that supply their own <main>
+ * landmark don't end up with an invalid nested <main>.
+ *
+ * This is the only route-level animation. Respects prefers-reduced-motion.
  */
 export default function PageTransition({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const reduce = useReducedMotion();
 
   return (
-    <AnimatePresence mode="wait" initial={false}>
-      <motion.main
-        key={pathname}
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -8 }}
-        transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-      >
-        {children}
-      </motion.main>
-    </AnimatePresence>
+    <motion.div
+      key={pathname}
+      initial={reduce ? false : { opacity: 0, y: 14 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+    >
+      {children}
+    </motion.div>
   );
 }

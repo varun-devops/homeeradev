@@ -40,6 +40,16 @@ export default async function EditProductPage({ params }: { params: { id: string
           gallery_urls: product.gallery_urls ?? [],
           video_url: product.video_url,
           is_active: product.is_active,
+          // migration-05 attributes
+          brand: product.brand ?? null,
+          style: product.style ?? null,
+          colors: product.colors ?? [],
+          sizes: product.sizes ?? [],
+          discount_percent: product.discount_percent ?? 0,
+          stock: product.stock ?? 0,
+          is_new: product.is_new ?? false,
+          customizable: product.customizable ?? false,
+          customization_note: product.customization_note ?? null,
         }}
         collections={collections.map((c) => ({ slug: c.slug, label: c.label }))}
         subCollections={subCollections.map((s) => ({ slug: s.slug, label: s.label, collection_slug: s.collection_slug }))}

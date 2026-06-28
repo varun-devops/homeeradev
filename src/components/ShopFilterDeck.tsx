@@ -12,12 +12,21 @@ const revealItem: Variants = {
   show: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] } },
 };
 
-// Price sort options shown inside an expanded collection.
-type SortMode = 'featured' | 'price-asc' | 'price-desc';
+// Sort options shown inside an expanded collection.
+type SortMode =
+  | 'featured'
+  | 'price-asc'
+  | 'price-desc'
+  | 'best-selling'
+  | 'newest'
+  | 'rating';
 const SORTS: { value: SortMode; label: string }[] = [
-  { value: 'featured', label: 'All' },
+  { value: 'featured', label: 'Popular' },
   { value: 'price-asc', label: 'Price: Low to High' },
   { value: 'price-desc', label: 'Price: High to Low' },
+  { value: 'best-selling', label: 'Best Selling' },
+  { value: 'newest', label: 'Newest' },
+  { value: 'rating', label: 'Customer Rating' },
 ];
 
 export type LiteProduct = {
@@ -25,11 +34,47 @@ export type LiteProduct = {
   slug: string;
   name: string;
   price: number;
+  effective_price: number;
   image_url: string | null;
   category_slug: string;
   sub_category: string;
   sub_category_slug: string;
   sku: string | null;
+  brand: string | null;
+  style: string | null;
+  material: string | null;
+  colors: string[];
+  sizes: string[];
+  discount_percent: number;
+  is_new: boolean;
+  in_stock: boolean;
+  rating: number;
+  review_count: number;
+};
+
+// Active filter state for the expanded collection grid.
+type Filters = {
+  brand: string | null;
+  color: string | null;
+  material: string | null;
+  size: string | null;
+  style: string | null;
+  inStockOnly: boolean;
+  onSaleOnly: boolean;
+  newOnly: boolean;
+  minRating: number; // 0 = any
+};
+
+const EMPTY_FILTERS: Filters = {
+  brand: null,
+  color: null,
+  material: null,
+  size: null,
+  style: null,
+  inStockOnly: false,
+  onSaleOnly: false,
+  newOnly: false,
+  minRating: 0,
 };
 
 export type Collection = {
@@ -58,19 +103,61 @@ export default function ShopCollectionDeck({ collections, products }: Props) {
   const [openSlug, setOpenSlug] = useState<string | null>(null);
   const [active, setActive] = useState(0);
   const [sort, setSort] = useState<SortMode>('featured');
+  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const reduce = useReducedMotion();
 
   const openCol = collections.find((c) => c.slug === openSlug) ?? null;
 
-  const productsFor = (catSlug: string) => {
+  // Distinct facet values present in the open collection (for filter chips).
+  const facetsFor = (catSlug: string) => {
     const items = products.filter((p) => p.category_slug === catSlug);
-    if (sort === 'price-asc') return [...items].sort((a, b) => a.price - b.price);
-    if (sort === 'price-desc') return [...items].sort((a, b) => b.price - a.price);
-    return items;
+    const uniq = (arr: (string | null)[]) =>
+      Array.from(new Set(arr.filter((x): x is string => Boolean(x)))).sort();
+    return {
+      brands: uniq(items.map((p) => p.brand)),
+      colors: uniq(items.flatMap((p) => p.colors)),
+      materials: uniq(items.map((p) => p.material)),
+      sizes: uniq(items.flatMap((p) => p.sizes)),
+      styles: uniq(items.map((p) => p.style)),
+    };
   };
 
+  const productsFor = (catSlug: string) => {
+    let items = products.filter((p) => p.category_slug === catSlug);
+
+    // ---- filters ----
+    if (filters.brand) items = items.filter((p) => p.brand === filters.brand);
+    if (filters.color) items = items.filter((p) => p.colors.includes(filters.color!));
+    if (filters.material) items = items.filter((p) => p.material === filters.material);
+    if (filters.size) items = items.filter((p) => p.sizes.includes(filters.size!));
+    if (filters.style) items = items.filter((p) => p.style === filters.style);
+    if (filters.inStockOnly) items = items.filter((p) => p.in_stock);
+    if (filters.onSaleOnly) items = items.filter((p) => p.discount_percent > 0);
+    if (filters.newOnly) items = items.filter((p) => p.is_new);
+    if (filters.minRating > 0) items = items.filter((p) => p.rating >= filters.minRating);
+
+    // ---- sorting ----
+    const by = [...items];
+    switch (sort) {
+      case 'price-asc':
+        return by.sort((a, b) => a.effective_price - b.effective_price);
+      case 'price-desc':
+        return by.sort((a, b) => b.effective_price - a.effective_price);
+      case 'best-selling':
+        return by.sort((a, b) => b.review_count - a.review_count);
+      case 'newest':
+        return by.sort((a, b) => Number(b.is_new) - Number(a.is_new));
+      case 'rating':
+        return by.sort((a, b) => b.rating - a.rating);
+      default:
+        return by;
+    }
+  };
+
+  // Reset sort + filters whenever a different collection opens.
   useEffect(() => {
     setSort('featured');
+    setFilters(EMPTY_FILTERS);
   }, [openSlug]);
 
   // Parallax + active-panel tracking — paused while expanded.
@@ -135,6 +222,7 @@ export default function ShopCollectionDeck({ collections, products }: Props) {
   };
 
   const items = openCol ? productsFor(openCol.slug) : [];
+  const facets = openCol ? facetsFor(openCol.slug) : null;
 
   return (
     <section ref={rootRef} aria-label="Shop collections" className="heShop">
@@ -258,19 +346,24 @@ export default function ShopCollectionDeck({ collections, products }: Props) {
                 <h2 className="heShop-overlayTitle">{openCol.label}</h2>
               </motion.div>
 
-              {items.length > 0 && (
+              {facets && (
                 <motion.div
                   className="heShop-filterRow"
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.18 }}
                 >
+                  <FilterBar facets={facets} filters={filters} setFilters={setFilters} />
                   <SortDropdown value={sort} onChange={setSort} />
                 </motion.div>
               )}
 
+              {items.length > 0 && (
+                <p className="heShop-resultCount">{items.length} result{items.length !== 1 ? 's' : ''}</p>
+              )}
+
               {items.length === 0 ? (
-                <div className="heShop-empty">No pieces in this collection yet.</div>
+                <div className="heShop-empty">No pieces match these filters.</div>
               ) : (
                 <motion.div
                   className="heShop-grid"
@@ -405,6 +498,97 @@ function SortDropdown({
 }
 
 // ──────────────────────────────────────────────────────────────────
+function FilterBar({
+  facets,
+  filters,
+  setFilters,
+}: {
+  facets: { brands: string[]; colors: string[]; materials: string[]; sizes: string[]; styles: string[] };
+  filters: Filters;
+  setFilters: React.Dispatch<React.SetStateAction<Filters>>;
+}) {
+  const set = <K extends keyof Filters>(k: K, v: Filters[K]) => setFilters((f) => ({ ...f, [k]: v }));
+  const toggle = (k: 'inStockOnly' | 'onSaleOnly' | 'newOnly') => setFilters((f) => ({ ...f, [k]: !f[k] }));
+
+  const activeCount =
+    (filters.brand ? 1 : 0) + (filters.color ? 1 : 0) + (filters.material ? 1 : 0) +
+    (filters.size ? 1 : 0) + (filters.style ? 1 : 0) + (filters.inStockOnly ? 1 : 0) +
+    (filters.onSaleOnly ? 1 : 0) + (filters.newOnly ? 1 : 0) + (filters.minRating > 0 ? 1 : 0);
+
+  return (
+    <div className="heFilter">
+      {facets.brands.length > 0 && (
+        <FacetSelect label="Brand" value={filters.brand} options={facets.brands} onChange={(v) => set('brand', v)} />
+      )}
+      {facets.colors.length > 0 && (
+        <FacetSelect label="Color" value={filters.color} options={facets.colors} onChange={(v) => set('color', v)} />
+      )}
+      {facets.materials.length > 0 && (
+        <FacetSelect label="Material" value={filters.material} options={facets.materials} onChange={(v) => set('material', v)} />
+      )}
+      {facets.sizes.length > 0 && (
+        <FacetSelect label="Size" value={filters.size} options={facets.sizes} onChange={(v) => set('size', v)} />
+      )}
+      {facets.styles.length > 0 && (
+        <FacetSelect label="Style" value={filters.style} options={facets.styles} onChange={(v) => set('style', v)} />
+      )}
+
+      <FacetSelect
+        label="Rating"
+        value={filters.minRating > 0 ? `${filters.minRating}★ & up` : null}
+        options={['4★ & up', '3★ & up', '2★ & up']}
+        onChange={(v) => set('minRating', v ? Number(v[0]) : 0)}
+      />
+
+      <button type="button" className="heFilter-chip" data-on={filters.inStockOnly} onClick={() => toggle('inStockOnly')}>
+        In stock
+      </button>
+      <button type="button" className="heFilter-chip" data-on={filters.onSaleOnly} onClick={() => toggle('onSaleOnly')}>
+        Discount
+      </button>
+      <button type="button" className="heFilter-chip" data-on={filters.newOnly} onClick={() => toggle('newOnly')}>
+        New arrival
+      </button>
+
+      {activeCount > 0 && (
+        <button type="button" className="heFilter-clear" onClick={() => setFilters(EMPTY_FILTERS)}>
+          Clear ({activeCount})
+        </button>
+      )}
+    </div>
+  );
+}
+
+/** A compact native <select> styled as a filter chip. */
+function FacetSelect({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string | null;
+  options: string[];
+  onChange: (v: string | null) => void;
+}) {
+  return (
+    <label className="heFilter-sel" data-on={Boolean(value)}>
+      <span>{value ?? label}</span>
+      <select
+        value={value ?? ''}
+        onChange={(e) => onChange(e.target.value || null)}
+        aria-label={label}
+      >
+        <option value="">{label}: All</option>
+        {options.map((o) => (
+          <option key={o} value={o}>{o}</option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────
 const styles = `
   .heShop { position: relative; width: 100%; }
   .heShop-panel {
@@ -494,7 +678,41 @@ const styles = `
   }
   .heShop-back:hover { background: rgba(212,181,116,0.16); border-color: var(--gold); }
 
-  .heShop-filterRow { display: flex; justify-content: center; margin: 0 auto clamp(2.5rem, 6vh, 3.5rem); }
+  .heShop-filterRow {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
+    gap: 0.6rem; margin: 0 auto 1rem; max-width: 1100px;
+  }
+  .heShop-resultCount {
+    text-align: center; color: var(--ink-soft); font-size: 0.74rem;
+    letter-spacing: 0.14em; text-transform: uppercase; margin: 0 0 clamp(1.5rem, 4vh, 2.5rem);
+  }
+  .heFilter { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.6rem; }
+  .heFilter-sel {
+    position: relative; display: inline-flex; align-items: center;
+    border: 1px solid var(--line-strong); border-radius: 999px;
+    padding: 0.5rem 1rem; cursor: pointer; background: rgba(0,0,0,0.3);
+    font-size: 0.74rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink);
+    transition: border-color 200ms var(--ease-out);
+  }
+  .heFilter-sel:hover { border-color: var(--gold); }
+  .heFilter-sel[data-on='true'] { border-color: var(--gold); color: var(--gold); }
+  .heFilter-sel select {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    opacity: 0; cursor: pointer; border: none;
+  }
+  .heFilter-chip {
+    border: 1px solid var(--line-strong); border-radius: 999px;
+    padding: 0.5rem 1rem; cursor: pointer; background: rgba(0,0,0,0.3);
+    font-size: 0.74rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink);
+    transition: border-color 200ms var(--ease-out), background 200ms var(--ease-out), color 200ms var(--ease-out);
+  }
+  .heFilter-chip:hover { border-color: var(--gold); }
+  .heFilter-chip[data-on='true'] { border-color: var(--gold); color: var(--gold); background: rgba(212,181,116,0.12); }
+  .heFilter-clear {
+    border: none; background: none; cursor: pointer; color: var(--ink-soft);
+    font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase;
+    border-bottom: 1px solid var(--ink-soft); padding-bottom: 1px;
+  }
   .heSort { position: relative; display: inline-flex; align-items: center; gap: 0.75rem; }
   .heSort-label { font-size: 0.7rem; letter-spacing: 0.28em; text-transform: uppercase; color: var(--ink-soft); }
   .heSort-toggle {

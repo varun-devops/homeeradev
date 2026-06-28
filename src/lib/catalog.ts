@@ -29,6 +29,17 @@ export type DBProduct = {
   gallery_urls: string[] | null;
   video_url: string | null;
   is_active: boolean;
+  // Attributes for storefront filters + product options (migration-05).
+  // Optional so the app keeps working before the migration is applied.
+  brand?: string | null;
+  style?: string | null;
+  colors?: string[] | null;
+  sizes?: string[] | null;
+  discount_percent?: number | null;
+  is_new?: boolean | null;
+  stock?: number | null;
+  customizable?: boolean | null;
+  customization_note?: string | null;
 };
 
 export type CollectionGroup = {

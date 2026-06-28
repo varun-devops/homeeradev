@@ -1,6 +1,8 @@
+import Link from 'next/link';
 import { createServiceClient } from '@/lib/supabase/server';
 import { formatINR } from '@/lib/format';
 import OrderStatusControl from '@/components/admin/OrderStatusControl';
+import OrderStatusSteps from '@/components/OrderStatusSteps';
 
 export const metadata = { title: 'Orders' };
 export const dynamic = 'force-dynamic';
@@ -48,7 +50,12 @@ export default async function AdminOrdersPage() {
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap' }}>
                 <div>
-                  <p style={{ margin: 0, fontWeight: 500 }}>{o.full_name || o.email || 'Guest'}</p>
+                  <Link href={`/admin/orders/${o.id}`} data-hover style={{ display: 'inline-block' }}>
+                    <p style={{ margin: 0, fontWeight: 500 }}>
+                      {o.full_name || o.email || 'Guest'}
+                      <span style={{ color: 'var(--ink-mute)', fontWeight: 400 }}> · #{o.id.slice(0, 8)} →</span>
+                    </p>
+                  </Link>
                   <p style={{ margin: '0.2rem 0 0', fontSize: '0.8rem', color: 'var(--ink-soft)' }}>
                     {o.email}
                     {o.phone ? ` · ${o.phone}` : ''}
@@ -64,6 +71,10 @@ export default async function AdminOrdersPage() {
                   </p>
                   <OrderStatusControl orderId={o.id} status={o.status} />
                 </div>
+              </div>
+
+              <div style={{ margin: '1.25rem 0 0.25rem' }}>
+                <OrderStatusSteps status={o.status} size="sm" />
               </div>
 
               {o.order_items?.length > 0 && (

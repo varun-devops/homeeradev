@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { formatINR } from '@/lib/format';
 import ProfileForm from '@/components/ProfileForm';
+import OrderStatusSteps from '@/components/OrderStatusSteps';
 
 export const metadata: Metadata = { title: 'Your profile' };
 export const dynamic = 'force-dynamic';
@@ -91,6 +92,9 @@ export default async function ProfilePage() {
                     >
                       {o.status}
                     </span>
+                  </div>
+                  <div style={{ margin: '1rem 0 0.25rem' }}>
+                    <OrderStatusSteps status={o.status} size="sm" />
                   </div>
                   <p style={{ margin: '0.6rem 0 0', fontSize: '0.85rem', color: 'var(--ink-soft)' }}>
                     {o.order_items.map((it) => `${it.quantity}× ${it.name}`).join(', ')}

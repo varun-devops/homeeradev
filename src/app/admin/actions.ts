@@ -81,6 +81,16 @@ export type ProductInput = {
   gallery_urls?: string[];
   video_url?: string | null;
   is_active?: boolean;
+  // migration-05 attributes
+  brand?: string | null;
+  style?: string | null;
+  colors?: string[];
+  sizes?: string[];
+  discount_percent?: number | null;
+  is_new?: boolean;
+  stock?: number | null;
+  customizable?: boolean;
+  customization_note?: string | null;
 };
 
 function buildRow(input: ProductInput) {
@@ -105,6 +115,16 @@ function buildRow(input: ProductInput) {
     gallery_urls: input.gallery_urls ?? [],
     video_url: input.video_url ?? null,
     is_active: input.is_active ?? true,
+    // migration-05 attributes
+    brand: input.brand?.trim() || null,
+    style: input.style?.trim() || null,
+    colors: input.colors ?? [],
+    sizes: input.sizes ?? [],
+    discount_percent: Math.max(0, Math.min(90, Math.round(input.discount_percent || 0))),
+    is_new: input.is_new ?? false,
+    stock: Math.max(0, Math.round(input.stock || 0)),
+    customizable: input.customizable ?? false,
+    customization_note: input.customization_note?.trim() || null,
   };
 }
 

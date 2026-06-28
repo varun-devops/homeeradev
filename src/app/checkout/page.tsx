@@ -7,6 +7,7 @@ export const metadata: Metadata = { title: 'Checkout', robots: { index: false } 
 export const dynamic = 'force-dynamic';
 
 type CartRow = {
+  id: string;
   quantity: number;
   product: { id: string; name: string; price: number; image_url: string | null } | null;
 };
@@ -20,7 +21,7 @@ export default async function CheckoutPage() {
 
   const { data } = await sb
     .from('cart_items')
-    .select('quantity, product:products(id, name, price, image_url)')
+    .select('id, quantity, product:products(id, name, price, image_url)')
     .eq('user_id', user.id)
     .order('created_at', { ascending: true });
 
@@ -29,6 +30,7 @@ export default async function CheckoutPage() {
     .filter((r) => r.product)
     .map((r) => ({
       id: r.product!.id,
+      cartItemId: r.id,
       name: r.product!.name,
       price: r.product!.price,
       image_url: r.product!.image_url,

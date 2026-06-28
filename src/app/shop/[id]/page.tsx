@@ -5,6 +5,7 @@ import { getProductBySlug, getAllProductSlugs, getReviews, formatINR } from '@/l
 import { createClient } from '@/lib/supabase/server';
 import AddToCart from '@/components/AddToCart';
 import ProductGallery from '@/components/ProductGallery';
+import ProductOptions from '@/components/ProductOptions';
 import ProductReviews, { Stars } from '@/components/ProductReviews';
 
 export async function generateStaticParams() {
@@ -139,15 +140,42 @@ export default async function ProductPage({ params }: { params: { id: string } }
               <Stars value={average} size={15} /> {average.toFixed(1)} ({count})
             </div>
           )}
+          {(p.is_new || (p.discount_percent ?? 0) > 0) && (
+            <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              {p.is_new && (
+                <span style={{ fontSize: '0.66rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--gold)', border: '1px solid var(--gold)', borderRadius: 999, padding: '0.25rem 0.6rem' }}>
+                  New arrival
+                </span>
+              )}
+              {(p.discount_percent ?? 0) > 0 && (
+                <span style={{ fontSize: '0.66rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: '#0e0e0e', background: 'var(--gold)', borderRadius: 999, padding: '0.25rem 0.6rem', fontWeight: 700 }}>
+                  {p.discount_percent}% off
+                </span>
+              )}
+            </div>
+          )}
+
           <div
             style={{
               marginTop: '1.25rem',
               fontSize: '1.5rem',
               fontVariantNumeric: 'tabular-nums',
               color: 'var(--gold)',
+              display: 'flex',
+              alignItems: 'baseline',
+              gap: '0.75rem',
             }}
           >
-            {formatINR(p.price)}
+            {(p.discount_percent ?? 0) > 0 ? (
+              <>
+                {formatINR(Math.round(p.price * (1 - (p.discount_percent ?? 0) / 100)))}
+                <span style={{ fontSize: '1rem', color: 'var(--ink-mute)', textDecoration: 'line-through' }}>
+                  {formatINR(p.price)}
+                </span>
+              </>
+            ) : (
+              formatINR(p.price)
+            )}
           </div>
 
           {(p.sku || p.material || p.size || p.variant) && (
@@ -187,6 +215,14 @@ export default async function ProductPage({ params }: { params: { id: string } }
               )}
             </dl>
           )}
+
+          <ProductOptions
+            colors={p.colors ?? []}
+            sizes={p.sizes ?? []}
+            material={p.material}
+            customizable={p.customizable ?? false}
+            customizationNote={p.customization_note}
+          />
 
           <div style={{ marginTop: '2rem' }}>
             <AddToCart productId={p.id} favourited={isFav} initialQty={cartQty} />

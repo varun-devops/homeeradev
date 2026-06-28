@@ -1,11 +1,14 @@
 'use client';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import { formatINR } from '@/lib/format';
+import { removeFromCart } from '@/app/cart/actions';
 
 type Item = {
   id: string;
+  cartItemId: string;
   name: string;
   price: number;
   image_url: string | null;
@@ -45,9 +48,18 @@ export default function CheckoutClient({ items, total, defaults }: Props) {
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [removing, startRemove] = useTransition();
 
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  // Remove an item from the cart. When the cart empties, the server page
+  // redirects back to /cart, which router.refresh() picks up.
+  const remove = (cartItemId: string) =>
+    startRemove(async () => {
+      await removeFromCart(cartItemId);
+      router.refresh();
+    });
 
   const pay = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -171,9 +183,9 @@ export default function CheckoutClient({ items, total, defaults }: Props) {
           <h2 style={{ fontSize: '1.1rem', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 0 }}>
             Your order
           </h2>
-          <ul style={{ listStyle: 'none', margin: '1.25rem 0', padding: 0, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <ul style={{ listStyle: 'none', margin: '1.25rem 0', padding: 0, display: 'flex', flexDirection: 'column', gap: '1rem', opacity: removing ? 0.6 : 1, transition: 'opacity 200ms ease' }}>
             {items.map((it) => (
-              <li key={it.id} style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+              <li key={it.cartItemId} style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                 <div style={{ width: 54, height: 66, borderRadius: 5, overflow: 'hidden', background: '#15140f', flexShrink: 0 }}>
                   {it.image_url && (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -187,9 +199,48 @@ export default function CheckoutClient({ items, total, defaults }: Props) {
                 <span style={{ color: 'var(--gold)', fontVariantNumeric: 'tabular-nums' }}>
                   {formatINR(it.price * it.quantity)}
                 </span>
+                <button
+                  type="button"
+                  onClick={() => remove(it.cartItemId)}
+                  disabled={removing}
+                  aria-label={`Remove ${it.name}`}
+                  title="Remove"
+                  style={{
+                    flexShrink: 0,
+                    width: 28,
+                    height: 28,
+                    display: 'grid',
+                    placeItems: 'center',
+                    borderRadius: 999,
+                    border: '1px solid var(--line-strong)',
+                    background: 'transparent',
+                    color: 'var(--ink-soft)',
+                    cursor: removing ? 'wait' : 'pointer',
+                    fontSize: '1rem',
+                    lineHeight: 1,
+                  }}
+                >
+                  ×
+                </button>
               </li>
             ))}
           </ul>
+
+          <Link
+            href="/shop"
+            data-hover
+            style={{
+              display: 'inline-block',
+              fontSize: '0.78rem',
+              letterSpacing: '0.16em',
+              textTransform: 'uppercase',
+              color: 'var(--ink)',
+              borderBottom: '1px solid var(--ink)',
+              paddingBottom: '0.2rem',
+            }}
+          >
+            + Add more items
+          </Link>
           <div
             style={{
               borderTop: '1px solid var(--line)',

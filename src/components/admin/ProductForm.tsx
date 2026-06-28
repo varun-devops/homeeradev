@@ -31,6 +31,16 @@ export default function ProductForm({ product, collections, subCollections }: Pr
     weight_kg: product?.weight_kg ?? ('' as number | ''),
     price: product?.price ?? ('' as number | ''),
     is_active: product?.is_active ?? true,
+    // migration-05 attributes
+    brand: product?.brand ?? '',
+    style: product?.style ?? '',
+    colors: (product?.colors ?? []).join(', '),
+    sizes: (product?.sizes ?? []).join(', '),
+    discount_percent: product?.discount_percent ?? ('' as number | ''),
+    stock: product?.stock ?? ('' as number | ''),
+    is_new: product?.is_new ?? false,
+    customizable: product?.customizable ?? false,
+    customization_note: product?.customization_note ?? '',
   });
   const [mainImage, setMainImage] = useState<string[]>(product?.image_url ? [product.image_url] : []);
   const [gallery, setGallery] = useState<string[]>(product?.gallery_urls ?? []);
@@ -63,6 +73,16 @@ export default function ProductForm({ product, collections, subCollections }: Pr
       gallery_urls: gallery,
       video_url: video[0] ?? null,
       is_active: f.is_active,
+      // migration-05 attributes
+      brand: f.brand || null,
+      style: f.style || null,
+      colors: splitList(f.colors),
+      sizes: splitList(f.sizes),
+      discount_percent: f.discount_percent === '' ? 0 : Number(f.discount_percent),
+      stock: f.stock === '' ? 0 : Number(f.stock),
+      is_new: f.is_new,
+      customizable: f.customizable,
+      customization_note: f.customization_note || null,
     };
     start(async () => {
       const res = isEdit ? await updateProduct(input) : await createProduct(input);
@@ -128,6 +148,38 @@ export default function ProductForm({ product, collections, subCollections }: Pr
         <Field label="Size (cm)"><input value={f.size} onChange={set('size')} style={input} /></Field>
       </div>
 
+      {/* Storefront attributes (filters + product options) */}
+      <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        <p style={{ margin: 0, fontSize: '0.72rem', letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--ink-soft)' }}>
+          Attributes &amp; options
+        </p>
+        <div style={grid3}>
+          <Field label="Brand"><input value={f.brand} onChange={set('brand')} style={input} /></Field>
+          <Field label="Style"><input value={f.style} onChange={set('style')} style={input} /></Field>
+          <Field label="Stock (units)"><input type="number" min="0" value={f.stock} onChange={set('stock')} style={input} /></Field>
+        </div>
+        <div style={grid2}>
+          <Field label="Colors (comma-separated)"><input value={f.colors} onChange={set('colors')} placeholder="Gold, Silver, Antique" style={input} /></Field>
+          <Field label="Sizes (comma-separated)"><input value={f.sizes} onChange={set('sizes')} placeholder="S, M, L / 10, 20, 30 cm" style={input} /></Field>
+        </div>
+        <div style={grid3}>
+          <Field label="Discount %"><input type="number" min="0" max="90" value={f.discount_percent} onChange={set('discount_percent')} style={input} /></Field>
+        </div>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.85rem', color: 'var(--ink-soft)' }}>
+          <input type="checkbox" checked={f.is_new} onChange={(e) => setF((s) => ({ ...s, is_new: e.target.checked }))} />
+          Mark as New arrival
+        </label>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.85rem', color: 'var(--ink-soft)' }}>
+          <input type="checkbox" checked={f.customizable} onChange={(e) => setF((s) => ({ ...s, customizable: e.target.checked }))} />
+          Customization available
+        </label>
+        {f.customizable && (
+          <Field label="Customization note (shown to customer)">
+            <textarea value={f.customization_note} onChange={set('customization_note')} rows={2} style={{ ...input, resize: 'vertical' }} />
+          </Field>
+        )}
+      </div>
+
       <Field label="Description">
         <textarea value={f.description} onChange={set('description')} rows={3} style={{ ...input, resize: 'vertical' }} />
       </Field>
@@ -158,6 +210,18 @@ export default function ProductForm({ product, collections, subCollections }: Pr
         )}
       </div>
     </form>
+  );
+}
+
+/** Parse a comma-separated input into a trimmed, de-duped string array. */
+function splitList(s: string): string[] {
+  return Array.from(
+    new Set(
+      s
+        .split(',')
+        .map((x) => x.trim())
+        .filter(Boolean),
+    ),
   );
 }
 

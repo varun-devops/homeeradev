@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { createServiceClient } from '@/lib/supabase/server';
 
 export const metadata = { title: 'Users' };
@@ -60,7 +61,11 @@ export default async function AdminUsersPage() {
               const ord = ordersByUser.get(u.id) ?? { total: 0, paid: 0 };
               return (
                 <tr key={u.id} style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
-                  <td style={td}>{u.full_name || '—'}</td>
+                  <td style={td}>
+                    <Link href={`/admin/users/${u.id}`} data-hover style={{ borderBottom: '1px solid var(--line-strong)' }}>
+                      {u.full_name || u.email || '—'} →
+                    </Link>
+                  </td>
                   <td style={{ ...td, color: 'var(--ink-soft)' }}>{u.email}</td>
                   <td style={{ ...td, color: 'var(--ink-mute)' }}>
                     {new Date(u.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}

@@ -1,32 +1,52 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 
 /**
  * Single full-screen hero with an autoplaying, looping background video.
  *
- * The clip lives on Cloudinary (folder `homeera/hero`, public id `clip`). It is
- * delivered with `q_auto,f_auto` so the browser gets a well-compressed,
- * fast-starting file. A poster frame + tonal gradient show instantly while the
- * video streams in, and the video fades in once it can play so there's no flash
- * of an empty/black box on slower connections.
+ * Two clips live on Cloudinary (folder `homeera/hero`):
+ *   • clip  — landscape, shown on desktop / laptop
+ *   • slim  — portrait, shown on tablet & mobile (fits tall screens better)
+ * We pick the source from a media query after mount so only one video ever
+ * loads. Delivered with `q_auto,f_auto` for fast, well-compressed streaming.
  *
- * Fully responsive: the section is sized in svh/dvh units, the video covers via
- * object-fit, and all typography/spacing is fluid (clamp), so it works from
- * small phones up to large desktops. `muted + playsInline + autoPlay` is the
- * only combination browsers allow to start without a user gesture.
+ * The wordmark ("HOME ERA / SINCE 1960") shows on load, then auto-hides after
+ * 10s with a fade-out — and hides immediately if the visitor taps/clicks the
+ * screen. The video keeps playing underneath.
+ *
+ * Fully responsive: sized in svh/dvh, video covers via object-fit, fluid type.
  */
 
 const CLOUD_NAME = 'dcdchbc8p';
+const base = (id: string) =>
+  `https://res.cloudinary.com/${CLOUD_NAME}/video/upload/q_auto,f_auto/homeera/hero/${id}.mp4`;
 
-/** Cloudinary delivery URL with auto format + quality for fast streaming. */
-const CLIP_URL = `https://res.cloudinary.com/${CLOUD_NAME}/video/upload/q_auto,f_auto/homeera/hero/clip.mp4`;
+const DESKTOP_URL = base('clip');
+const MOBILE_URL = base('slim');
+
+/** How long the wordmark stays before auto-hiding. */
+const REVEAL_MS = 10000;
 
 export default function HeroVideo() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [ready, setReady] = useState(false);
+  const [showWord, setShowWord] = useState(true);
+  // Decide the source from the viewport. Default to desktop for SSR; corrected
+  // on mount before paint so phones/tablets get the portrait `slim` clip.
+  const [src, setSrc] = useState(DESKTOP_URL);
 
+  // Pick the right clip for this device (≤ 1024px → mobile/tablet portrait).
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 1024px)');
+    const apply = () => setSrc(mq.matches ? MOBILE_URL : DESKTOP_URL);
+    apply();
+    mq.addEventListener('change', apply);
+    return () => mq.removeEventListener('change', apply);
+  }, []);
+
+  // Autoplay handling: fade the video in once it can play.
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
@@ -38,32 +58,38 @@ export default function HeroVideo() {
     if (v.readyState >= 3) onCanPlay();
     v.addEventListener('canplay', onCanPlay);
     return () => v.removeEventListener('canplay', onCanPlay);
+  }, [src]);
+
+  // Auto-hide the wordmark after REVEAL_MS.
+  useEffect(() => {
+    const t = setTimeout(() => setShowWord(false), REVEAL_MS);
+    return () => clearTimeout(t);
   }, []);
 
   return (
-    <section className="heHero" aria-label="Home Era">
+    <section
+      className="heHero"
+      aria-label="Home Era"
+      onClick={() => setShowWord(false)}
+    >
       <style>{`
         .heHero {
           position: relative;
           width: 100%;
           /* Exactly one viewport tall and always fully visible on mobile.
-             Fallback chain: vh (universal) → dvh (dynamic) → svh (small —
-             the guaranteed-visible area with the toolbar shown). Using svh
-             last means the hero never gets hidden behind mobile browser UI,
-             so there's no gap or partial scroll. */
+             Fallback chain: vh → dvh → svh (guaranteed-visible area). */
           height: 100vh;
           height: 100dvh;
           height: 100svh;
           overflow: hidden;
           display: grid;
           place-items: center;
-          /* tonal fallback shown before the video paints */
+          cursor: pointer;
           background: radial-gradient(120% 120% at 50% 30%, #1a1916, #0b0b0a 70%);
         }
         .heHero-video {
           position: absolute; inset: 0;
           width: 100%; height: 100%;
-          /* cover the whole box, keep the subject centred, no letterboxing */
           object-fit: cover;
           object-position: center center;
           opacity: 0;
@@ -74,53 +100,56 @@ export default function HeroVideo() {
         .heHero-scrim {
           position: absolute; inset: 0; z-index: 1; pointer-events: none;
           background:
-            radial-gradient(ellipse 90% 70% at 50% 45%, transparent 40%, rgba(0,0,0,0.55) 100%),
-            linear-gradient(180deg, rgba(0,0,0,0.45), transparent 30%, transparent 60%, rgba(0,0,0,0.6));
+            radial-gradient(ellipse 90% 70% at 50% 45%, transparent 40%, rgba(0,0,0,0.5) 100%),
+            linear-gradient(180deg, rgba(0,0,0,0.4), transparent 35%, transparent 60%, rgba(0,0,0,0.55));
         }
         .heHero-inner {
           position: relative; z-index: 2;
           text-align: center;
-          width: min(92vw, 720px);
+          width: min(92vw, 760px);
           padding: clamp(1rem, 5vw, 2rem);
           display: flex; flex-direction: column; align-items: center;
-          gap: clamp(1rem, 3vh, 2rem);
         }
-        .heHero-emblem {
-          width: clamp(84px, 18vw, 168px);
-          height: auto;
-          filter: drop-shadow(0 6px 30px rgba(0,0,0,0.5));
-        }
-        .heHero-word {
+        /* Wordmark */
+        .heHero-mark {
           font-family: var(--font-display, Georgia, serif);
-          font-style: italic; font-weight: 500;
-          font-size: clamp(1.15rem, 4.5vw, 2.1rem);
-          letter-spacing: clamp(0.18em, 1vw, 0.34em); text-transform: uppercase;
+          font-weight: 500;
+          font-size: clamp(2.4rem, 11vw, 6rem);
+          letter-spacing: clamp(0.2em, 2vw, 0.5em);
+          text-transform: uppercase;
           color: var(--ink, #f2ede3);
-          text-shadow: 0 2px 24px rgba(0,0,0,0.6);
+          text-shadow: 0 4px 40px rgba(0,0,0,0.6);
           margin: 0;
-          line-height: 1.3;
+          line-height: 1;
+          /* compensate the trailing letter-spacing so it stays optically centred */
+          text-indent: clamp(0.2em, 2vw, 0.5em);
         }
-        /* Top CTA — sits just below the top edge, centred, underlined. */
-        .heHero-topcta {
-          position: absolute;
-          top: max(env(safe-area-inset-top), clamp(1.5rem, 5vh, 3rem));
-          left: 50%; transform: translateX(-50%);
-          z-index: 3;
+        /* aesthetic rule with a centred diamond */
+        .heHero-rule {
+          display: flex; align-items: center; justify-content: center;
+          gap: clamp(0.75rem, 2vw, 1.25rem);
+          width: min(80%, 360px);
+          margin: clamp(1rem, 3vh, 1.6rem) 0;
         }
-        .heHero-cta {
-          display: inline-block;
-          color: var(--ink, #f2ede3);
-          font-size: clamp(0.7rem, 2.6vw, 0.85rem);
-          letter-spacing: 0.22em; text-transform: uppercase;
-          text-decoration: underline;
-          text-underline-offset: 6px;
-          text-decoration-thickness: 1px;
-          text-shadow: 0 2px 18px rgba(0,0,0,0.55);
-          transition: color 280ms ease, text-underline-offset 280ms ease;
+        .heHero-rule span {
+          height: 1px; flex: 1;
+          background: linear-gradient(90deg, transparent, var(--gold, #d4b574), transparent);
         }
-        .heHero-cta:hover {
-          color: var(--gold, #d4b574);
-          text-underline-offset: 9px;
+        .heHero-rule i {
+          width: 7px; height: 7px; flex: 0 0 auto;
+          transform: rotate(45deg);
+          background: var(--gold, #d4b574);
+          box-shadow: 0 0 12px rgba(212,181,116,0.6);
+        }
+        .heHero-since {
+          font-family: var(--font-sans, system-ui), sans-serif;
+          font-size: clamp(0.7rem, 2.4vw, 0.95rem);
+          letter-spacing: clamp(0.3em, 1.5vw, 0.55em);
+          text-transform: uppercase;
+          color: var(--ink-soft, #d8d2c4);
+          text-shadow: 0 2px 18px rgba(0,0,0,0.6);
+          margin: 0;
+          text-indent: clamp(0.3em, 1.5vw, 0.55em);
         }
         @media (prefers-reduced-motion: reduce) {
           .heHero-video { transition: none; }
@@ -129,9 +158,10 @@ export default function HeroVideo() {
 
       <video
         ref={videoRef}
+        key={src}
         className="heHero-video"
         data-ready={ready}
-        src={CLIP_URL}
+        src={src}
         poster="/images/parallax/home-decor.jpg"
         autoPlay
         muted
@@ -143,39 +173,45 @@ export default function HeroVideo() {
 
       <div className="heHero-scrim" aria-hidden="true" />
 
-      {/* Top CTA into the shop */}
-      <div className="heHero-topcta">
-        <motion.a
-          href="/shop"
-          data-hover
-          className="heHero-cta"
-          initial={{ opacity: 0, y: -16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
-        >
-          View all collections
-        </motion.a>
-      </div>
+      <AnimatePresence>
+        {showWord && (
+          <motion.div
+            className="heHero-inner"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, y: -18, filter: 'blur(6px)' }}
+            transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <motion.h1
+              className="heHero-mark"
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: 0.15 }}
+            >
+              Home Era
+            </motion.h1>
 
-      <div className="heHero-inner">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <motion.img
-          className="heHero-emblem"
-          src="/favicon.png"
-          alt="Home Era"
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1], delay: 0.25 }}
-        />
-        <motion.p
-          className="heHero-word"
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1], delay: 0.4 }}
-        >
-          Home Era · Since 1960
-        </motion.p>
-      </div>
+            <motion.div
+              className="heHero-rule"
+              aria-hidden="true"
+              initial={{ opacity: 0, scaleX: 0.4 }}
+              animate={{ opacity: 1, scaleX: 1 }}
+              transition={{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: 0.45 }}
+            >
+              <span /> <i /> <span />
+            </motion.div>
+
+            <motion.p
+              className="heHero-since"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: 0.6 }}
+            >
+              Since 1960
+            </motion.p>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </section>
   );
 }

@@ -32,7 +32,20 @@
       "Bash(curl -s -o /dev/null -w \"%{http_code} -> %{redirect_url}\\\\n\" --max-time 12 http://localhost:3000/checkout)",
       "Bash(curl -s --max-time 12 -w \"  [HTTP %{http_code}]\\\\n\" -X POST http://localhost:3000/api/razorpay/order -H \"Content-Type: application/json\" -d '{}')",
       "Bash(curl -s --max-time 12 -w \"  [HTTP %{http_code}]\\\\n\" -X POST http://localhost:3000/api/razorpay/verify -H \"Content-Type: application/json\" -d '{}')",
-      "Bash(curl -s -o /dev/null -w \"cart -> %{redirect_url}\\\\n\" --max-time 10 http://localhost:3000/cart)"
+      "Bash(curl -s -o /dev/null -w \"cart -> %{redirect_url}\\\\n\" --max-time 10 http://localhost:3000/cart)",
+      "PowerShell(& \"C:\\\\Users\\\\varunsingh\\\\AppData\\\\Local\\\\nvm\\\\v20.19.4\\\\node.exe\" \"D:\\\\websitem\\\\homeera\\\\node_modules\\\\typescript\\\\bin\\\\tsc\" --noEmit -p \"D:\\\\websitem\\\\homeera\\\\tsconfig.json\" 2>&1 | Select-Object -First 30; Write-Output \"EXIT=$LASTEXITCODE\")",
+      "PowerShell($env:Path = \"C:\\\\Users\\\\varunsingh\\\\AppData\\\\Local\\\\nvm\\\\v20.19.4;\" + $env:Path; Set-Location \"D:\\\\websitem\\\\homeera\"; & \"C:\\\\Users\\\\varunsingh\\\\AppData\\\\Local\\\\nvm\\\\v20.19.4\\\\node.exe\" \"D:\\\\websitem\\\\homeera\\\\node_modules\\\\next\\\\dist\\\\bin\\\\next\" build 2>&1 | Select-Object -Last 10)",
+      "PowerShell($env:Path = \"C:\\\\Users\\\\varunsingh\\\\AppData\\\\Local\\\\nvm\\\\v20.19.4;\" + $env:Path; Set-Location \"D:\\\\websitem\\\\homeera\"; & \"C:\\\\Users\\\\varunsingh\\\\AppData\\\\Local\\\\nvm\\\\v20.19.4\\\\node.exe\" \"D:\\\\websitem\\\\homeera\\\\node_modules\\\\next\\\\dist\\\\bin\\\\next\" build 2>&1 | Select-Object -Last 8)",
+      "Bash(mv migrations/0001_product_attributes.sql migration-05-product-attributes.sql)",
+      "Bash(rmdir migrations *)",
+      "PowerShell(& \"C:\\\\Users\\\\varunsingh\\\\AppData\\\\Local\\\\nvm\\\\v20.19.4\\\\node.exe\" \"D:\\\\websitem\\\\homeera\\\\node_modules\\\\typescript\\\\bin\\\\tsc\" --noEmit -p \"D:\\\\websitem\\\\homeera\\\\tsconfig.json\" 2>&1 | Select-Object -First 40; Write-Output \"EXIT=$LASTEXITCODE\")",
+      "PowerShell($env:Path = \"C:\\\\Users\\\\varunsingh\\\\AppData\\\\Local\\\\nvm\\\\v20.19.4;\" + $env:Path; Set-Location \"D:\\\\websitem\\\\homeera\"; & \"C:\\\\Users\\\\varunsingh\\\\AppData\\\\Local\\\\nvm\\\\v20.19.4\\\\node.exe\" \"D:\\\\websitem\\\\homeera\\\\node_modules\\\\next\\\\dist\\\\bin\\\\next\" build 2>&1 | Select-Object -Last 35)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://res.cloudinary.com/dcdchbc8p/video/upload/homeera/hero/slim.mp4\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://res.cloudinary.com/dcdchbc8p/video/upload/slim.mp4\")",
+      "PowerShell(& \"C:\\\\Users\\\\varunsingh\\\\AppData\\\\Local\\\\nvm\\\\v20.19.4\\\\node.exe\" \"C:\\\\Users\\\\VARUNS~1\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--websitem-homeera\\\\24e41f64-c4d9-4ad6-8bcd-049611363e9e\\\\scratchpad\\\\find-slim.mjs\")",
+      "PowerShell(& \"C:\\\\Users\\\\varunsingh\\\\AppData\\\\Local\\\\nvm\\\\v20.19.4\\\\node.exe\" \"C:\\\\Users\\\\VARUNS~1\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--websitem-homeera\\\\24e41f64-c4d9-4ad6-8bcd-049611363e9e\\\\scratchpad\\\\rename-slim.mjs\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://res.cloudinary.com/dcdchbc8p/video/upload/q_auto,f_auto/homeera/hero/slim.mp4\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://res.cloudinary.com/dcdchbc8p/video/upload/q_auto,f_auto/homeera/hero/clip.mp4\")"
     ]
   }
 }

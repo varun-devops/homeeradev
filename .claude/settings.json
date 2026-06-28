@@ -54,7 +54,8 @@
       "Bash(echo \"exit: $?\")",
       "Bash(git rev-list *)",
       "Bash(git fetch *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "PowerShell(& \"C:\\\\Users\\\\varunsingh\\\\AppData\\\\Local\\\\nvm\\\\v20.19.4\\\\node.exe\" \"D:\\\\websitem\\\\homeera\\\\node_modules\\\\typescript\\\\bin\\\\tsc\" --noEmit -p \"D:\\\\websitem\\\\homeera\\\\tsconfig.json\" 2>&1 | Select-Object -First 20; Write-Output \"EXIT=$LASTEXITCODE\")"
     ]
   }
 }

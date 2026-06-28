@@ -12,9 +12,10 @@ import { AnimatePresence, motion } from 'framer-motion';
  * We pick the source from a media query after mount so only one video ever
  * loads. Delivered with `q_auto,f_auto` for fast, well-compressed streaming.
  *
- * The wordmark ("HOME ERA / SINCE 1960") shows on load, then auto-hides after
- * 10s with a fade-out — and hides immediately if the visitor taps/clicks the
- * screen. The video keeps playing underneath.
+ * The favicon emblem stays centred at all times. The wordmark ("HOME ERA /
+ * SINCE 1960") shows on load, then auto-hides after 10s with a fade-out — and
+ * hides immediately if the visitor taps/clicks the screen. The video keeps
+ * playing underneath.
  *
  * Fully responsive: sized in svh/dvh, video covers via object-fit, fluid type.
  */
@@ -103,12 +104,24 @@ export default function HeroVideo() {
             radial-gradient(ellipse 90% 70% at 50% 45%, transparent 40%, rgba(0,0,0,0.5) 100%),
             linear-gradient(180deg, rgba(0,0,0,0.4), transparent 35%, transparent 60%, rgba(0,0,0,0.55));
         }
-        .heHero-inner {
+        /* Persistent centred stack (logo always; wordmark below it). */
+        .heHero-center {
           position: relative; z-index: 2;
-          text-align: center;
           width: min(92vw, 760px);
           padding: clamp(1rem, 5vw, 2rem);
           display: flex; flex-direction: column; align-items: center;
+          text-align: center;
+          pointer-events: none;
+        }
+        .heHero-emblem {
+          width: clamp(96px, 20vw, 180px);
+          height: auto;
+          filter: drop-shadow(0 6px 34px rgba(0,0,0,0.55));
+          margin-bottom: clamp(1rem, 3vh, 1.75rem);
+        }
+        .heHero-inner {
+          display: flex; flex-direction: column; align-items: center;
+          text-align: center;
         }
         /* Wordmark */
         .heHero-mark {
@@ -173,45 +186,59 @@ export default function HeroVideo() {
 
       <div className="heHero-scrim" aria-hidden="true" />
 
-      <AnimatePresence>
-        {showWord && (
-          <motion.div
-            className="heHero-inner"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0, y: -18, filter: 'blur(6px)' }}
-            transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-          >
-            <motion.h1
-              className="heHero-mark"
-              initial={{ opacity: 0, y: 24 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: 0.15 }}
-            >
-              Home Era
-            </motion.h1>
+      <div className="heHero-center">
+        {/* Persistent logo — always centred, never hidden. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <motion.img
+          className="heHero-emblem"
+          src="/favicon.png"
+          alt="Home Era"
+          initial={{ opacity: 0, y: 16, scale: 0.96 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
+        />
 
+        {/* Wordmark — shows on load, auto-hides after 10s or on tap. */}
+        <AnimatePresence>
+          {showWord && (
             <motion.div
-              className="heHero-rule"
-              aria-hidden="true"
-              initial={{ opacity: 0, scaleX: 0.4 }}
-              animate={{ opacity: 1, scaleX: 1 }}
-              transition={{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: 0.45 }}
+              className="heHero-inner"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0, y: -18, filter: 'blur(6px)' }}
+              transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
             >
-              <span /> <i /> <span />
-            </motion.div>
+              <motion.h1
+                className="heHero-mark"
+                initial={{ opacity: 0, y: 24 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: 0.25 }}
+              >
+                Home Era
+              </motion.h1>
 
-            <motion.p
-              className="heHero-since"
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: 0.6 }}
-            >
-              Since 1960
-            </motion.p>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              <motion.div
+                className="heHero-rule"
+                aria-hidden="true"
+                initial={{ opacity: 0, scaleX: 0.4 }}
+                animate={{ opacity: 1, scaleX: 1 }}
+                transition={{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: 0.5 }}
+              >
+                <span /> <i /> <span />
+              </motion.div>
+
+              <motion.p
+                className="heHero-since"
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: 0.65 }}
+              >
+                Since 1960
+              </motion.p>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </section>
   );
 }

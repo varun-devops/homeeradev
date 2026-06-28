@@ -114,55 +114,70 @@ export default function HeroVideo() {
           pointer-events: none;
         }
         .heHero-emblem {
-          width: clamp(96px, 20vw, 180px);
+          width: clamp(72px, 16vw, 180px);
           height: auto;
           filter: drop-shadow(0 6px 34px rgba(0,0,0,0.55));
-          margin-bottom: clamp(1rem, 3vh, 1.75rem);
+          margin-bottom: clamp(0.85rem, 3vh, 1.75rem);
         }
         .heHero-inner {
           display: flex; flex-direction: column; align-items: center;
           text-align: center;
+          max-width: 100%;
         }
         /* Wordmark */
         .heHero-mark {
           font-family: var(--font-display, Georgia, serif);
           font-weight: 500;
-          font-size: clamp(2.4rem, 11vw, 6rem);
-          letter-spacing: clamp(0.2em, 2vw, 0.5em);
+          font-size: clamp(1.7rem, 8.5vw, 6rem);
+          letter-spacing: clamp(0.12em, 1.4vw, 0.5em);
           text-transform: uppercase;
           color: var(--ink, #f2ede3);
           text-shadow: 0 4px 40px rgba(0,0,0,0.6);
           margin: 0;
-          line-height: 1;
+          line-height: 1.05;
+          white-space: nowrap;
           /* compensate the trailing letter-spacing so it stays optically centred */
-          text-indent: clamp(0.2em, 2vw, 0.5em);
+          text-indent: clamp(0.12em, 1.4vw, 0.5em);
         }
         /* aesthetic rule with a centred diamond */
         .heHero-rule {
           display: flex; align-items: center; justify-content: center;
-          gap: clamp(0.75rem, 2vw, 1.25rem);
-          width: min(80%, 360px);
-          margin: clamp(1rem, 3vh, 1.6rem) 0;
+          gap: clamp(0.6rem, 2vw, 1.25rem);
+          width: min(72%, 360px);
+          margin: clamp(0.85rem, 3vh, 1.6rem) 0;
         }
         .heHero-rule span {
           height: 1px; flex: 1;
           background: linear-gradient(90deg, transparent, var(--gold, #d4b574), transparent);
         }
         .heHero-rule i {
-          width: 7px; height: 7px; flex: 0 0 auto;
+          width: 6px; height: 6px; flex: 0 0 auto;
           transform: rotate(45deg);
           background: var(--gold, #d4b574);
           box-shadow: 0 0 12px rgba(212,181,116,0.6);
         }
         .heHero-since {
           font-family: var(--font-sans, system-ui), sans-serif;
-          font-size: clamp(0.7rem, 2.4vw, 0.95rem);
-          letter-spacing: clamp(0.3em, 1.5vw, 0.55em);
+          font-size: clamp(0.6rem, 2vw, 0.95rem);
+          letter-spacing: clamp(0.22em, 1.2vw, 0.55em);
           text-transform: uppercase;
           color: var(--ink-soft, #d8d2c4);
           text-shadow: 0 2px 18px rgba(0,0,0,0.6);
           margin: 0;
-          text-indent: clamp(0.3em, 1.5vw, 0.55em);
+          text-indent: clamp(0.22em, 1.2vw, 0.55em);
+        }
+        /* Phones: firmly cap sizes + tighten spacing so nothing overflows. */
+        @media (max-width: 480px) {
+          .heHero-center { width: 94vw; padding: 0.75rem; }
+          .heHero-emblem { width: 64px; margin-bottom: 0.75rem; }
+          .heHero-mark { font-size: 1.55rem; letter-spacing: 0.1em; text-indent: 0.1em; }
+          .heHero-rule { width: 64%; margin: 0.8rem 0; }
+          .heHero-since { font-size: 0.58rem; letter-spacing: 0.2em; text-indent: 0.2em; }
+        }
+        @media (max-width: 360px) {
+          .heHero-emblem { width: 56px; }
+          .heHero-mark { font-size: 1.3rem; letter-spacing: 0.08em; text-indent: 0.08em; }
+          .heHero-since { font-size: 0.54rem; letter-spacing: 0.16em; text-indent: 0.16em; }
         }
         @media (prefers-reduced-motion: reduce) {
           .heHero-video { transition: none; }

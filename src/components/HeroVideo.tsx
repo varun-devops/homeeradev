@@ -13,9 +13,9 @@ import { AnimatePresence, motion } from 'framer-motion';
  * loads. Delivered with `q_auto,f_auto` for fast, well-compressed streaming.
  *
  * The centred favicon emblem + wordmark ("HOME ERA / SINCE 1960") appear on
- * load and, after 20s, slowly fade away together (a soft 1.4s fade + blur).
+ * load and, after 15s, slowly fade away together (a soft 1.4s fade + blur).
  * A tap/click toggles them: it brings the intro back with the same smooth
- * fade-in (and restarts the 20s timer), or hides it again. The video keeps
+ * fade-in (and restarts the 15s timer), or hides it again. The video keeps
  * playing underneath.
  *
  * Fully responsive: sized in svh/dvh, video covers via object-fit, fluid type.
@@ -29,7 +29,7 @@ const DESKTOP_URL = base('clip');
 const MOBILE_URL = base('slim');
 
 /** Logo + wordmark stay this long, then slowly fade away together. */
-const REVEAL_MS = 20000;
+const REVEAL_MS = 15000;
 
 export default function HeroVideo() {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -62,7 +62,7 @@ export default function HeroVideo() {
     return () => v.removeEventListener('canplay', onCanPlay);
   }, [src]);
 
-  // Whenever the intro is showing, arm a fresh 20s timer to fade it away.
+  // Whenever the intro is showing, arm a fresh 15s timer to fade it away.
   // Re-runs each time it's brought back (by tap), restarting the countdown.
   useEffect(() => {
     if (!showIntro) return;
@@ -134,8 +134,8 @@ export default function HeroVideo() {
         /* Wordmark */
         .heHero-mark {
           font-family: var(--font-display, Georgia, serif);
-          font-weight: 600;
-          font-size: clamp(2rem, 9.5vw, 7rem);
+          font-weight: 700;
+          font-size: clamp(2.4rem, 11vw, 8.5rem);
           letter-spacing: clamp(0.12em, 1.4vw, 0.5em);
           text-transform: uppercase;
           color: var(--ink, #f2ede3);
@@ -165,8 +165,8 @@ export default function HeroVideo() {
         }
         .heHero-since {
           font-family: var(--font-sans, system-ui), sans-serif;
-          font-weight: 500;
-          font-size: clamp(0.68rem, 2.2vw, 1.1rem);
+          font-weight: 700;
+          font-size: clamp(0.85rem, 3vw, 1.5rem);
           letter-spacing: clamp(0.22em, 1.2vw, 0.55em);
           text-transform: uppercase;
           color: var(--ink-soft, #d8d2c4);
@@ -177,15 +177,15 @@ export default function HeroVideo() {
         /* Phones: firmly cap sizes + tighten spacing so nothing overflows. */
         @media (max-width: 480px) {
           .heHero-center { width: 94vw; padding: 0.75rem; }
-          .heHero-emblem { width: 78px; margin-bottom: 0.85rem; }
-          .heHero-mark { font-size: 1.85rem; letter-spacing: 0.1em; text-indent: 0.1em; }
+          .heHero-emblem { width: 82px; margin-bottom: 0.85rem; }
+          .heHero-mark { font-size: 2.2rem; letter-spacing: 0.1em; text-indent: 0.1em; }
           .heHero-rule { width: 66%; margin: 0.85rem 0; }
-          .heHero-since { font-size: 0.66rem; letter-spacing: 0.2em; text-indent: 0.2em; }
+          .heHero-since { font-size: 0.82rem; letter-spacing: 0.2em; text-indent: 0.2em; }
         }
         @media (max-width: 360px) {
-          .heHero-emblem { width: 68px; }
-          .heHero-mark { font-size: 1.55rem; letter-spacing: 0.08em; text-indent: 0.08em; }
-          .heHero-since { font-size: 0.6rem; letter-spacing: 0.16em; text-indent: 0.16em; }
+          .heHero-emblem { width: 72px; }
+          .heHero-mark { font-size: 1.85rem; letter-spacing: 0.08em; text-indent: 0.08em; }
+          .heHero-since { font-size: 0.72rem; letter-spacing: 0.16em; text-indent: 0.16em; }
         }
         @media (prefers-reduced-motion: reduce) {
           .heHero-video { transition: none; }
@@ -209,7 +209,7 @@ export default function HeroVideo() {
 
       <div className="heHero-scrim" aria-hidden="true" />
 
-      {/* Logo + wordmark — appear on load, fade away together after 20s, and
+      {/* Logo + wordmark — appear on load, fade away together after 15s, and
           a tap brings them back with a slow, smooth fade-in. One wrapper so
           they enter/leave as a single group. */}
       <AnimatePresence>

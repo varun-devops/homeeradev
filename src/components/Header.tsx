@@ -202,9 +202,6 @@ export default function Header() {
               style={{ width: '100%', height: '100%', objectFit: 'contain' }}
             />
           </span>
-          <span className="heHeader-brand-word" aria-hidden="true">
-            Homeera
-          </span>
         </Link>
 
         {/* Primary nav — desktop only */}

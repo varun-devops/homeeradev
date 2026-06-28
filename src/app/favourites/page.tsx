@@ -15,7 +15,7 @@ type FavRow = {
     slug: string;
     price: number;
     image_url: string | null;
-    vendor: string | null;
+    sku: string | null;
   } | null;
 };
 
@@ -28,7 +28,7 @@ export default async function FavouritesPage() {
 
   const { data } = await sb
     .from('favourites')
-    .select('product:products(id, name, slug, price, image_url, vendor)')
+    .select('product:products(id, name, slug, price, image_url, sku)')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false });
 
@@ -68,7 +68,7 @@ export default async function FavouritesPage() {
                   </div>
                   <div style={{ marginTop: '0.85rem', textAlign: 'center' }}>
                     <p style={{ margin: 0, fontSize: '0.82rem', letterSpacing: '0.16em', textTransform: 'uppercase' }}>{p.name}</p>
-                    {p.vendor && <p style={{ margin: '0.3rem 0 0', fontSize: '0.82rem', color: 'var(--ink-soft)' }}>{p.vendor}</p>}
+                    {p.sku && <p style={{ margin: '0.3rem 0 0', fontSize: '0.82rem', color: 'var(--ink-soft)' }}>Item No. {p.sku}</p>}
                     <p style={{ margin: '0.3rem 0 0', color: 'var(--gold)' }}>{formatINR(p.price)}</p>
                   </div>
                 </Link>

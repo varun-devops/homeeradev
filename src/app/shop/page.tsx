@@ -32,7 +32,7 @@ export default async function ShopPage() {
     category_slug: p.category_slug,
     sub_category: p.sub_category,
     sub_category_slug: p.sub_category_slug,
-    vendor: p.vendor,
+    sku: p.sku,
   }));
 
   return <ShopCollectionDeck collections={collections} products={lite} />;

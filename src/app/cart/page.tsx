@@ -17,7 +17,7 @@ type CartRow = {
     slug: string;
     price: number;
     image_url: string | null;
-    vendor: string | null;
+    sku: string | null;
   } | null;
 };
 
@@ -31,7 +31,7 @@ export default async function CartPage() {
   const { data } = await sb
     .from('cart_items')
     .select(
-      'id, quantity, product:products(id, name, slug, price, image_url, vendor)',
+      'id, quantity, product:products(id, name, slug, price, image_url, sku)',
     )
     .eq('user_id', user.id)
     .order('created_at', { ascending: true });
@@ -73,7 +73,7 @@ export default async function CartPage() {
               slug: r.product!.slug,
               price: r.product!.price,
               image_url: r.product!.image_url,
-              vendor: r.product!.vendor,
+              sku: r.product!.sku,
             }))}
           />
 

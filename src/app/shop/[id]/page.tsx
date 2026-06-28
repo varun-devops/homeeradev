@@ -130,7 +130,6 @@ export default async function ProductPage({ params }: { params: { id: string } }
             }}
           >
             {p.sub_category}
-            {p.vendor ? ` · ${p.vendor}` : ''}
           </p>
           <h1 style={{ fontStyle: 'italic', fontSize: 'clamp(2rem, 4.5vw, 3.5rem)' }}>
             {p.name}
@@ -151,7 +150,7 @@ export default async function ProductPage({ params }: { params: { id: string } }
             {formatINR(p.price)}
           </div>
 
-          {(p.material || p.size || p.variant) && (
+          {(p.sku || p.material || p.size || p.variant) && (
             <dl
               style={{
                 marginTop: '1.75rem',
@@ -162,6 +161,12 @@ export default async function ProductPage({ params }: { params: { id: string } }
                 color: 'var(--ink-soft)',
               }}
             >
+              {p.sku && (
+                <>
+                  <dt style={{ textTransform: 'uppercase', letterSpacing: '0.12em', fontSize: '0.72rem' }}>Item No.</dt>
+                  <dd style={{ margin: 0 }}>{p.sku}</dd>
+                </>
+              )}
               {p.material && (
                 <>
                   <dt style={{ textTransform: 'uppercase', letterSpacing: '0.12em', fontSize: '0.72rem' }}>Material</dt>

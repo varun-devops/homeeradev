@@ -22,7 +22,7 @@ export type LiteProduct = {
   category_slug: string;
   sub_category: string;
   sub_category_slug: string;
-  vendor: string | null;
+  sku: string | null;
 };
 
 export type Collection = {
@@ -278,7 +278,7 @@ export default function ShopCollectionDeck({ collections, products }: Props) {
                         </div>
                         <div className="heShop-cardMeta">
                           <p className="heShop-cardTitle">{p.name}</p>
-                          {p.vendor && <p className="heShop-cardSub">{p.vendor}</p>}
+                          {p.sku && <p className="heShop-cardSub">Item No. {p.sku}</p>}
                           <p className="heShop-cardPrice">{formatINR(p.price)}</p>
                         </div>
                       </Link>

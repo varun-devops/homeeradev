@@ -3,16 +3,25 @@
 import { useEffect, useRef, useState } from 'react';
 
 /**
- * Single full-screen hero with an autoplaying, muted, looping background
- * video. The video sits behind a dark scrim so the brand mark + caption
- * stay legible.
+ * Single full-screen hero with an autoplaying, looping background video.
  *
- * Smooth load: the <video> is muted + playsInline + autoPlay (the only
- * combination browsers allow to start without a user gesture). A poster
- * frame and a tonal background show instantly while the video streams in,
- * and we fade the video in once it can actually play through, so there's
- * no flash of an empty/black box on slower connections.
+ * The clip lives on Cloudinary (folder `homeera/hero`, public id `clip`). It is
+ * delivered with `q_auto,f_auto` so the browser gets a well-compressed,
+ * fast-starting file. A poster frame + tonal gradient show instantly while the
+ * video streams in, and the video fades in once it can play so there's no flash
+ * of an empty/black box on slower connections.
+ *
+ * Fully responsive: the section is sized in svh/dvh units, the video covers via
+ * object-fit, and all typography/spacing is fluid (clamp), so it works from
+ * small phones up to large desktops. `muted + playsInline + autoPlay` is the
+ * only combination browsers allow to start without a user gesture.
  */
+
+const CLOUD_NAME = 'dcdchbc8p';
+
+/** Cloudinary delivery URL with auto format + quality for fast streaming. */
+const CLIP_URL = `https://res.cloudinary.com/${CLOUD_NAME}/video/upload/q_auto,f_auto/homeera/hero/clip.mp4`;
+
 export default function HeroVideo() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [ready, setReady] = useState(false);
@@ -20,26 +29,23 @@ export default function HeroVideo() {
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
-    // Some browsers ignore the autoPlay attribute until JS nudges them.
     const tryPlay = () => v.play().catch(() => {});
-    if (v.readyState >= 3) {
-      setReady(true);
-      tryPlay();
-    }
     const onCanPlay = () => {
       setReady(true);
       tryPlay();
     };
+    if (v.readyState >= 3) onCanPlay();
     v.addEventListener('canplay', onCanPlay);
     return () => v.removeEventListener('canplay', onCanPlay);
   }, []);
 
   return (
-    <section className="heHero" aria-label="Homeera">
+    <section className="heHero" aria-label="Home Era">
       <style>{`
         .heHero {
           position: relative;
           min-height: 100svh;
+          min-height: 100dvh;
           width: 100%;
           overflow: hidden;
           display: grid;
@@ -52,7 +58,7 @@ export default function HeroVideo() {
           width: 100%; height: 100%;
           object-fit: cover;
           opacity: 0;
-          transition: opacity 1200ms var(--ease-out);
+          transition: opacity 600ms ease;
           z-index: 0;
         }
         .heHero-video[data-ready='true'] { opacity: 1; }
@@ -65,42 +71,47 @@ export default function HeroVideo() {
         .heHero-inner {
           position: relative; z-index: 2;
           text-align: center;
-          padding: var(--pad-x);
+          width: min(92vw, 720px);
+          padding: clamp(1rem, 5vw, 2rem);
           display: flex; flex-direction: column; align-items: center;
-          gap: clamp(1.25rem, 3vh, 2rem);
+          gap: clamp(1rem, 3vh, 2rem);
         }
         .heHero-emblem {
-          width: clamp(96px, 18vw, 168px);
+          width: clamp(84px, 18vw, 168px);
           height: auto;
           filter: drop-shadow(0 6px 30px rgba(0,0,0,0.5));
         }
         .heHero-word {
-          font-family: var(--font-display);
+          font-family: var(--font-display, Georgia, serif);
           font-style: italic; font-weight: 500;
-          font-size: clamp(1.4rem, 3.4vw, 2.1rem);
-          letter-spacing: 0.34em; text-transform: uppercase;
-          color: var(--ink);
+          font-size: clamp(1.15rem, 4.5vw, 2.1rem);
+          letter-spacing: clamp(0.18em, 1vw, 0.34em); text-transform: uppercase;
+          color: var(--ink, #f2ede3);
           text-shadow: 0 2px 24px rgba(0,0,0,0.6);
           margin: 0;
+          line-height: 1.3;
         }
         .heHero-cta {
           display: inline-block;
-          margin-top: 0.5rem;
-          padding: 0.85rem 2rem;
-          border: 1px solid var(--ink);
+          margin-top: 0.25rem;
+          padding: clamp(0.7rem, 2.5vw, 0.85rem) clamp(1.4rem, 6vw, 2rem);
+          border: 1px solid var(--ink, #f2ede3);
           border-radius: 999px;
-          color: var(--ink);
-          font-size: clamp(0.72rem, 2vw, 0.82rem);
-          letter-spacing: 0.24em; text-transform: uppercase;
+          color: var(--ink, #f2ede3);
+          font-size: clamp(0.68rem, 2.6vw, 0.82rem);
+          letter-spacing: 0.22em; text-transform: uppercase;
           background: rgba(0,0,0,0.18);
-          transition: background 280ms var(--ease-out), border-color 280ms var(--ease-out);
+          transition: background 280ms ease, border-color 280ms ease;
         }
-        .heHero-cta:hover { background: rgba(212,181,116,0.16); border-color: var(--gold); }
+        .heHero-cta:hover { background: rgba(212,181,116,0.16); border-color: var(--gold, #d4b574); }
         .heHero-scroll {
-          position: absolute; bottom: clamp(1.25rem, 4vh, 2.25rem);
+          position: absolute; bottom: max(env(safe-area-inset-bottom), clamp(1rem, 4vh, 2.25rem));
           left: 50%; transform: translateX(-50%); z-index: 2;
-          font-size: 0.62rem; letter-spacing: 0.4em; text-transform: uppercase;
-          color: var(--ink-mute);
+          font-size: clamp(0.55rem, 2vw, 0.62rem); letter-spacing: 0.4em; text-transform: uppercase;
+          color: var(--ink-mute, rgba(242,237,227,0.6));
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .heHero-video { transition: none; }
         }
       `}</style>
 
@@ -108,7 +119,7 @@ export default function HeroVideo() {
         ref={videoRef}
         className="heHero-video"
         data-ready={ready}
-        src="/video/hero.mp4"
+        src={CLIP_URL}
         poster="/images/parallax/home-decor.jpg"
         autoPlay
         muted
@@ -117,6 +128,7 @@ export default function HeroVideo() {
         preload="auto"
         aria-hidden="true"
       />
+
       <div className="heHero-scrim" aria-hidden="true" />
 
       <div className="heHero-inner">

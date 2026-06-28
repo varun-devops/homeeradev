@@ -12,7 +12,7 @@ export type CartItem = {
   slug: string;
   price: number;
   image_url: string | null;
-  vendor: string | null;
+  sku: string | null;
 };
 
 export default function CartList({ items }: { items: CartItem[] }) {
@@ -73,9 +73,9 @@ export default function CartList({ items }: { items: CartItem[] }) {
             <Link href={`/shop/${it.slug}`} data-hover>
               <p style={{ margin: 0, fontSize: '0.92rem', letterSpacing: '0.04em' }}>{it.name}</p>
             </Link>
-            {it.vendor && (
+            {it.sku && (
               <p style={{ margin: '0.25rem 0 0', fontSize: '0.8rem', color: 'var(--ink-soft)' }}>
-                {it.vendor}
+                Item No. {it.sku}
               </p>
             )}
             <div style={{ marginTop: '0.6rem', display: 'inline-flex', alignItems: 'center', gap: '0.75rem' }}>

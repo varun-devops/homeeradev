@@ -23,7 +23,6 @@ export default function ProductForm({ product, collections, subCollections }: Pr
     sku: product?.sku ?? '',
     name: product?.name ?? '',
     description: product?.description ?? '',
-    vendor: product?.vendor ?? '',
     category: product?.category ?? (collections[0]?.label ?? ''),
     sub_category: product?.sub_category ?? '',
     material: product?.material ?? '',
@@ -53,7 +52,6 @@ export default function ProductForm({ product, collections, subCollections }: Pr
       sku: f.sku,
       name: f.name,
       description: f.description || null,
-      vendor: f.vendor || null,
       category: f.category,
       sub_category: f.sub_category,
       material: f.material || null,
@@ -95,7 +93,7 @@ export default function ProductForm({ product, collections, subCollections }: Pr
     <form onSubmit={submit} style={{ maxWidth: 760, display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       <div style={grid2}>
         <Field label="Product name*"><input required value={f.name} onChange={set('name')} style={input} /></Field>
-        <Field label="SKU*"><input required value={f.sku} onChange={set('sku')} style={input} /></Field>
+        <Field label="Item No.*"><input required value={f.sku} onChange={set('sku')} style={input} /></Field>
       </div>
 
       <div style={grid2}>
@@ -122,7 +120,6 @@ export default function ProductForm({ product, collections, subCollections }: Pr
 
       <div style={grid2}>
         <Field label="Price (₹)*"><input required type="number" min="0" value={f.price} onChange={set('price')} style={input} /></Field>
-        <Field label="Vendor"><input value={f.vendor} onChange={set('vendor')} style={input} /></Field>
       </div>
 
       <div style={grid3}>

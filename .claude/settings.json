@@ -45,7 +45,16 @@
       "PowerShell(& \"C:\\\\Users\\\\varunsingh\\\\AppData\\\\Local\\\\nvm\\\\v20.19.4\\\\node.exe\" \"C:\\\\Users\\\\VARUNS~1\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--websitem-homeera\\\\24e41f64-c4d9-4ad6-8bcd-049611363e9e\\\\scratchpad\\\\find-slim.mjs\")",
       "PowerShell(& \"C:\\\\Users\\\\varunsingh\\\\AppData\\\\Local\\\\nvm\\\\v20.19.4\\\\node.exe\" \"C:\\\\Users\\\\VARUNS~1\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--websitem-homeera\\\\24e41f64-c4d9-4ad6-8bcd-049611363e9e\\\\scratchpad\\\\rename-slim.mjs\")",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://res.cloudinary.com/dcdchbc8p/video/upload/q_auto,f_auto/homeera/hero/slim.mp4\")",
-      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://res.cloudinary.com/dcdchbc8p/video/upload/q_auto,f_auto/homeera/hero/clip.mp4\")"
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://res.cloudinary.com/dcdchbc8p/video/upload/q_auto,f_auto/homeera/hero/clip.mp4\")",
+      "Bash(grep -iE \"\\\\.\\(mp4|mov\\)$\")",
+      "Bash(awk '{print $5\"\\\\t\"$9}')",
+      "Bash(xxd)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(git rev-list *)",
+      "Bash(git fetch *)",
+      "Bash(git push *)"
     ]
   }
 }

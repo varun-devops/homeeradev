@@ -121,10 +121,10 @@ export default function HeroVideo() {
           pointer-events: none;
         }
         .heHero-emblem {
-          width: clamp(88px, 19vw, 220px);
+          width: clamp(104px, 22vw, 280px);
           height: auto;
           filter: drop-shadow(0 6px 34px rgba(0,0,0,0.55));
-          margin-bottom: clamp(0.9rem, 3vh, 1.85rem);
+          margin-bottom: clamp(1rem, 3.5vh, 2.1rem);
         }
         .heHero-inner {
           display: flex; flex-direction: column; align-items: center;
@@ -135,7 +135,7 @@ export default function HeroVideo() {
         .heHero-mark {
           font-family: var(--font-display, Georgia, serif);
           font-weight: 700;
-          font-size: clamp(2.4rem, 11vw, 8.5rem);
+          font-size: clamp(3rem, 13vw, 11rem);
           letter-spacing: clamp(0.12em, 1.4vw, 0.5em);
           text-transform: uppercase;
           color: var(--ink, #f2ede3);
@@ -166,7 +166,7 @@ export default function HeroVideo() {
         .heHero-since {
           font-family: var(--font-sans, system-ui), sans-serif;
           font-weight: 700;
-          font-size: clamp(0.85rem, 3vw, 1.5rem);
+          font-size: clamp(1rem, 3.6vw, 1.9rem);
           letter-spacing: clamp(0.22em, 1.2vw, 0.55em);
           text-transform: uppercase;
           color: var(--ink-soft, #d8d2c4);
@@ -176,16 +176,16 @@ export default function HeroVideo() {
         }
         /* Phones: firmly cap sizes + tighten spacing so nothing overflows. */
         @media (max-width: 480px) {
-          .heHero-center { width: 94vw; padding: 0.75rem; }
-          .heHero-emblem { width: 82px; margin-bottom: 0.85rem; }
-          .heHero-mark { font-size: 2.2rem; letter-spacing: 0.1em; text-indent: 0.1em; }
-          .heHero-rule { width: 66%; margin: 0.85rem 0; }
-          .heHero-since { font-size: 0.82rem; letter-spacing: 0.2em; text-indent: 0.2em; }
+          .heHero-center { width: 96vw; padding: 0.5rem; }
+          .heHero-emblem { width: 98px; margin-bottom: 0.95rem; }
+          .heHero-mark { font-size: 2.7rem; letter-spacing: 0.09em; text-indent: 0.09em; }
+          .heHero-rule { width: 68%; margin: 0.95rem 0; }
+          .heHero-since { font-size: 0.98rem; letter-spacing: 0.18em; text-indent: 0.18em; }
         }
         @media (max-width: 360px) {
-          .heHero-emblem { width: 72px; }
-          .heHero-mark { font-size: 1.85rem; letter-spacing: 0.08em; text-indent: 0.08em; }
-          .heHero-since { font-size: 0.72rem; letter-spacing: 0.16em; text-indent: 0.16em; }
+          .heHero-emblem { width: 84px; }
+          .heHero-mark { font-size: 2.2rem; letter-spacing: 0.07em; text-indent: 0.07em; }
+          .heHero-since { font-size: 0.82rem; letter-spacing: 0.15em; text-indent: 0.15em; }
         }
         @media (prefers-reduced-motion: reduce) {
           .heHero-video { transition: none; }

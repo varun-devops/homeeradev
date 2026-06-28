@@ -12,10 +12,11 @@ import { AnimatePresence, motion } from 'framer-motion';
  * We pick the source from a media query after mount so only one video ever
  * loads. Delivered with `q_auto,f_auto` for fast, well-compressed streaming.
  *
- * The wordmark ("HOME ERA / SINCE 1960") shows on load and auto-hides after
- * 10s (fade-out); the centred favicon emblem lingers until 20s, then vanishes
- * with a scale-up + blur "blast". A tap/click dismisses both immediately. The
- * video keeps playing underneath.
+ * The centred favicon emblem + wordmark ("HOME ERA / SINCE 1960") appear on
+ * load and, after 20s, slowly fade away together (a soft 1.4s fade + blur).
+ * A tap/click toggles them: it brings the intro back with the same smooth
+ * fade-in (and restarts the 20s timer), or hides it again. The video keeps
+ * playing underneath.
  *
  * Fully responsive: sized in svh/dvh, video covers via object-fit, fluid type.
  */
@@ -27,15 +28,13 @@ const base = (id: string) =>
 const DESKTOP_URL = base('clip');
 const MOBILE_URL = base('slim');
 
-/** Wordmark auto-hides after this; the logo lingers until LOGO_MS. */
-const REVEAL_MS = 10000;
-const LOGO_MS = 20000;
+/** Logo + wordmark stay this long, then slowly fade away together. */
+const REVEAL_MS = 20000;
 
 export default function HeroVideo() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [ready, setReady] = useState(false);
-  const [showWord, setShowWord] = useState(true);
-  const [showLogo, setShowLogo] = useState(true);
+  const [showIntro, setShowIntro] = useState(true);
   // Decide the source from the viewport. Default to desktop for SSR; corrected
   // on mount before paint so phones/tablets get the portrait `slim` clip.
   const [src, setSrc] = useState(DESKTOP_URL);
@@ -63,27 +62,23 @@ export default function HeroVideo() {
     return () => v.removeEventListener('canplay', onCanPlay);
   }, [src]);
 
-  // Auto-hide the wordmark after REVEAL_MS, then the logo after LOGO_MS.
+  // Whenever the intro is showing, arm a fresh 20s timer to fade it away.
+  // Re-runs each time it's brought back (by tap), restarting the countdown.
   useEffect(() => {
-    const t1 = setTimeout(() => setShowWord(false), REVEAL_MS);
-    const t2 = setTimeout(() => setShowLogo(false), LOGO_MS);
-    return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-    };
-  }, []);
+    if (!showIntro) return;
+    const t = setTimeout(() => setShowIntro(false), REVEAL_MS);
+    return () => clearTimeout(t);
+  }, [showIntro]);
 
-  // A tap/click dismisses both immediately.
-  const dismiss = () => {
-    setShowWord(false);
-    setShowLogo(false);
-  };
+  // A tap/click toggles the intro: bring it back (slow fade-in) if hidden,
+  // or fade it away if it's currently showing.
+  const toggleIntro = () => setShowIntro((v) => !v);
 
   return (
     <section
       className="heHero"
       aria-label="Home Era"
-      onClick={dismiss}
+      onClick={toggleIntro}
     >
       <style>{`
         .heHero {
@@ -126,10 +121,10 @@ export default function HeroVideo() {
           pointer-events: none;
         }
         .heHero-emblem {
-          width: clamp(72px, 16vw, 180px);
+          width: clamp(88px, 19vw, 220px);
           height: auto;
           filter: drop-shadow(0 6px 34px rgba(0,0,0,0.55));
-          margin-bottom: clamp(0.85rem, 3vh, 1.75rem);
+          margin-bottom: clamp(0.9rem, 3vh, 1.85rem);
         }
         .heHero-inner {
           display: flex; flex-direction: column; align-items: center;
@@ -139,8 +134,8 @@ export default function HeroVideo() {
         /* Wordmark */
         .heHero-mark {
           font-family: var(--font-display, Georgia, serif);
-          font-weight: 500;
-          font-size: clamp(1.7rem, 8.5vw, 6rem);
+          font-weight: 600;
+          font-size: clamp(2rem, 9.5vw, 7rem);
           letter-spacing: clamp(0.12em, 1.4vw, 0.5em);
           text-transform: uppercase;
           color: var(--ink, #f2ede3);
@@ -170,7 +165,8 @@ export default function HeroVideo() {
         }
         .heHero-since {
           font-family: var(--font-sans, system-ui), sans-serif;
-          font-size: clamp(0.6rem, 2vw, 0.95rem);
+          font-weight: 500;
+          font-size: clamp(0.68rem, 2.2vw, 1.1rem);
           letter-spacing: clamp(0.22em, 1.2vw, 0.55em);
           text-transform: uppercase;
           color: var(--ink-soft, #d8d2c4);
@@ -181,15 +177,15 @@ export default function HeroVideo() {
         /* Phones: firmly cap sizes + tighten spacing so nothing overflows. */
         @media (max-width: 480px) {
           .heHero-center { width: 94vw; padding: 0.75rem; }
-          .heHero-emblem { width: 64px; margin-bottom: 0.75rem; }
-          .heHero-mark { font-size: 1.55rem; letter-spacing: 0.1em; text-indent: 0.1em; }
-          .heHero-rule { width: 64%; margin: 0.8rem 0; }
-          .heHero-since { font-size: 0.58rem; letter-spacing: 0.2em; text-indent: 0.2em; }
+          .heHero-emblem { width: 78px; margin-bottom: 0.85rem; }
+          .heHero-mark { font-size: 1.85rem; letter-spacing: 0.1em; text-indent: 0.1em; }
+          .heHero-rule { width: 66%; margin: 0.85rem 0; }
+          .heHero-since { font-size: 0.66rem; letter-spacing: 0.2em; text-indent: 0.2em; }
         }
         @media (max-width: 360px) {
-          .heHero-emblem { width: 56px; }
-          .heHero-mark { font-size: 1.3rem; letter-spacing: 0.08em; text-indent: 0.08em; }
-          .heHero-since { font-size: 0.54rem; letter-spacing: 0.16em; text-indent: 0.16em; }
+          .heHero-emblem { width: 68px; }
+          .heHero-mark { font-size: 1.55rem; letter-spacing: 0.08em; text-indent: 0.08em; }
+          .heHero-since { font-size: 0.6rem; letter-spacing: 0.16em; text-indent: 0.16em; }
         }
         @media (prefers-reduced-motion: reduce) {
           .heHero-video { transition: none; }
@@ -213,33 +209,29 @@ export default function HeroVideo() {
 
       <div className="heHero-scrim" aria-hidden="true" />
 
-      <div className="heHero-center">
-        {/* Logo — centred; vanishes (scale-up + fade + blur) after 20s or tap. */}
-        <AnimatePresence>
-          {showLogo && (
-            // eslint-disable-next-line @next/next/no-img-element
+      {/* Logo + wordmark — appear on load, fade away together after 20s, and
+          a tap brings them back with a slow, smooth fade-in. One wrapper so
+          they enter/leave as a single group. */}
+      <AnimatePresence>
+        {showIntro && (
+          <motion.div
+            className="heHero-center"
+            initial={{ opacity: 0, filter: 'blur(6px)' }}
+            animate={{ opacity: 1, filter: 'blur(0px)' }}
+            exit={{ opacity: 0, filter: 'blur(4px)' }}
+            transition={{ duration: 1.4, ease: 'easeInOut' }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <motion.img
               className="heHero-emblem"
               src="/favicon.png"
               alt="Home Era"
               initial={{ opacity: 0, y: 16, scale: 0.96 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, scale: 1.6, filter: 'blur(10px)', transition: { duration: 0.6, ease: 'easeIn' } }}
               transition={{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
             />
-          )}
-        </AnimatePresence>
 
-        {/* Wordmark — shows on load, auto-hides after 10s or on tap. */}
-        <AnimatePresence>
-          {showWord && (
-            <motion.div
-              className="heHero-inner"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0, y: -18, filter: 'blur(6px)' }}
-              transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-            >
+            <div className="heHero-inner">
               <motion.h1
                 className="heHero-mark"
                 initial={{ opacity: 0, y: 24 }}
@@ -267,10 +259,10 @@ export default function HeroVideo() {
               >
                 Since 1960
               </motion.p>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </section>
   );
 }

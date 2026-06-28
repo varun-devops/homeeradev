@@ -45,9 +45,15 @@ export default function HeroVideo() {
       <style>{`
         .heHero {
           position: relative;
-          min-height: 100svh;
-          min-height: 100dvh;
           width: 100%;
+          /* Exactly one viewport tall and always fully visible on mobile.
+             Fallback chain: vh (universal) → dvh (dynamic) → svh (small —
+             the guaranteed-visible area with the toolbar shown). Using svh
+             last means the hero never gets hidden behind mobile browser UI,
+             so there's no gap or partial scroll. */
+          height: 100vh;
+          height: 100dvh;
+          height: 100svh;
           overflow: hidden;
           display: grid;
           place-items: center;
@@ -57,7 +63,9 @@ export default function HeroVideo() {
         .heHero-video {
           position: absolute; inset: 0;
           width: 100%; height: 100%;
+          /* cover the whole box, keep the subject centred, no letterboxing */
           object-fit: cover;
+          object-position: center center;
           opacity: 0;
           transition: opacity 600ms ease;
           z-index: 0;
@@ -92,24 +100,27 @@ export default function HeroVideo() {
           margin: 0;
           line-height: 1.3;
         }
+        /* Top CTA — sits just below the top edge, centred, underlined. */
+        .heHero-topcta {
+          position: absolute;
+          top: max(env(safe-area-inset-top), clamp(1.5rem, 5vh, 3rem));
+          left: 50%; transform: translateX(-50%);
+          z-index: 3;
+        }
         .heHero-cta {
           display: inline-block;
-          margin-top: 0.25rem;
-          padding: clamp(0.7rem, 2.5vw, 0.85rem) clamp(1.4rem, 6vw, 2rem);
-          border: 1px solid var(--ink, #f2ede3);
-          border-radius: 999px;
           color: var(--ink, #f2ede3);
-          font-size: clamp(0.68rem, 2.6vw, 0.82rem);
+          font-size: clamp(0.7rem, 2.6vw, 0.85rem);
           letter-spacing: 0.22em; text-transform: uppercase;
-          background: rgba(0,0,0,0.18);
-          transition: background 280ms ease, border-color 280ms ease;
+          text-decoration: underline;
+          text-underline-offset: 6px;
+          text-decoration-thickness: 1px;
+          text-shadow: 0 2px 18px rgba(0,0,0,0.55);
+          transition: color 280ms ease, text-underline-offset 280ms ease;
         }
-        .heHero-cta:hover { background: rgba(212,181,116,0.16); border-color: var(--gold, #d4b574); }
-        .heHero-scroll {
-          position: absolute; bottom: max(env(safe-area-inset-bottom), clamp(1rem, 4vh, 2.25rem));
-          left: 50%; transform: translateX(-50%); z-index: 2;
-          font-size: clamp(0.55rem, 2vw, 0.62rem); letter-spacing: 0.4em; text-transform: uppercase;
-          color: var(--ink-mute, rgba(242,237,227,0.6));
+        .heHero-cta:hover {
+          color: var(--gold, #d4b574);
+          text-underline-offset: 9px;
         }
         @media (prefers-reduced-motion: reduce) {
           .heHero-video { transition: none; }
@@ -132,6 +143,20 @@ export default function HeroVideo() {
 
       <div className="heHero-scrim" aria-hidden="true" />
 
+      {/* Top CTA into the shop */}
+      <div className="heHero-topcta">
+        <motion.a
+          href="/shop"
+          data-hover
+          className="heHero-cta"
+          initial={{ opacity: 0, y: -16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
+        >
+          View all collections
+        </motion.a>
+      </div>
+
       <div className="heHero-inner">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <motion.img
@@ -140,40 +165,17 @@ export default function HeroVideo() {
           alt="Home Era"
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
+          transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1], delay: 0.25 }}
         />
         <motion.p
           className="heHero-word"
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1], delay: 0.25 }}
+          transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1], delay: 0.4 }}
         >
           Home Era · Since 1960
         </motion.p>
-        <motion.a
-          href="/shop"
-          data-hover
-          className="heHero-cta"
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1], delay: 0.4 }}
-        >
-          Enter the shop
-        </motion.a>
       </div>
-
-      <motion.span
-        className="heHero-scroll"
-        aria-hidden="true"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1, y: [0, 6, 0] }}
-        transition={{
-          opacity: { duration: 0.8, delay: 0.8 },
-          y: { duration: 1.8, repeat: Infinity, ease: 'easeInOut' },
-        }}
-      >
-        Scroll
-      </motion.span>
     </section>
   );
 }

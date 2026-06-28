@@ -2,8 +2,15 @@
 
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion, type Variants } from 'framer-motion';
 import { formatINR } from '@/lib/format';
+
+// Shared scroll-reveal item: fade + rise, used for the staggered collection
+// headline content.
+const revealItem: Variants = {
+  hidden: { opacity: 0, y: 28 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] } },
+};
 
 // Price sort options shown inside an expanded collection.
 type SortMode = 'featured' | 'price-asc' | 'price-desc';
@@ -92,10 +99,10 @@ export default function ShopCollectionDeck({ collections, products }: Props) {
         if (reduce) return;
         const content = contents[i];
         if (content) {
+          // Parallax lift only — opacity is owned by Framer Motion
+          // (whileInView) so the two systems don't fight.
           const lift = phase * vh * 0.06;
-          const visible = 1 - Math.min(1, Math.abs(phase) / 0.8);
           content.style.transform = `translate3d(0, ${lift.toFixed(2)}px, 0)`;
-          content.style.opacity = String(Math.max(0, visible));
         }
       });
       if (bestIdx !== lastActive) {
@@ -142,27 +149,49 @@ export default function ShopCollectionDeck({ collections, products }: Props) {
           className="heShop-panel"
           onClick={() => setOpenSlug(c.slug)}
         >
+          {/* Entrance "blast in" wrapper — runs once when the shop mounts
+              (i.e. right after the page transition from the hero), staggered
+              per card. The RAF parallax doesn't touch this layer, so the two
+              never fight. */}
           <motion.div
-            layoutId={`card-bg-${c.slug}`}
-            className="heShop-bg"
-            style={c.image ? { backgroundImage: `url(${c.image})` } : { background: '#1a1916' }}
-            animate={{ opacity: openSlug === c.slug ? 0 : 1 }}
-            transition={{ duration: 0.2 }}
-          />
+            className="heShop-bgWrap"
+            initial={reduce ? false : { opacity: 0, scale: 1.12 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1], delay: 0.05 + i * 0.12 }}
+          >
+            <motion.div
+              layoutId={`card-bg-${c.slug}`}
+              className="heShop-bg"
+              style={c.image ? { backgroundImage: `url(${c.image})` } : { background: '#1a1916' }}
+              animate={{ opacity: openSlug === c.slug ? 0 : 1 }}
+              transition={{ duration: 0.2 }}
+            />
+          </motion.div>
           <div className="heShop-scrim" aria-hidden="true" />
           <div data-content className="heShop-content">
-            <span className="heShop-kicker">
-              <span className="heShop-index">
-                {String(i + 1).padStart(2, '0')} / {String(collections.length).padStart(2, '0')}
-              </span>
-              {'  ·  '}
-              {c.count} pieces
-            </span>
-            <h2 className="heShop-title">{c.label}</h2>
-            <p className="heShop-copy">
-              {c.subCollections.map((s) => s.label).join(' · ')}
-            </p>
-            <span className="heShop-open">View collection</span>
+            <motion.div
+              className="heShop-contentInner"
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, amount: 0.5 }}
+              variants={{
+                hidden: {},
+                show: { transition: { staggerChildren: 0.08, delayChildren: 0.15 } },
+              }}
+            >
+              <motion.span className="heShop-kicker" variants={revealItem}>
+                <span className="heShop-index">
+                  {String(i + 1).padStart(2, '0')} / {String(collections.length).padStart(2, '0')}
+                </span>
+                {'  ·  '}
+                {c.count} pieces
+              </motion.span>
+              <motion.h2 className="heShop-title" variants={revealItem}>{c.label}</motion.h2>
+              <motion.p className="heShop-copy" variants={revealItem}>
+                {c.subCollections.map((s) => s.label).join(' · ')}
+              </motion.p>
+              <motion.span className="heShop-open" variants={revealItem}>View collection</motion.span>
+            </motion.div>
           </div>
         </article>
       ))}
@@ -382,6 +411,9 @@ const styles = `
     position: relative; height: 100svh; width: 100%;
     overflow: hidden; display: grid; place-items: center; cursor: pointer;
   }
+  .heShop-bgWrap {
+    position: absolute; inset: 0; z-index: 0; overflow: hidden;
+  }
   .heShop-bg {
     position: absolute; inset: 0; height: 100%; width: 100%;
     background-size: cover; background-position: center; z-index: 0;
@@ -396,6 +428,9 @@ const styles = `
     position: relative; z-index: 2; max-width: 820px; text-align: center;
     padding: clamp(2rem, 6vw, 4rem) var(--pad-x);
     will-change: transform, opacity; pointer-events: none;
+  }
+  .heShop-contentInner {
+    display: flex; flex-direction: column; align-items: center;
   }
   .heShop-kicker {
     display: inline-block; font-size: 0.72rem; letter-spacing: 0.36em;

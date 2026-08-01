@@ -139,6 +139,66 @@ if (staleErr) {
   for (const r of stale) console.log(`  – ${r.sku}`);
 }
 
+// ------------------------------------------------------------------
+// Re-seed the collection tree from what we just imported.
+//
+// The storefront deck reads `collections` / `sub_collections`, so if the
+// sheet's taxonomy changes those tables have to follow or the shop shows
+// stale or empty cards. Doing it here means the tables are always correct
+// after an import, without anyone remembering to run a migration.
+// ------------------------------------------------------------------
+const collections = new Map();
+const subCollections = new Map();
+for (const p of products) {
+  if (!collections.has(p.category_slug)) {
+    collections.set(p.category_slug, { slug: p.category_slug, label: p.category, image_url: null });
+  }
+  if (!subCollections.has(p.sub_category_slug)) {
+    subCollections.set(p.sub_category_slug, {
+      slug: p.sub_category_slug,
+      label: p.sub_category,
+      collection_slug: p.category_slug,
+      image_url: null,
+    });
+  }
+}
+
+// Give each one a representative photo — the first product image in it.
+const { data: imaged } = await sb
+  .from('products')
+  .select('category_slug, sub_category_slug, image_url')
+  .eq('is_active', true)
+  .not('image_url', 'is', null);
+for (const row of imaged ?? []) {
+  const c = collections.get(row.category_slug);
+  if (c && !c.image_url) c.image_url = row.image_url;
+  const s = subCollections.get(row.sub_category_slug);
+  if (s && !s.image_url) s.image_url = row.image_url;
+}
+
+const { error: colErr } = await sb
+  .from('collections')
+  .upsert([...collections.values()], { onConflict: 'slug' });
+const { error: subErr } = await sb
+  .from('sub_collections')
+  .upsert([...subCollections.values()], { onConflict: 'slug' });
+
+// Drop collection rows the sheet no longer has, so the deck can't show a
+// card with nothing behind it.
+await sb.from('sub_collections').delete().not('slug', 'in', `(${[...subCollections.keys()].map((s) => `"${s}"`).join(',')})`);
+await sb.from('collections').delete().not('slug', 'in', `(${[...collections.keys()].map((s) => `"${s}"`).join(',')})`);
+
+if (colErr || subErr) {
+  console.error(`\nCollection re-seed failed: ${(colErr ?? subErr).message}`);
+  console.error('Run supabase/migration-09-restore-sheet-collections.sql to fix it.');
+} else {
+  console.log(`\nCollections: ${collections.size} · sub-collections: ${subCollections.size}`);
+  for (const c of collections.values()) {
+    const subs = [...subCollections.values()].filter((s) => s.collection_slug === c.slug);
+    console.log(`  ${c.label} → ${subs.map((s) => s.label).join(', ')}`);
+  }
+}
+
 console.log(
   `\nDone. Imported ${imported}/${products.length} · images uploaded ${uploaded} · failed ${failed}`,
 );

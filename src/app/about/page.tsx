@@ -59,7 +59,7 @@ export default function AboutPage() {
         paddingBottom: 'clamp(3rem, 6vh, 5rem)',
       }}
     >
-      <style>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         .heAbout-row {
           display: grid;
           grid-template-columns: minmax(160px, 1fr) minmax(0, 1.6fr);
@@ -107,7 +107,7 @@ export default function AboutPage() {
           transition: background 260ms var(--ease-out), border-color 260ms var(--ease-out);
         }
         .heAbout-cta:hover { background: rgba(212,181,116,0.14); border-color: var(--gold); }
-      `}</style>
+      ` }} />
 
       {/* ============ HEAD ============ */}
       <Reveal>

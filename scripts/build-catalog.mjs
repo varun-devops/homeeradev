@@ -7,10 +7,12 @@
  *   • scripts/data/media/<SKU>.jpg — the photo embedded in that row
  *
  * Catalogue model produced here (matches the storefront):
- *   • ONE top-level collection: "Home Décor". Every product sits inside it.
+ *   • The collection is the sheet's "Category" column — Home Décor,
+ *     Bar & Entertaining, Lighting, Home & Garden, Home & Kitchen.
  *   • The sub-collection is the sheet's "Sub category" column, normalised
  *     to a clean plural label (ORNAMENT → Ornaments, FLOWER POT → Flower
  *     Pots, FLOOX LAMP → Floor Lamps, TREY → Trays, …).
+ *   • Both are taken verbatim from the sheet; nothing is merged.
  *   • `description` is written prose about the object, not an attribute
  *     dump — the product page shows it as the "About this piece" copy.
  *
@@ -36,8 +38,27 @@ const XLSX = join(root, 'list of items (1).xlsx');
 const OUT_JSON = join(root, 'scripts/data/import.json');
 const OUT_MEDIA = join(root, 'scripts/data/media');
 
-const CATEGORY = 'Home Décor';
-const CATEGORY_SLUG = 'home-decor';
+// Sheet category → storefront collection label. The sheet shouts in caps
+// and has one typo ("LIGHTNING"), so the display label is mapped rather
+// than title-cased blindly.
+const CATEGORY_LABEL = {
+  'HOME DÉCOR': 'Home Décor',
+  'HOME DECOR': 'Home Décor',
+  'BAR & ENTERTAINING': 'Bar & Entertaining',
+  LIGHTNING: 'Lighting',            // sheet typo for LIGHTING
+  'HOME & GARDEN': 'Home & Garden',
+  'HOME & KITCHEN': 'Home & Kitchen',
+};
+
+// Order the collections appear in on the shop deck. Anything unlisted
+// falls to the end, alphabetically.
+const CATEGORY_ORDER = [
+  'Home Décor',
+  'Home & Garden',
+  'Bar & Entertaining',
+  'Home & Kitchen',
+  'Lighting',
+];
 
 // ── the sheet carries no prices, so these are the standing list prices
 //    per sub-collection (whole rupees, unchanged from the live catalogue).
@@ -368,6 +389,7 @@ function describe(p) {
 const products = [];
 const usedSku = new Set();
 let lastVendor = '';
+let lastCategory = '';
 let lastPlanterName = 'Wooden Planter';
 
 for (const rowNum of [...rows.keys()].filter((r) => r > 1).sort((a, b) => a - b)) {
@@ -377,6 +399,14 @@ for (const rowNum of [...rows.keys()].filter((r) => r > 1).sort((a, b) => a - b)
   if (!rawSub) continue;                    // not a product row
   const sub_category = SUB_LABEL[rawSub] ?? titleCase(rawSub);
   const sub_category_slug = slugify(sub_category);
+
+  // Collection straight from the sheet's Category column. Like the vendor,
+  // it carries down the sheet's merged-looking blocks so a colourway row
+  // that leaves the cell blank still lands in the right collection.
+  const rawCat = (c[6] ?? '').toUpperCase();
+  const category = rawCat ? CATEGORY_LABEL[rawCat] ?? titleCase(rawCat) : lastCategory;
+  if (category) lastCategory = category;
+  const category_slug = slugify(category);
 
   // Vendor carries down the sheet's merged-looking blocks.
   const vendor = c[4] ? c[4].replace(/\s*\[.*?\]\s*/g, ' ').replace(/\s+/g, ' ').trim() : lastVendor;
@@ -428,8 +458,8 @@ for (const rowNum of [...rows.keys()].filter((r) => r > 1).sort((a, b) => a - b)
     sku,
     name,
     vendor: vendor || null,
-    category: CATEGORY,
-    category_slug: CATEGORY_SLUG,
+    category,
+    category_slug,
     sub_category,
     sub_category_slug,
     material,
@@ -470,13 +500,27 @@ for (const p of products) {
 writeFileSync(OUT_JSON, JSON.stringify(products, null, 2) + '\n');
 
 // ──────────────────────────────────────────────────────────────────
-const bySub = new Map();
-for (const p of products) bySub.set(p.sub_category, (bySub.get(p.sub_category) ?? 0) + 1);
+// Collection → sub-collection tree, in deck order.
+const tree = new Map();
+for (const p of products) {
+  if (!tree.has(p.category)) tree.set(p.category, new Map());
+  const subs = tree.get(p.category);
+  subs.set(p.sub_category, (subs.get(p.sub_category) ?? 0) + 1);
+}
+
+const rank = (label) => {
+  const i = CATEGORY_ORDER.indexOf(label);
+  return i === -1 ? CATEGORY_ORDER.length : i;
+};
 
 console.log(`\n${products.length} products → ${OUT_JSON}`);
 console.log(`${copied} photos → ${OUT_MEDIA}\n`);
-console.log(`Collection: ${CATEGORY}`);
-for (const [label, n] of [...bySub].sort((a, b) => b[1] - a[1])) {
-  console.log(`   ${String(n).padStart(3)}  ${label}`);
+console.log(`${tree.size} collections:`);
+for (const [label, subs] of [...tree].sort((a, b) => rank(a[0]) - rank(b[0]) || a[0].localeCompare(b[0]))) {
+  const total = [...subs.values()].reduce((s, n) => s + n, 0);
+  console.log(`\n  ${label}  (${total})`);
+  for (const [sub, n] of [...subs].sort((a, b) => b[1] - a[1])) {
+    console.log(`     ${String(n).padStart(3)}  ${sub}`);
+  }
 }
 console.log(`\nExample:\n  ${products[0].name} (${products[0].sku})\n  ${products[0].description}`);

@@ -62,7 +62,7 @@ export default function PageTransition({ children }: { children: React.ReactNode
 
   return (
     <>
-      <style>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         /* Forward: hinged on the right edge, swinging in from the right —
            a page being turned right to left. */
         @keyframes hePageFoldFwd {
@@ -100,7 +100,7 @@ export default function PageTransition({ children }: { children: React.ReactNode
         @media (prefers-reduced-motion: reduce) {
           .hePageFold { animation: none; }
         }
-      `}</style>
+      ` }} />
       <div key={pathname} className={`hePageFold hePageFold--${dirRef.current}`}>
         {children}
       </div>

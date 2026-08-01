@@ -100,7 +100,7 @@ export default function AuthModal({
           aria-modal="true"
           aria-label={mode === 'login' ? 'Sign in' : 'Create account'}
         >
-          <style>{`
+          <style dangerouslySetInnerHTML={{ __html: `
             .heAuth-backdrop {
               position: fixed; inset: 0; z-index: 10000;
               display: grid; place-items: center;
@@ -168,7 +168,7 @@ export default function AuthModal({
               color: var(--ink, #f2ede3); border-bottom: 1px solid currentColor;
               font-size: inherit;
             }
-          `}</style>
+          ` }} />
 
           <motion.div
             className="heAuth-card"

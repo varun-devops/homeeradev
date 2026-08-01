@@ -53,7 +53,7 @@ export default function ContactPage() {
         paddingBottom: 'clamp(3rem, 6vh, 5rem)',
       }}
     >
-      <style>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         /* Two-column row used for every band: label / address on the
            left, content on the right. Collapses to one column under 760px. */
         .heContact-row {
@@ -133,7 +133,7 @@ export default function ContactPage() {
           font-size: 1.1em;
           line-height: 1;
         }
-      `}</style>
+      ` }} />
 
       {/* ============ HEAD ROW — display headline + primary emails ============ */}
       <Reveal>

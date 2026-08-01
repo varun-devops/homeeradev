@@ -53,7 +53,7 @@ export default function AdminNav({ email, role }: { email: string; role: NavRole
 
   return (
     <>
-      <style>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         /* ---------- shared link styles ---------- */
         .adminNav-link {
           padding: 0.65rem 0.85rem;
@@ -122,7 +122,7 @@ export default function AdminNav({ email, role }: { email: string; role: NavRole
           }
           .adminNav-drawer[data-open='true'] { transform: translateX(0); }
         }
-      `}</style>
+      ` }} />
 
       {/* ===== Mobile top bar ===== */}
       <div className="adminNav-bar">

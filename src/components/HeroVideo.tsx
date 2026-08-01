@@ -80,7 +80,7 @@ export default function HeroVideo() {
       aria-label="Home Era"
       onClick={toggleIntro}
     >
-      <style>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         .heHero {
           position: relative;
           width: 100%;
@@ -190,7 +190,7 @@ export default function HeroVideo() {
         @media (prefers-reduced-motion: reduce) {
           .heHero-video { transition: none; }
         }
-      `}</style>
+      ` }} />
 
       <video
         ref={videoRef}

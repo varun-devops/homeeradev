@@ -34,7 +34,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <div className="adminShell">
-      <style>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         .adminShell {
           display: grid;
           /* The sidebar column is fixed-width; the content column is
@@ -83,7 +83,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
           gap: 1.25rem;
         }
-      `}</style>
+      ` }} />
       <AdminNav email={identity.email} role={identity.role} />
       <div className="adminShell-main">{children}</div>
     </div>

@@ -79,7 +79,7 @@ export default function Header() {
   return (
     <>
       {/* Breakpoint-driven show/hide + drawer animation — scoped here */}
-      <style>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         /* Hamburger drawer is the navigation at every breakpoint.
            The inline desktop link row is permanently hidden, so the
            hamburger button + full-page drawer are shown on every
@@ -213,7 +213,7 @@ export default function Header() {
         @media (prefers-reduced-motion: reduce) {
           .heHeader-bar { transition: none; }
         }
-      `}</style>
+      ` }} />
 
       <header
         className="heHeader-bar"

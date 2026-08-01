@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion, type Variants } from 'framer-motion';
 import { formatINR } from '@/lib/format';
+import SubCollectionDeck from '@/components/SubCollectionDeck';
 
 export type LiteProduct = {
   id: string;
@@ -208,7 +209,7 @@ export default function ShopCollectionDeck({ collections, products }: Props) {
 
   return (
     <section ref={rootRef} aria-label="Shop collections" className="heShop">
-      <style>{styles}</style>
+      <style dangerouslySetInnerHTML={{ __html: styles }} />
 
       {/* ============ LEVEL 1 — COLLECTION DECK ============ */}
       {collections.map((c, i) => (
@@ -284,6 +285,10 @@ export default function ShopCollectionDeck({ collections, products }: Props) {
             key={`ov-${openCol.slug}`}
             ref={overlayRef}
             className="heShop-overlay"
+            // The sub-collection deck owns the wheel and fills the viewport,
+            // so the overlay must not scroll behind it. The product grid does
+            // need to scroll.
+            data-level={openSubCol ? 'items' : 'subs'}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -334,27 +339,11 @@ export default function ShopCollectionDeck({ collections, products }: Props) {
                     animate="center"
                     exit="exit"
                   >
-                    <div className="heShop-subGrid">
-                      {openCol.subCollections.map((s) => (
-                        <button
-                          key={s.slug}
-                          type="button"
-                          className="heShop-subCard"
-                          onClick={() => openSubCollection(s.slug)}
-                        >
-                          <div className="heShop-subImg">
-                            {s.image ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img src={s.image} alt="" loading="lazy" className="heShop-subPhoto" />
-                            ) : (
-                              <div className="heShop-subPhoto heShop-cardNoimg" />
-                            )}
-                            <span className="heShop-subScrim" aria-hidden="true" />
-                            <span className="heShop-subLabel">{s.label}</span>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
+                    <SubCollectionDeck
+                      collectionLabel={openCol.label}
+                      subs={openCol.subCollections}
+                      onOpen={openSubCollection}
+                    />
                   </motion.div>
                 ) : (
                   /* ---------- LEVEL 3 — products ---------- */
@@ -448,6 +437,7 @@ const styles = `
   }
 
   .heShop-overlay { position: fixed; inset: 0; z-index: 90; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .heShop-overlay[data-level='subs'] { overflow: hidden; }
   .heShop-overlayBg { position: fixed; inset: 0; z-index: 0; background-size: cover; background-position: center; }
   .heShop-overlayTint {
     position: fixed; inset: 0; z-index: 1; pointer-events: none;
@@ -456,6 +446,13 @@ const styles = `
   .heShop-overlayInner {
     position: relative; z-index: 2; min-height: 100svh;
     padding: clamp(7.5rem, 16vh, 10rem) var(--pad-x) clamp(4rem, 10vh, 7rem);
+  }
+  /* The sub-collection deck sizes itself to 100svh, so the inner wrapper
+     only supplies the side gutter — vertical padding would push it past
+     the fold and reintroduce a scrollbar. */
+  .heShop-overlay[data-level='subs'] .heShop-overlayInner {
+    min-height: 0;
+    padding: 0 var(--pad-x);
   }
 
   /* Back arrow — parked under the logo, at the page gutter.
@@ -472,41 +469,8 @@ const styles = `
   .heShop-back:hover { background: rgba(212,181,116,0.16); border-color: var(--gold); transform: translateX(-2px); }
   .heShop-back:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 
-  /* ---------- level 2: sub-collection cards ---------- */
-  .heShop-subGrid {
-    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: clamp(1.25rem, 3vw, 2rem); max-width: 1100px; margin: 0 auto;
-  }
-  @media (max-width: 900px) { .heShop-subGrid { grid-template-columns: repeat(2, 1fr); } }
-  @media (max-width: 560px) { .heShop-subGrid { grid-template-columns: 1fr; } }
-
-  .heShop-subCard {
-    display: block; width: 100%; padding: 0; border: none; background: none;
-    cursor: pointer; text-align: left;
-  }
-  .heShop-subImg {
-    position: relative; aspect-ratio: 4 / 3; border-radius: 8px; overflow: hidden;
-    background: #15140f; transition: transform 600ms var(--ease-out);
-  }
-  .heShop-subCard:hover .heShop-subImg { transform: translateY(-4px); }
-  .heShop-subCard:focus-visible .heShop-subImg { outline: 2px solid var(--gold); outline-offset: 3px; }
-  .heShop-subPhoto {
-    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block;
-    transition: transform 900ms var(--ease-out);
-  }
-  .heShop-subCard:hover .heShop-subPhoto { transform: scale(1.06); }
-  .heShop-subScrim {
-    position: absolute; inset: 0;
-    background: linear-gradient(180deg, rgba(0,0,0,0.35), rgba(0,0,0,0.55));
-  }
-  /* Name centred over the card, both axes. */
-  .heShop-subLabel {
-    position: absolute; inset: 0;
-    display: grid; place-items: center; text-align: center;
-    padding: 1rem; color: var(--ink);
-    font-family: var(--font-display); font-size: clamp(1.25rem, 2.8vw, 1.75rem);
-    font-style: italic; letter-spacing: 0.01em; line-height: 1.15;
-  }
+  /* Level 2 (the sub-collection card stack) styles itself — see
+     SubCollectionDeck.tsx. */
 
   /* ---------- level 3: products ---------- */
   .heShop-grid {

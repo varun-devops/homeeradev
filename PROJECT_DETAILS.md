@@ -55,13 +55,21 @@ Built on **Next.js 14 (App Router)**, **Supabase** (Postgres + Auth), **Cloudina
   state, name, street, mobile) and will not enable payment until the pin
   code passes `/api/serviceability`.
 
-> Rebuilding the catalogue after the sheet changes:
+> Rebuilding the catalogue after the sheet changes — **PowerShell**:
+> ```powershell
+> node scripts/build-catalog.mjs; if ($?) { node scripts/import-catalog.mjs }
 > ```
-> node scripts/build-catalog.mjs     # sheet  → import.json + media/
-> node scripts/import-catalog.mjs    # import.json → Supabase + Cloudinary
-> ```
+> (Windows PowerShell 5.1 has no `&&`. In bash/zsh the usual
+> `node scripts/build-catalog.mjs && node scripts/import-catalog.mjs` works.)
+>
+> Step 1 reads the workbook and writes `scripts/data/import.json` plus one
+> `<SKU>.jpg` per product. Step 2 uploads to Cloudinary and upserts Supabase.
 > Products no longer in the sheet are deactivated, not deleted, so past
-> orders keep resolving.
+> orders keep resolving. Product copy lives in `scripts/product-copy.mjs`,
+> keyed by SKU — edit it there, not in `import.json`, which is regenerated.
+>
+> No external tools are needed: the `.xlsx` is unpacked in-process with
+> Node's zlib, so there is no dependency on `unzip` being on PATH.
 
 ---
 

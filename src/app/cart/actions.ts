@@ -18,7 +18,6 @@ export async function addToCart(productId: string, quantity = 1): Promise<Result
   } = await sb.auth.getUser();
   if (!user) return { ok: false, reason: 'auth' };
 
-  // Upsert: if the product is already in the cart, bump the quantity.
   const { data: existing } = await sb
     .from('cart_items')
     .select('id, quantity')

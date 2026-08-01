@@ -14,19 +14,22 @@
  *   • `description` is written prose about the object, not an attribute
  *     dump — the product page shows it as the "About this piece" copy.
  *
- * The .xlsx is read directly (it is just a zip of XML + JPEGs), so there is
- * no spreadsheet dependency to install.
+ * The .xlsx is read directly — it is just a ZIP of XML + JPEGs, unpacked
+ * in-process with Node's zlib. Nothing to install, and no reliance on an
+ * `unzip` binary being on PATH (it isn't, on stock Windows).
  *
  * Run:  node scripts/build-catalog.mjs
  * Then: node scripts/import-catalog.mjs   (pushes to Supabase + Cloudinary)
+ * PowerShell one-liner for both:
+ *   node scripts/build-catalog.mjs; if ($?) { node scripts/import-catalog.mjs }
  *
  * Idempotent — safe to re-run whenever the sheet changes.
  */
-import { execFileSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, rmSync, readFileSync, writeFileSync, copyFileSync, existsSync, readdirSync, unlinkSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { mkdirSync, readFileSync, writeFileSync, existsSync, readdirSync, unlinkSync } from 'node:fs';
+import { inflateRawSync } from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { PRODUCT_COPY } from './product-copy.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const XLSX = join(root, 'list of items (1).xlsx');
@@ -65,20 +68,85 @@ const SUB_LABEL = {
 };
 
 // ──────────────────────────────────────────────────────────────────
-// 1. Unzip the workbook into a temp dir and pull out the bits we need
+// 1. Read the workbook
 // ──────────────────────────────────────────────────────────────────
+
+/**
+ * Minimal ZIP reader — an .xlsx is a ZIP archive.
+ *
+ * Implemented in-process with zlib rather than shelling out to `unzip`,
+ * because `unzip` is not present on a stock Windows PATH (it exists in Git
+ * Bash but not in PowerShell or cmd), and this script has to run wherever
+ * the merchant runs it. Returns a Map of entry name → Buffer.
+ *
+ * Only the two things a spreadsheet uses are handled: stored (method 0) and
+ * deflate (method 8). Anything else in the archive is skipped rather than
+ * throwing, since we only ever ask for a handful of known entries.
+ */
+function readZip(file) {
+  const buf = readFileSync(file);
+
+  // The End Of Central Directory record lives in the last 64KB, after a
+  // comment of unknown length — so scan backwards for its signature.
+  const EOCD_SIG = 0x06054b50;
+  let eocd = -1;
+  for (let i = buf.length - 22; i >= 0 && i >= buf.length - 65557; i--) {
+    if (buf.readUInt32LE(i) === EOCD_SIG) {
+      eocd = i;
+      break;
+    }
+  }
+  if (eocd < 0) throw new Error('Not a ZIP archive (no end-of-central-directory record)');
+
+  const entryCount = buf.readUInt16LE(eocd + 10);
+  let p = buf.readUInt32LE(eocd + 16); // offset of the central directory
+
+  const files = new Map();
+  for (let i = 0; i < entryCount; i++) {
+    if (buf.readUInt32LE(p) !== 0x02014b50) break; // central file header
+    const method = buf.readUInt16LE(p + 10);
+    const compressedSize = buf.readUInt32LE(p + 20);
+    const nameLen = buf.readUInt16LE(p + 28);
+    const extraLen = buf.readUInt16LE(p + 30);
+    const commentLen = buf.readUInt16LE(p + 32);
+    const localOffset = buf.readUInt32LE(p + 42);
+    const name = buf.toString('utf8', p + 46, p + 46 + nameLen);
+
+    // The local header repeats the name and extra fields, and its extra
+    // field length often differs from the central one — so the data offset
+    // must be computed from the LOCAL header, not the central directory.
+    const lNameLen = buf.readUInt16LE(localOffset + 26);
+    const lExtraLen = buf.readUInt16LE(localOffset + 28);
+    const dataStart = localOffset + 30 + lNameLen + lExtraLen;
+    const raw = buf.subarray(dataStart, dataStart + compressedSize);
+
+    if (method === 0) files.set(name, raw);
+    else if (method === 8) files.set(name, inflateRawSync(raw));
+
+    p += 46 + nameLen + extraLen + commentLen;
+  }
+  return files;
+}
+
 if (!existsSync(XLSX)) {
   console.error(`Source sheet not found: ${XLSX}`);
   process.exit(1);
 }
-const tmp = mkdtempSync(join(tmpdir(), 'homeera-xlsx-'));
+
+let zip;
 try {
-  execFileSync('unzip', ['-o', '-q', XLSX, '-d', tmp], { stdio: 'inherit' });
-} catch {
-  console.error('Could not unzip the workbook — is `unzip` on PATH?');
-  rmSync(tmp, { recursive: true, force: true });
+  zip = readZip(XLSX);
+} catch (err) {
+  console.error(`Could not read the workbook: ${err.message}`);
   process.exit(1);
 }
+
+/** Read one entry out of the workbook as text. */
+const zipText = (name) => {
+  const b = zip.get(name);
+  if (!b) throw new Error(`Missing "${name}" inside the workbook`);
+  return b.toString('utf8');
+};
 
 const decode = (s) =>
   s
@@ -94,7 +162,7 @@ const colToNum = (col) => [...col].reduce((n, c) => n * 26 + (c.charCodeAt(0) - 
 
 // Shared string table.
 const shared = [];
-for (const m of readFileSync(join(tmp, 'xl/sharedStrings.xml'), 'utf8').matchAll(/<si>([\s\S]*?)<\/si>/g)) {
+for (const m of zipText('xl/sharedStrings.xml').matchAll(/<si>([\s\S]*?)<\/si>/g)) {
   let text = '';
   for (const t of m[1].matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)) text += t[1];
   shared.push(decode(text));
@@ -103,7 +171,7 @@ for (const m of readFileSync(join(tmp, 'xl/sharedStrings.xml'), 'utf8').matchAll
 // Cells, row by row. Note the `<c .../>` self-closing form has to be matched
 // too, otherwise an empty cell swallows the next cell's value.
 const rows = new Map();
-const sheetXml = readFileSync(join(tmp, 'xl/worksheets/sheet1.xml'), 'utf8');
+const sheetXml = zipText('xl/worksheets/sheet1.xml');
 for (const rm of sheetXml.matchAll(/<row[^>]*\sr="(\d+)"[^>]*>([\s\S]*?)<\/row>/g)) {
   const cells = {};
   for (const cm of rm[2].matchAll(/<c\s([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g)) {
@@ -120,11 +188,11 @@ for (const rm of sheetXml.matchAll(/<row[^>]*\sr="(\d+)"[^>]*>([\s\S]*?)<\/row>/
 
 // Which embedded JPEG is anchored to which sheet row.
 const relMap = {};
-for (const m of readFileSync(join(tmp, 'xl/drawings/_rels/drawing1.xml.rels'), 'utf8').matchAll(/Id="([^"]+)"[^>]*Target="([^"]+)"/g)) {
+for (const m of zipText('xl/drawings/_rels/drawing1.xml.rels').matchAll(/Id="([^"]+)"[^>]*Target="([^"]+)"/g)) {
   relMap[m[1]] = m[2].replace('../', '');
 }
 const imageForRow = new Map();
-for (const m of readFileSync(join(tmp, 'xl/drawings/drawing1.xml'), 'utf8').matchAll(/<xdr:(?:twoCellAnchor|oneCellAnchor)[\s\S]*?<\/xdr:(?:twoCellAnchor|oneCellAnchor)>/g)) {
+for (const m of zipText('xl/drawings/drawing1.xml').matchAll(/<xdr:(?:twoCellAnchor|oneCellAnchor)[\s\S]*?<\/xdr:(?:twoCellAnchor|oneCellAnchor)>/g)) {
   const row = /<xdr:from>[\s\S]*?<xdr:row>(\d+)<\/xdr:row>/.exec(m[0])?.[1];
   const embed = /r:embed="([^"]+)"/.exec(m[0])?.[1];
   if (row != null && embed && relMap[embed]) imageForRow.set(+row + 1, relMap[embed]);
@@ -269,7 +337,19 @@ const dimensionLine = (size) => {
     : `Measures ${parts[0]} cm.`;
 };
 
+/**
+ * Product description.
+ *
+ * Prefers the hand-written copy in product-copy.mjs, which says what the
+ * object actually is. Falls back to a generated line built from the sheet's
+ * own material/finish/sub-category columns, so a row added to the
+ * spreadsheet still produces a usable page before anyone writes copy for it.
+ * Either way the dimensions from the sheet are appended.
+ */
 function describe(p) {
+  const written = PRODUCT_COPY[p.sku];
+  if (written) return [written, dimensionLine(p.size)].filter(Boolean).join(' ');
+
   const sub = SUB_COPY[p.sub_category_slug] ?? { noun: 'piece', line: '' };
   const material = (p.material || '').replace(/\s*\/\s*/g, ' and ').toLowerCase();
   const opening = material
@@ -377,17 +457,17 @@ for (const f of readdirSync(OUT_MEDIA)) unlinkSync(join(OUT_MEDIA, f));
 let copied = 0;
 for (const p of products) {
   if (!p.image_file) continue;
-  const src = join(tmp, 'xl/media', p.image_file);
-  if (!existsSync(src)) {
+  // Straight out of the workbook in memory — no temp directory involved.
+  const bytes = zip.get(`xl/media/${p.image_file}`);
+  if (!bytes) {
     p.image_file = null;
     continue;
   }
-  copyFileSync(src, join(OUT_MEDIA, `${p.sku}.jpg`));
+  writeFileSync(join(OUT_MEDIA, `${p.sku}.jpg`), bytes);
   copied++;
 }
 
 writeFileSync(OUT_JSON, JSON.stringify(products, null, 2) + '\n');
-rmSync(tmp, { recursive: true, force: true });
 
 // ──────────────────────────────────────────────────────────────────
 const bySub = new Map();

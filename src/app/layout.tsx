@@ -7,6 +7,7 @@ import { Inter, Cormorant_Garamond } from 'next/font/google';
 import 'lenis/dist/lenis.css';
 import '../styles/globals.css';
 import Chrome from '@/components/Chrome';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 
 const sans = Inter({
   subsets: ['latin'],
@@ -114,6 +115,7 @@ export default function RootLayout({
       </head>
       <body>
         <Chrome>{children}</Chrome>
+        <SpeedInsights />
       </body>
     </html>
   );

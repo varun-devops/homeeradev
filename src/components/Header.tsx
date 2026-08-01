@@ -8,20 +8,55 @@ import NotificationBell from '@/components/NotificationBell';
 // on mobile.
 const primary = [
   { label: 'Shop', href: '/shop' },
-  { label: 'Favourites', href: '/favourites' },
   { label: 'Cart', href: '/cart' },
   { label: 'Profile', href: '/profile' },
+  { label: 'About Us', href: '/about' },
   { label: 'Contact', href: '/contact' },
 ];
 
+// Scrolling down past this many pixels from the top is what first allows
+// the bar to hide — above it the header is always visible, so the brand
+// mark is never missing at the top of a page.
+const HIDE_AFTER = 90;
+// Ignore jitter below this delta so a trackpad's noise can't flicker the bar.
+const DELTA = 6;
+
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [hidden, setHidden] = useState(false);
 
-  // The header stays transparent and permanently fixed at the top — it
-  // never hides on scroll. With the full-screen collection deck the visitor
-  // is always one tap from the menu, and the brand mark stays present
-  // throughout the scroll experience (the "logo + hamburger transparent,
-  // fixed" requirement).
+  // The header is transparent and fixed, and hides itself on the way down
+  // the page / reappears the moment the visitor scrolls back up. Reading
+  // scrollY inside a rAF keeps this off the scroll event's critical path,
+  // which matters because Lenis drives the scroll position here.
+  useEffect(() => {
+    let last = window.scrollY;
+    let ticking = false;
+
+    const update = () => {
+      ticking = false;
+      const y = window.scrollY;
+      const diff = y - last;
+      if (Math.abs(diff) < DELTA) return;
+      // Never hide while the drawer is open — the close button lives here.
+      setHidden(diff > 0 && y > HIDE_AFTER);
+      last = y;
+    };
+
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(update);
+    };
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  // An open drawer always forces the bar back into view.
+  useEffect(() => {
+    if (menuOpen) setHidden(false);
+  }, [menuOpen]);
 
   // Lock body scroll while the mobile drawer is open, close it on Escape,
   // and flag <html> so the hero text can hide itself (see the global
@@ -163,9 +198,26 @@ export default function Header() {
         .heHeader-drawer[data-open=true] .heHeader-link:nth-child(2) { transition-delay: 290ms; }
         .heHeader-drawer[data-open=true] .heHeader-link:nth-child(3) { transition-delay: 360ms; }
         .heHeader-drawer[data-open=true] .heHeader-link:nth-child(4) { transition-delay: 430ms; }
+        .heHeader-drawer[data-open=true] .heHeader-link:nth-child(5) { transition-delay: 500ms; }
+
+        /* Auto-hide bar. Sliding the whole header out by its own height
+           (rather than fading) keeps the hit area off screen entirely, so a
+           hidden bar can never swallow a click meant for the page. */
+        .heHeader-bar {
+          transform: translateY(0);
+          transition: transform 420ms var(--ease-out);
+        }
+        .heHeader-bar[data-hidden='true'] {
+          transform: translateY(-115%);
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .heHeader-bar { transition: none; }
+        }
       `}</style>
 
       <header
+        className="heHeader-bar"
+        data-hidden={hidden && !menuOpen}
         style={{
           position: 'fixed',
           top: 0,

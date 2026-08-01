@@ -43,8 +43,8 @@ export default async function AdminUsersPage() {
         {rows.length} registered · cart and order activity per user.
       </p>
 
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.86rem', minWidth: 720 }}>
+      <div className="adminScroll">
+        <table style={{ fontSize: '0.86rem', minWidth: 720 }}>
           <thead>
             <tr style={{ textAlign: 'left', color: 'var(--ink-soft)', textTransform: 'uppercase', fontSize: '0.68rem', letterSpacing: '0.12em' }}>
               <th style={th}>Name</th>

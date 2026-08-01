@@ -4,6 +4,7 @@ import { createServiceClient } from '@/lib/supabase/server';
 import { formatINR } from '@/lib/format';
 import OrderStatusControl from '@/components/admin/OrderStatusControl';
 import OrderStatusSteps from '@/components/OrderStatusSteps';
+import PaymentPanel from '@/components/admin/PaymentPanel';
 
 export const metadata = { title: 'Order detail' };
 export const dynamic = 'force-dynamic';
@@ -13,7 +14,7 @@ export default async function AdminOrderDetailPage({ params }: { params: { id: s
   const { data } = await svc
     .from('orders')
     .select(
-      'id, user_id, email, full_name, phone, shipping_address, amount, status, razorpay_order_id, razorpay_payment_id, created_at, order_items(name, sku, quantity, price)',
+      'id, user_id, email, full_name, phone, shipping_address, amount, status, razorpay_order_id, razorpay_payment_id, created_at, payment_method, payment_detail, payment_email, payment_contact, amount_paid, amount_refunded, paid_at, payment_error, confirmed_via, last_synced_at, refund_id, order_items(name, sku, quantity, price)',
     )
     .eq('id', params.id)
     .maybeSingle();
@@ -32,8 +33,28 @@ export default async function AdminOrderDetailPage({ params }: { params: { id: s
     razorpay_order_id: string | null;
     razorpay_payment_id: string | null;
     created_at: string;
+    payment_method: string | null;
+    payment_detail: string | null;
+    payment_email: string | null;
+    payment_contact: string | null;
+    amount_paid: number | null;
+    amount_refunded: number | null;
+    paid_at: string | null;
+    payment_error: string | null;
+    confirmed_via: string | null;
+    last_synced_at: string | null;
+    refund_id: string | null;
     order_items: { name: string; sku: string | null; quantity: number; price: number }[];
   };
+
+  // Recent webhook/sync activity for this order — the audit trail behind the
+  // "confirmed" badge.
+  const { data: events } = await svc
+    .from('payment_events')
+    .select('event, amount, created_at')
+    .eq('order_id', o.id)
+    .order('created_at', { ascending: false })
+    .limit(8);
 
   return (
     <div>
@@ -81,16 +102,30 @@ export default async function AdminOrderDetailPage({ params }: { params: { id: s
           </p>
         </section>
 
-        {/* Payment */}
-        <section style={card}>
-          <h2 style={cardH}>Payment</h2>
-          <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--ink-soft)' }}>
-            Razorpay order: {o.razorpay_order_id || '—'}
-          </p>
-          <p style={{ margin: '0.3rem 0 0', fontSize: '0.8rem', color: 'var(--ink-soft)' }}>
-            Payment id: {o.razorpay_payment_id || '—'}
-          </p>
-        </section>
+      </div>
+
+      {/* Payment — confirmation, reconcile and refund */}
+      <div style={{ marginTop: '1.5rem' }}>
+        <PaymentPanel
+          info={{
+            orderId: o.id,
+            status: o.status,
+            amount: o.amount,
+            amountPaid: o.amount_paid,
+            amountRefunded: o.amount_refunded,
+            method: o.payment_method,
+            detail: o.payment_detail,
+            paymentEmail: o.payment_email,
+            paymentContact: o.payment_contact,
+            paidAt: o.paid_at,
+            paymentError: o.payment_error,
+            confirmedVia: o.confirmed_via,
+            lastSyncedAt: o.last_synced_at,
+            razorpayOrderId: o.razorpay_order_id,
+            razorpayPaymentId: o.razorpay_payment_id,
+            refundId: o.refund_id,
+          }}
+        />
       </div>
 
       {/* Items */}
@@ -108,6 +143,24 @@ export default async function AdminOrderDetailPage({ params }: { params: { id: s
           ))}
         </ul>
       </section>
+
+      {/* Payment event log — what Razorpay actually told us, when. */}
+      {events && events.length > 0 && (
+        <section style={{ ...card, marginTop: '1.5rem' }}>
+          <h2 style={cardH}>Payment activity</h2>
+          <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+            {(events as { event: string; amount: number | null; created_at: string }[]).map((e, i) => (
+              <li key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', fontSize: '0.8rem', color: 'var(--ink-soft)' }}>
+                <span>{e.event}</span>
+                <span style={{ color: 'var(--ink-mute)', fontSize: '0.74rem', whiteSpace: 'nowrap' }}>
+                  {e.amount != null ? `${formatINR(e.amount)} · ` : ''}
+                  {new Date(e.created_at).toLocaleString('en-IN')}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </div>
   );
 }

@@ -31,20 +31,37 @@ Built on **Next.js 14 (App Router)**, **Supabase** (Postgres + Auth), **Cloudina
 
 | Page | Route |
 |---|---|
-| Home (video hero + parallax collections) | `/` |
-| Shop (full-screen collection deck → products) | `/shop` |
+| Home (video hero) | `/` |
+| Shop (collections → sub-collections → products) | `/shop` |
 | Product detail | `/shop/<slug>` |
+| About us | `/about` |
+| Contact | `/contact` |
 | Cart | `/cart` (login required) |
 | Checkout (Razorpay) | `/checkout` |
 | Order confirmation | `/checkout/success` |
+| Customer account + orders | `/profile` (login required) |
 | Customer sign in / up | `/auth/login`, `/auth/register` |
 
-- **Catalogue:** 66 products imported from `list of items.xlsx`, real taxonomy
-  (Home Décor → Ornaments / Table Clocks / Sculptures / Flower Pots / Utility & Living;
-  Bar & Entertaining → Brass Drinkware; Lighting → Floor Lamps; Home & Garden → Planters;
-  Home & Kitchen → Trays). 63 real product photos on Cloudinary.
-- **Prices** are in **INR (₹)**. They were auto-generated from weight/category because the
-  spreadsheet's price column was empty — **edit them in Admin → Products**.
+- **Catalogue:** 66 products built from `list of items (1).xlsx` by
+  `scripts/build-catalog.mjs`. **One** top-level collection — Home Décor —
+  with the sheet's sub-categories as its sub-collections (Sculptures,
+  Ornaments, Table Clocks, Flower Pots, Planters, Utility & Living,
+  Brass Drinkware, Floor Lamps, Trays). Every product has a photo pulled
+  straight out of the workbook and a written description.
+- **Prices** are in **INR (₹)**, set per sub-collection in
+  `scripts/build-catalog.mjs` because the spreadsheet's price columns are
+  empty — **edit them in Admin → Products**.
+- **Checkout** collects a structured address (pin code, locality, city,
+  state, name, street, mobile) and will not enable payment until the pin
+  code passes `/api/serviceability`.
+
+> Rebuilding the catalogue after the sheet changes:
+> ```
+> node scripts/build-catalog.mjs     # sheet  → import.json + media/
+> node scripts/import-catalog.mjs    # import.json → Supabase + Cloudinary
+> ```
+> Products no longer in the sheet are deactivated, not deleted, so past
+> orders keep resolving.
 
 ---
 
@@ -75,12 +92,22 @@ NEXT_PUBLIC_SITE_URL=http://localhost:3000
 
 ## 4. Still to do before going live
 
-1. **Razorpay keys** — paste `RAZORPAY_KEY_ID` (`rzp_test_…`) + `RAZORPAY_KEY_SECRET`
+1. **Apply the migrations** in `supabase/` in order. `migration-08-single-collection-and-addresses.sql`
+   is required by the current storefront — it collapses the catalogue to one
+   collection and adds the structured address columns checkout reads.
+2. **Rebuild + re-import the catalogue** (see section 2) so product
+   descriptions and the sub-collection tree match the sheet.
+3. **Razorpay keys** — paste `RAZORPAY_KEY_ID` (`rzp_test_…`) + `RAZORPAY_KEY_SECRET`
    into `.env.local`, restart. Test card `4111 1111 1111 1111`, any future expiry/CVV.
-2. **Disable email confirmation** (so customers log in instantly):
+4. **Disable email confirmation** (so customers log in instantly):
    Supabase → **Authentication → Sign In / Providers → Email → turn off "Confirm email" → Save**.
-3. **Review prices** in Admin → Products.
-4. **Rotate the secrets** listed above.
+5. **Review prices** in Admin → Products.
+6. **Rotate the secrets** listed above, and change the admin password —
+   it is currently documented in this file in plain text.
+
+See **[ADMIN_GAPS.md](ADMIN_GAPS.md)** for the full audit of what the admin
+panel still needs (stock enforcement, GST invoicing, policy pages,
+transactional email, shipping rules, pagination).
 
 ---
 

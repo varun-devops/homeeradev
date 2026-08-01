@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { formatINR } from '@/lib/format';
+import { EMPTY_ADDRESS } from '@/lib/address';
 import ProfileForm from '@/components/ProfileForm';
 import OrderStatusSteps from '@/components/OrderStatusSteps';
 
@@ -27,7 +28,11 @@ export default async function ProfilePage() {
   if (!user) redirect('/auth/login?next=/profile');
 
   const [{ data: profile }, { data: orders }] = await Promise.all([
-    sb.from('profiles').select('full_name, phone, address, email').eq('id', user.id).maybeSingle(),
+    sb
+      .from('profiles')
+      .select('full_name, phone, email, pin_code, locality, city, state, address_line')
+      .eq('id', user.id)
+      .maybeSingle(),
     sb
       .from('orders')
       .select('id, amount, status, created_at, order_items(name, quantity)')
@@ -44,7 +49,7 @@ export default async function ProfilePage() {
   }[]) ?? [];
 
   return (
-    <main className="container" style={{ padding: '8rem 0 4rem', minHeight: '70svh' }}>
+    <main className="container" style={{ paddingTop: '8rem', paddingBottom: '4rem', minHeight: '70svh' }}>
       <h1 style={{ fontStyle: 'italic', fontSize: 'clamp(2rem, 5vw, 3rem)' }}>Your profile</h1>
 
       <div
@@ -62,9 +67,14 @@ export default async function ProfilePage() {
           <ProfileForm
             email={profile?.email ?? user.email ?? ''}
             defaults={{
+              ...EMPTY_ADDRESS,
               full_name: profile?.full_name ?? '',
               phone: profile?.phone ?? '',
-              address: profile?.address ?? '',
+              pin_code: profile?.pin_code ?? '',
+              locality: profile?.locality ?? '',
+              city: profile?.city ?? '',
+              state: profile?.state ?? '',
+              address_line: profile?.address_line ?? '',
             }}
           />
         </section>
@@ -106,8 +116,8 @@ export default async function ProfilePage() {
               ))}
             </ul>
           )}
-          <Link href="/favourites" data-hover style={{ display: 'inline-block', marginTop: '1.5rem', fontSize: '0.8rem', letterSpacing: '0.16em', textTransform: 'uppercase', borderBottom: '1px solid var(--ink)', paddingBottom: '0.2rem' }}>
-            View favourites →
+          <Link href="/shop" data-hover style={{ display: 'inline-block', marginTop: '1.5rem', fontSize: '0.8rem', letterSpacing: '0.16em', textTransform: 'uppercase', borderBottom: '1px solid var(--ink)', paddingBottom: '0.2rem' }}>
+            Continue shopping →
           </Link>
         </section>
       </div>

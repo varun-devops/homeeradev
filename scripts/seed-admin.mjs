@@ -62,10 +62,21 @@ if (existing) {
 
 // Ensure a profile row exists and is flagged admin.
 const { error: upErr } = await sb.from('profiles').upsert(
-  { id: userId, email: ADMIN_EMAIL, full_name: 'Homeera Admin', is_admin: true },
+  { id: userId, email: ADMIN_EMAIL, full_name: 'Homeera Admin', is_admin: true, role: 'admin' },
   { onConflict: 'id' },
 );
-if (upErr) throw upErr;
+if (upErr) {
+  // Fall back gracefully if migration-06 (role column) hasn't been run.
+  if (/column .*role/i.test(upErr.message)) {
+    const { error: e2 } = await sb.from('profiles').upsert(
+      { id: userId, email: ADMIN_EMAIL, full_name: 'Homeera Admin', is_admin: true },
+      { onConflict: 'id' },
+    );
+    if (e2) throw e2;
+  } else {
+    throw upErr;
+  }
+}
 
 console.log(`\n✅ Admin ready:\n   email:    ${ADMIN_EMAIL}\n   password: ${ADMIN_PASSWORD}\n   login at: /admin/login`);
 process.exit(0);

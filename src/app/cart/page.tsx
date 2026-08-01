@@ -41,7 +41,7 @@ export default async function CartPage() {
   const total = items.reduce((s, r) => s + (r.product!.price * r.quantity), 0);
 
   return (
-    <main className="container" style={{ padding: '8rem 0 4rem', minHeight: '70svh' }}>
+    <main className="container" style={{ paddingTop: '8rem', paddingBottom: '4rem', minHeight: '70svh' }}>
       <h1 style={{ fontStyle: 'italic', fontSize: 'clamp(2rem, 5vw, 3rem)' }}>Your bag</h1>
 
       {items.length === 0 ? (

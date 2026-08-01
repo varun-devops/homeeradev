@@ -33,7 +33,7 @@ export default async function SuccessPage({
   const items = (order.order_items as { name: string; quantity: number; price: number }[]) ?? [];
 
   return (
-    <main className="container" style={{ padding: '9rem 0 5rem', minHeight: '70svh', maxWidth: 620 }}>
+    <main className="container" style={{ paddingTop: '9rem', paddingBottom: '5rem', minHeight: '70svh', maxWidth: 620 }}>
       <div style={{ textAlign: 'center' }}>
         <div
           style={{

@@ -4,21 +4,23 @@ import { useState } from 'react';
 
 /**
  * Product options shown above the Add-to-bag block: colour swatches, size
- * chips, a material line, customization note, and a shipping / return /
- * pincode panel. Selection is presentational (the cart is keyed per product,
- * not per variant) — it guides the buyer and surfaces the attributes the
- * admin entered. Renders nothing for any group that has no data.
+ * chips, customization note, and a shipping / return / pincode panel.
+ * Selection is presentational (the cart is keyed per product, not per
+ * variant) — it guides the buyer and surfaces the attributes the admin
+ * entered. Renders nothing for any group that has no data.
+ *
+ * Material is deliberately absent: the written description on the product
+ * page already says what the piece is made of, so a separate spec line
+ * only repeated it.
  */
 export default function ProductOptions({
   colors = [],
   sizes = [],
-  material,
   customizable = false,
   customizationNote,
 }: {
   colors?: string[];
   sizes?: string[];
-  material?: string | null;
   customizable?: boolean;
   customizationNote?: string | null;
 }) {
@@ -37,7 +39,7 @@ export default function ProductOptions({
     setPinResult({ ok: true, text: `Delivers to ${pincode.trim()} in 4–7 business days.` });
   };
 
-  const hasAnyOptions = colors.length > 0 || sizes.length > 0 || material || customizable;
+  const hasAnyOptions = colors.length > 0 || sizes.length > 0 || customizable;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginTop: '1.75rem' }}>
@@ -89,12 +91,6 @@ export default function ProductOptions({
                   </button>
                 ))}
               </div>
-            </Group>
-          )}
-
-          {material && (
-            <Group label="Material">
-              <p style={{ margin: 0, color: 'var(--ink-soft)', fontSize: '0.92rem' }}>{material}</p>
             </Group>
           )}
 

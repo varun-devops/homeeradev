@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import { uploadBuffer, cloudinaryConfigured } from '@/lib/cloudinary';
+import { getAdminIdentity } from '@/lib/admin-auth';
 
 export const runtime = 'nodejs';
 // Allow larger video uploads.
@@ -9,23 +9,14 @@ export const maxDuration = 60;
 /**
  * POST /api/admin/upload   (multipart/form-data, field "file")
  *
- * Admin-only. Streams the uploaded image/video to Cloudinary and returns
- * { url, resourceType }. The admin product form calls this for each file
- * and stores the returned URLs on the product.
+ * Product managers only (admin or staff). Streams the uploaded image/video
+ * to Cloudinary and returns { url, resourceType }. The admin product form
+ * calls this for each file and stores the returned URLs on the product.
  */
 export async function POST(req: Request) {
-  // --- auth: must be an admin ---
-  const sb = createClient();
-  const {
-    data: { user },
-  } = await sb.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Not signed in' }, { status: 401 });
-  const { data: profile } = await sb
-    .from('profiles')
-    .select('is_admin')
-    .eq('id', user.id)
-    .maybeSingle();
-  if (!profile?.is_admin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  // --- auth: admin or staff may upload product media ---
+  const identity = await getAdminIdentity();
+  if (!identity) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   if (!cloudinaryConfigured()) {
     return NextResponse.json({ error: 'Cloudinary is not configured' }, { status: 503 });

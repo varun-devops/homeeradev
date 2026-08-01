@@ -47,8 +47,10 @@ export default function ContactPage() {
       className="container"
       style={{
         // Generous top padding so the headline sits clear of the fixed
-        // header; bottom padding keeps the footer row breathing.
-        padding: 'clamp(7rem, 14vh, 11rem) 0 clamp(3rem, 6vh, 5rem)',
+        // header; bottom padding keeps the footer row breathing. Horizontal
+        // gutter comes from .container (--pad-x) — don't override it here.
+        paddingTop: 'clamp(7rem, 14vh, 11rem)',
+        paddingBottom: 'clamp(3rem, 6vh, 5rem)',
       }}
     >
       <style>{`

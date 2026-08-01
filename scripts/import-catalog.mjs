@@ -94,9 +94,9 @@ for (const p of products) {
       size: p.size || null,
       weight_kg: p.weight_kg ?? null,
       price: p.price,
-      description: [p.material, p.variant, p.size && `Size ${p.size} cm`]
-        .filter(Boolean)
-        .join(' · '),
+      // Written prose about the object, produced by build-catalog.mjs. The
+      // product page renders this as "About this piece".
+      description: p.description ?? null,
       image_url: imageUrl,
       is_active: true,
     };
@@ -111,6 +111,32 @@ for (const p of products) {
     failed++;
     console.error(`✗ ${p.sku}: ${err.message || err}`);
   }
+}
+
+// ------------------------------------------------------------------
+// Prune: hide anything in the DB that is no longer in the sheet.
+//
+// Rebuilding the catalogue can re-key a product (a vendor code changing,
+// say), which would otherwise leave the old row behind as a duplicate on
+// the storefront. We deactivate rather than delete so historical orders
+// keep resolving their product_id.
+// ------------------------------------------------------------------
+const liveSkus = products.map((p) => p.sku);
+const { data: stale, error: staleErr } = await sb
+  .from('products')
+  .select('id, sku')
+  .eq('is_active', true)
+  .not('sku', 'in', `(${liveSkus.map((s) => `"${s}"`).join(',')})`);
+
+if (staleErr) {
+  console.error(`\nCould not check for stale products: ${staleErr.message}`);
+} else if (stale?.length) {
+  await sb
+    .from('products')
+    .update({ is_active: false })
+    .in('id', stale.map((r) => r.id));
+  console.log(`\nDeactivated ${stale.length} product(s) no longer in the sheet:`);
+  for (const r of stale) console.log(`  – ${r.sku}`);
 }
 
 console.log(

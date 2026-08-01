@@ -5,10 +5,17 @@ import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 
 /**
- * Admin sign-in. Authenticates with Supabase, then verifies the profile
- * has is_admin = true before sending the user into the panel (the
- * middleware enforces this too, but checking here gives a clear message).
+ * Admin sign-in. Authenticates with Supabase, then verifies the profile is
+ * a member of staff (admin or staff role) before sending the user into the
+ * panel (the middleware enforces this too, but checking here gives a clear
+ * message). Staff land on /admin/products, which is all they can access.
  */
+const ERROR_MESSAGES: Record<string, string> = {
+  'not-admin': 'That account does not have admin access.',
+  'admin-only': 'That section is restricted to administrators.',
+  'auth-unavailable': 'Sign-in is temporarily unavailable. Please try again.',
+};
+
 export default function AdminLoginForm() {
   const router = useRouter();
   const params = useSearchParams();
@@ -18,7 +25,7 @@ export default function AdminLoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(
-    params.get('error') === 'not-admin' ? 'That account is not an administrator.' : null,
+    ERROR_MESSAGES[params.get('error') ?? ''] ?? null,
   );
   const [busy, setBusy] = useState(false);
 
@@ -31,14 +38,17 @@ export default function AdminLoginForm() {
       if (error) throw error;
       const { data: profile } = await supabase
         .from('profiles')
-        .select('is_admin')
+        .select('is_admin, role')
         .eq('id', data.user.id)
         .maybeSingle();
-      if (!profile?.is_admin) {
+      const isAdmin = profile?.is_admin === true || profile?.role === 'admin';
+      const isStaff = profile?.role === 'staff';
+      if (!isAdmin && !isStaff) {
         await supabase.auth.signOut();
-        throw new Error('That account is not an administrator.');
+        throw new Error('That account does not have admin access.');
       }
-      router.push(next);
+      // Staff can only reach /admin/products; ignore any deep `next`.
+      router.push(isStaff && !isAdmin ? '/admin/products' : next);
       router.refresh();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Sign in failed');

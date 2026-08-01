@@ -5,17 +5,21 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
 import { signOut } from '@/app/admin/actions';
 
-const links = [
+type NavRole = 'admin' | 'staff';
+
+const links: { href: string; label: string; roles?: NavRole[] }[] = [
   { href: '/admin', label: 'Dashboard' },
   { href: '/admin/products', label: 'Products' },
-  { href: '/admin/collections', label: 'Collections' },
-  { href: '/admin/orders', label: 'Orders' },
+  { href: '/admin/collections', label: 'Collections', roles: ['admin'] },
+  { href: '/admin/orders', label: 'Orders', roles: ['admin'] },
+  { href: '/admin/payments', label: 'Payments', roles: ['admin'] },
   { href: '/admin/users', label: 'Users' },
   { href: '/admin/account', label: 'Account' },
 ];
 
-export default function AdminNav({ email }: { email: string }) {
+export default function AdminNav({ email, role }: { email: string; role: NavRole }) {
   const pathname = usePathname();
+  const visibleLinks = links.filter((l) => !l.roles || l.roles.includes(role));
   const [pending, start] = useTransition();
   const [open, setOpen] = useState(false);
 
@@ -32,7 +36,7 @@ export default function AdminNav({ email }: { email: string }) {
     };
   }, [open]);
 
-  const navLinks = links.map((l) => {
+  const navLinks = visibleLinks.map((l) => {
     const active = l.href === '/admin' ? pathname === '/admin' : pathname.startsWith(l.href);
     return (
       <Link
@@ -75,9 +79,14 @@ export default function AdminNav({ email }: { email: string }) {
           height: 100svh;
         }
 
-        /* ---------- mobile top bar (hidden on desktop) ---------- */
+        /* ---------- mobile chrome (hidden on desktop) ----------
+           All three must be display:none above the breakpoint. They are
+           direct children of the .adminShell grid, so anything left visible
+           claims a grid cell and shunts the sidebar and the page content
+           into the wrong columns. */
         .adminNav-bar { display: none; }
         .adminNav-scrim { display: none; }
+        .adminNav-drawer { display: none; }
 
         @media (max-width: 860px) {
           .adminNav-side { display: none; }
@@ -107,6 +116,7 @@ export default function AdminNav({ email }: { email: string }) {
             background: #0d0d0c; border-right: 1px solid rgba(255,255,255,0.08);
             padding: 1.5rem 1.25rem;
             display: flex; flex-direction: column; gap: 0.25rem;
+            overflow-y: auto;
             transform: translateX(-100%);
             transition: transform 320ms cubic-bezier(0.16,1,0.3,1);
           }

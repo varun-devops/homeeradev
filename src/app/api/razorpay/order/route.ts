@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { razorpay, isConfigured } from '@/lib/razorpay';
+import { EMPTY_ADDRESS, formatAddress, type Address } from '@/lib/address';
 
 /**
  * POST /api/razorpay/order
@@ -25,12 +26,25 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Not signed in' }, { status: 401 });
   }
 
-  let body: { full_name?: string; phone?: string; address?: string } = {};
+  // Checkout posts a structured address (migration-08). The older
+  // single-field shape is still accepted so a stale client can't 500.
+  let body: Partial<Address> & { address?: string } = {};
   try {
     body = await req.json();
   } catch {
     /* empty body is fine */
   }
+
+  const address: Address = {
+    ...EMPTY_ADDRESS,
+    full_name: body.full_name ?? '',
+    phone: body.phone ?? '',
+    pin_code: body.pin_code ?? '',
+    locality: body.locality ?? '',
+    city: body.city ?? '',
+    state: body.state ?? '',
+    address_line: body.address_line ?? body.address ?? '',
+  };
 
   const svc = createServiceClient();
 
@@ -92,9 +106,17 @@ export async function POST(req: Request) {
     .insert({
       user_id: user.id,
       email: user.email,
-      full_name: body.full_name ?? null,
-      phone: body.phone ?? null,
-      shipping_address: body.address ?? null,
+      full_name: address.full_name || null,
+      phone: address.phone || null,
+      // Both shapes are stored: the structured columns for anything that
+      // needs the pin code on its own, and the formatted single line so the
+      // admin order screens keep rendering without a migration of their own.
+      shipping_address: formatAddress(address) || null,
+      pin_code: address.pin_code || null,
+      locality: address.locality || null,
+      city: address.city || null,
+      state: address.state || null,
+      address_line: address.address_line || null,
       amount,
       currency: 'INR',
       status: 'created',

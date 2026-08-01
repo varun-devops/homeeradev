@@ -42,12 +42,19 @@ export type DBProduct = {
   customization_note?: string | null;
 };
 
+export type SubCollectionGroup = {
+  slug: string;
+  label: string;
+  image: string | null;
+  count: number;
+};
+
 export type CollectionGroup = {
   slug: string;
   label: string;
   image: string | null;
   count: number;
-  subCollections: { slug: string; label: string; count: number }[];
+  subCollections: SubCollectionGroup[];
 };
 
 /** All active products, newest first by category for stable grouping. */
@@ -75,28 +82,6 @@ export async function getProductBySlug(slug: string): Promise<DBProduct | null> 
     .maybeSingle();
   if (error) throw error;
   return (data as DBProduct) ?? null;
-}
-
-export type Review = {
-  id: string;
-  rating: number;
-  body: string | null;
-  author_name: string | null;
-  created_at: string;
-};
-
-/** Reviews for a product + the average rating. */
-export async function getReviews(productId: string): Promise<{ reviews: Review[]; average: number; count: number }> {
-  const svc = createServiceClient();
-  const { data } = await svc
-    .from('reviews')
-    .select('id, rating, body, author_name, created_at')
-    .eq('product_id', productId)
-    .order('created_at', { ascending: false });
-  const reviews = (data ?? []) as Review[];
-  const count = reviews.length;
-  const average = count ? reviews.reduce((s, r) => s + r.rating, 0) / count : 0;
-  return { reviews, average, count };
 }
 
 /** Active product slugs — for generateStaticParams. */
@@ -132,11 +117,15 @@ export function buildCollections(products: DBProduct[]): CollectionGroup[] {
       if (!subMap.has(p.sub_category_slug)) subMap.set(p.sub_category_slug, []);
       subMap.get(p.sub_category_slug)!.push(p);
     }
-    const subCollections = [...subMap.entries()].map(([slug, sItems]) => ({
-      slug,
-      label: sItems[0].sub_category,
-      count: sItems.length,
-    }));
+    const subCollections = [...subMap.entries()]
+      .map(([slug, sItems]) => ({
+        slug,
+        label: sItems[0].sub_category,
+        image: sItems.find((p) => p.image_url)?.image_url ?? null,
+        count: sItems.length,
+      }))
+      // Richest sub-collections lead, so the grid opens on real depth.
+      .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
 
     groups.push({
       slug: catSlug,

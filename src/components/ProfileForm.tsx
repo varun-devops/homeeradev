@@ -3,22 +3,36 @@
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { updateProfile, changeMyPassword, signOutCustomer } from '@/app/profile/actions';
+import { INDIAN_STATES, type Address } from '@/lib/address';
 
+/**
+ * Account panel: login email, name, the structured delivery address that
+ * checkout reads back, and a password change. The address fields mirror
+ * checkout exactly so a customer only ever learns one form.
+ */
 export default function ProfileForm({
   email,
   defaults,
 }: {
   email: string;
-  defaults: { full_name: string; phone: string; address: string };
+  defaults: Address;
 }) {
   const router = useRouter();
-  const [f, setF] = useState(defaults);
+  const [f, setF] = useState<Address>(defaults);
   const [pw, setPw] = useState('');
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, start] = useTransition();
 
-  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-    setF((s) => ({ ...s, [k]: e.target.value }));
+  const set = (k: keyof Address) => (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
+  ) => {
+    const raw = e.target.value;
+    const value =
+      k === 'pin_code' ? raw.replace(/\D/g, '').slice(0, 6)
+      : k === 'phone' ? raw.replace(/[^\d+ ]/g, '').slice(0, 14)
+      : raw;
+    setF((s) => ({ ...s, [k]: value }));
+  };
 
   const save = (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,11 +72,38 @@ export default function ProfileForm({
       <Field label="Full name">
         <input value={f.full_name} onChange={set('full_name')} style={input} autoComplete="name" />
       </Field>
-      <Field label="Phone number">
+      <Field label="Mobile number">
         <input value={f.phone} onChange={set('phone')} style={input} autoComplete="tel" inputMode="tel" />
       </Field>
-      <Field label="Saved delivery address">
-        <textarea value={f.address} onChange={set('address')} rows={3} style={{ ...input, resize: 'vertical' }} />
+
+      <p style={{ margin: '0.5rem 0 0', fontSize: '0.72rem', letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--ink-soft)' }}>
+        Saved delivery address
+      </p>
+
+      {/* Same column layout as checkout: pin code and city/state pair up,
+          the free-text lines run full width. */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '1rem' }}>
+        <Field label="Pin code">
+          <input value={f.pin_code} onChange={set('pin_code')} style={input} inputMode="numeric" autoComplete="postal-code" />
+        </Field>
+        <Field label="Locality / town">
+          <input value={f.locality} onChange={set('locality')} style={input} autoComplete="address-level3" />
+        </Field>
+        <Field label="City / district">
+          <input value={f.city} onChange={set('city')} style={input} autoComplete="address-level2" />
+        </Field>
+        <Field label="State">
+          <select value={f.state} onChange={set('state')} style={{ ...input, appearance: 'none', cursor: 'pointer' }} autoComplete="address-level1">
+            <option value="">Select state</option>
+            {INDIAN_STATES.map((s) => (
+              <option key={s} value={s} style={{ background: '#141414' }}>{s}</option>
+            ))}
+          </select>
+        </Field>
+      </div>
+
+      <Field label="Address">
+        <textarea value={f.address_line} onChange={set('address_line')} rows={3} style={{ ...input, resize: 'vertical' }} autoComplete="street-address" />
       </Field>
 
       {msg && <p style={{ margin: 0, fontSize: '0.85rem', color: msg.ok ? 'var(--gold)' : '#e08a8a' }}>{msg.text}</p>}

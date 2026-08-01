@@ -1,5 +1,6 @@
 import { createServiceClient } from '@/lib/supabase/server';
 import { formatINR } from '@/lib/format';
+import { getAdminIdentity } from '@/lib/admin-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,27 +27,31 @@ async function counts() {
 }
 
 export default async function AdminDashboard() {
+  const identity = await getAdminIdentity();
+  const isStaff = identity?.role === 'staff';
   const c = await counts();
-  const cards = [
-    { label: 'Revenue (paid)', value: formatINR(c.revenue), accent: true },
-    { label: 'Orders', value: c.orders, sub: `${c.paid} paid` },
-    { label: 'Registered users', value: c.users },
-    { label: 'Products', value: c.products, sub: `${c.activeProducts} visible` },
-    { label: 'Items in carts', value: c.cartItems },
-  ];
+
+  // Staff manage products only — don't surface revenue/orders financials.
+  const cards = isStaff
+    ? [
+        { label: 'Products', value: c.products, sub: `${c.activeProducts} visible` },
+        { label: 'Registered users', value: c.users },
+        { label: 'Items in carts', value: c.cartItems },
+      ]
+    : [
+        { label: 'Revenue (paid)', value: formatINR(c.revenue), accent: true },
+        { label: 'Orders', value: c.orders, sub: `${c.paid} paid` },
+        { label: 'Registered users', value: c.users },
+        { label: 'Products', value: c.products, sub: `${c.activeProducts} visible` },
+        { label: 'Items in carts', value: c.cartItems },
+      ];
 
   return (
     <div>
       <h1 style={{ fontStyle: 'italic', fontSize: '2rem', marginBottom: '0.5rem' }}>Dashboard</h1>
       <p style={{ color: 'var(--ink-soft)', marginBottom: '2.5rem' }}>Store at a glance.</p>
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: '1.25rem',
-        }}
-      >
+      <div className="adminGrid">
         {cards.map((card) => (
           <div
             key={card.label}

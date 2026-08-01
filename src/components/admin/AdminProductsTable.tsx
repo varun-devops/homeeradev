@@ -60,8 +60,8 @@ export default function AdminProductsTable({ products }: { products: Row[] }) {
         }}
       />
 
-      <div style={{ overflowX: 'auto', opacity: pending ? 0.7 : 1, transition: 'opacity 150ms' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.86rem', minWidth: 680 }}>
+      <div className="adminScroll" style={{ opacity: pending ? 0.7 : 1, transition: 'opacity 150ms' }}>
+        <table style={{ fontSize: '0.86rem', minWidth: 680 }}>
           <thead>
             <tr style={{ textAlign: 'left', color: 'var(--ink-soft)', textTransform: 'uppercase', fontSize: '0.68rem', letterSpacing: '0.12em' }}>
               <th style={th}>Product</th>

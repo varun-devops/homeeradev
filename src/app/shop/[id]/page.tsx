@@ -1,12 +1,12 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { getProductBySlug, getAllProductSlugs, getReviews, formatINR } from '@/lib/catalog';
+import { getProductBySlug, getAllProductSlugs, formatINR } from '@/lib/catalog';
 import { createClient } from '@/lib/supabase/server';
 import AddToCart from '@/components/AddToCart';
 import ProductGallery from '@/components/ProductGallery';
 import ProductOptions from '@/components/ProductOptions';
-import ProductReviews, { Stars } from '@/components/ProductReviews';
 
 export async function generateStaticParams() {
   const slugs = await getAllProductSlugs();
@@ -38,35 +38,26 @@ export default async function ProductPage({ params }: { params: { id: string } }
   const p = await getProductBySlug(params.id);
   if (!p) notFound();
 
-  // Is this product already in the signed-in user's favourites?
+  // How many of this product the signed-in visitor already has in the bag,
+  // so the stepper opens on the right number.
   const sb = createClient();
   const {
     data: { user },
   } = await sb.auth.getUser();
-  let isFav = false;
-  let canReview = false;
   let cartQty = 0;
-  let myReview: { rating: number; body: string | null } | null = null;
   if (user) {
-    const [{ data: fav }, { data: bought }, { data: mine }, { data: cartItem }] = await Promise.all([
-      sb.from('favourites').select('id').eq('user_id', user.id).eq('product_id', p.id).maybeSingle(),
-      sb
-        .from('order_items')
-        .select('id, orders!inner(user_id, status)')
-        .eq('product_id', p.id)
-        .eq('orders.user_id', user.id)
-        .eq('orders.status', 'paid')
-        .limit(1),
-      sb.from('reviews').select('rating, body').eq('user_id', user.id).eq('product_id', p.id).maybeSingle(),
-      sb.from('cart_items').select('quantity').eq('user_id', user.id).eq('product_id', p.id).maybeSingle(),
-    ]);
-    isFav = Boolean(fav);
-    canReview = Boolean(bought && bought.length > 0);
-    myReview = mine ?? null;
+    const { data: cartItem } = await sb
+      .from('cart_items')
+      .select('quantity')
+      .eq('user_id', user.id)
+      .eq('product_id', p.id)
+      .maybeSingle();
     cartQty = cartItem?.quantity ?? 0;
   }
 
-  const { reviews, average, count } = await getReviews(p.id);
+  const price = (p.discount_percent ?? 0) > 0
+    ? Math.round(p.price * (1 - (p.discount_percent ?? 0) / 100))
+    : p.price;
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -79,14 +70,14 @@ export default async function ProductPage({ params }: { params: { id: string } }
     category: `${p.category} / ${p.sub_category}`,
     offers: {
       '@type': 'Offer',
-      price: p.price,
+      price,
       priceCurrency: 'INR',
       availability: 'https://schema.org/InStock',
     },
   };
 
   return (
-    <article className="container" style={{ padding: '8rem 0 4rem' }}>
+    <article className="container" style={{ paddingTop: '8rem', paddingBottom: '4rem' }}>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -101,7 +92,7 @@ export default async function ProductPage({ params }: { params: { id: string } }
           color: 'var(--ink-soft)',
         }}
       >
-        ← Back to shop
+        ← Back to collections
       </Link>
 
       <div
@@ -135,11 +126,7 @@ export default async function ProductPage({ params }: { params: { id: string } }
           <h1 style={{ fontStyle: 'italic', fontSize: 'clamp(2rem, 4.5vw, 3.5rem)' }}>
             {p.name}
           </h1>
-          {count > 0 && (
-            <div style={{ marginTop: '0.6rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--ink-soft)', fontSize: '0.85rem' }}>
-              <Stars value={average} size={15} /> {average.toFixed(1)} ({count})
-            </div>
-          )}
+
           {(p.is_new || (p.discount_percent ?? 0) > 0) && (
             <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
               {p.is_new && (
@@ -168,7 +155,7 @@ export default async function ProductPage({ params }: { params: { id: string } }
           >
             {(p.discount_percent ?? 0) > 0 ? (
               <>
-                {formatINR(Math.round(p.price * (1 - (p.discount_percent ?? 0) / 100)))}
+                {formatINR(price)}
                 <span style={{ fontSize: '1rem', color: 'var(--ink-mute)', textDecoration: 'line-through' }}>
                   {formatINR(p.price)}
                 </span>
@@ -178,69 +165,46 @@ export default async function ProductPage({ params }: { params: { id: string } }
             )}
           </div>
 
-          {(p.sku || p.material || p.size || p.variant) && (
-            <dl
-              style={{
-                marginTop: '1.75rem',
-                display: 'grid',
-                gridTemplateColumns: 'auto 1fr',
-                gap: '0.5rem 1.5rem',
-                fontSize: '0.92rem',
-                color: 'var(--ink-soft)',
-              }}
-            >
-              {p.sku && (
-                <>
-                  <dt style={{ textTransform: 'uppercase', letterSpacing: '0.12em', fontSize: '0.72rem' }}>Item No.</dt>
-                  <dd style={{ margin: 0 }}>{p.sku}</dd>
-                </>
-              )}
-              {p.material && (
-                <>
-                  <dt style={{ textTransform: 'uppercase', letterSpacing: '0.12em', fontSize: '0.72rem' }}>Material</dt>
-                  <dd style={{ margin: 0 }}>{p.material}</dd>
-                </>
-              )}
-              {p.variant && (
-                <>
-                  <dt style={{ textTransform: 'uppercase', letterSpacing: '0.12em', fontSize: '0.72rem' }}>Finish</dt>
-                  <dd style={{ margin: 0 }}>{p.variant}</dd>
-                </>
-              )}
-              {p.size && (
-                <>
-                  <dt style={{ textTransform: 'uppercase', letterSpacing: '0.12em', fontSize: '0.72rem' }}>Size</dt>
-                  <dd style={{ margin: 0 }}>{p.size} cm</dd>
-                </>
-              )}
-            </dl>
+          {/* About this piece — the written description is the product copy.
+              It already covers what the object is made of and how it is
+              finished, which is why there is no separate spec table. */}
+          {p.description && (
+            <section style={{ marginTop: '1.75rem' }}>
+              <h2
+                style={{
+                  fontSize: '0.72rem',
+                  letterSpacing: '0.18em',
+                  textTransform: 'uppercase',
+                  color: 'var(--ink-soft)',
+                  fontFamily: 'var(--font-sans)',
+                  fontWeight: 400,
+                  margin: '0 0 0.7rem',
+                }}
+              >
+                About this piece
+              </h2>
+              <p style={{ margin: 0, color: 'var(--ink-soft)', fontSize: '0.98rem', lineHeight: 1.75 }}>
+                {p.description}
+              </p>
+            </section>
           )}
 
           <ProductOptions
             colors={p.colors ?? []}
             sizes={p.sizes ?? []}
-            material={p.material}
             customizable={p.customizable ?? false}
             customizationNote={p.customization_note}
           />
 
           <div style={{ marginTop: '2rem' }}>
-            <AddToCart productId={p.id} favourited={isFav} initialQty={cartQty} />
+            {/* AddToCart reads ?intent= to resume a Buy-now that was
+                interrupted by sign-in, so it needs a Suspense boundary. */}
+            <Suspense fallback={null}>
+              <AddToCart productId={p.id} initialQty={cartQty} signedIn={Boolean(user)} />
+            </Suspense>
           </div>
         </div>
       </div>
-
-      <ProductReviews
-        productId={p.id}
-        slug={p.slug}
-        reviews={reviews}
-        average={average}
-        count={count}
-        canReview={canReview}
-        myRating={myReview?.rating}
-        myBody={myReview?.body ?? ''}
-        signedIn={Boolean(user)}
-      />
     </article>
   );
 }

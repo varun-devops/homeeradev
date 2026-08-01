@@ -57,7 +57,11 @@
       "Bash(git push *)",
       "PowerShell(& \"C:\\\\Users\\\\varunsingh\\\\AppData\\\\Local\\\\nvm\\\\v20.19.4\\\\node.exe\" \"D:\\\\websitem\\\\homeera\\\\node_modules\\\\typescript\\\\bin\\\\tsc\" --noEmit -p \"D:\\\\websitem\\\\homeera\\\\tsconfig.json\" 2>&1 | Select-Object -First 20; Write-Output \"EXIT=$LASTEXITCODE\")",
       "PowerShell(& \"C:\\\\Users\\\\varunsingh\\\\AppData\\\\Local\\\\nvm\\\\v20.19.4\\\\node.exe\" \"D:\\\\websitem\\\\homeera\\\\node_modules\\\\typescript\\\\bin\\\\tsc\" --noEmit -p \"D:\\\\websitem\\\\homeera\\\\tsconfig.json\" 2>&1 | Select-Object -First 15; Write-Output \"EXIT=$LASTEXITCODE\")",
-      "PowerShell(& \"C:\\\\Users\\\\varunsingh\\\\AppData\\\\Local\\\\nvm\\\\v20.19.4\\\\node.exe\" \"D:\\\\websitem\\\\homeera\\\\node_modules\\\\typescript\\\\bin\\\\tsc\" --noEmit -p \"D:\\\\websitem\\\\homeera\\\\tsconfig.json\" 2>&1 | Select-Object -First 12; Write-Output \"EXIT=$LASTEXITCODE\")"
+      "PowerShell(& \"C:\\\\Users\\\\varunsingh\\\\AppData\\\\Local\\\\nvm\\\\v20.19.4\\\\node.exe\" \"D:\\\\websitem\\\\homeera\\\\node_modules\\\\typescript\\\\bin\\\\tsc\" --noEmit -p \"D:\\\\websitem\\\\homeera\\\\tsconfig.json\" 2>&1 | Select-Object -First 12; Write-Output \"EXIT=$LASTEXITCODE\")",
+      "Bash(echo \"=== exit: $? ===\")",
+      "Bash(host fbyslpmwppbqoxixseus.supabase.co)",
+      "Bash(host supabase.co)",
+      "Bash(host google.com)"
     ]
   }
 }

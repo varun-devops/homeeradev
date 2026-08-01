@@ -3,21 +3,25 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
+import { getAdminIdentity } from '@/lib/admin-auth';
 
-/** Guard: throws/redirects unless the caller is an admin. Returns user id. */
+/** Guard: redirects unless the caller is a full admin. Returns user id. */
 async function requireAdmin(): Promise<string> {
-  const sb = createClient();
-  const {
-    data: { user },
-  } = await sb.auth.getUser();
-  if (!user) redirect('/admin/login');
-  const { data: profile } = await sb
-    .from('profiles')
-    .select('is_admin')
-    .eq('id', user.id)
-    .maybeSingle();
-  if (!profile?.is_admin) redirect('/admin/login?error=not-admin');
-  return user.id;
+  const identity = await getAdminIdentity();
+  if (!identity) redirect('/admin/login');
+  if (identity.role !== 'admin') redirect('/admin/products?error=admin-only');
+  return identity.userId;
+}
+
+/**
+ * Guard for product operations: allows admin OR staff. Returns user id.
+ * Staff exist to manage products, so this is the guard on all product CRUD.
+ */
+async function requireProductManager(): Promise<string> {
+  const identity = await getAdminIdentity();
+  if (!identity) redirect('/admin/login');
+  // Both 'admin' and 'staff' may manage products.
+  return identity.userId;
 }
 
 export async function signOut() {
@@ -28,7 +32,7 @@ export async function signOut() {
 
 /** Toggle a product's visibility on the storefront. */
 export async function setProductActive(productId: string, isActive: boolean) {
-  await requireAdmin();
+  await requireProductManager();
   const svc = createServiceClient();
   const { error } = await svc.from('products').update({ is_active: isActive }).eq('id', productId);
   if (error) return { ok: false, message: error.message };
@@ -39,7 +43,7 @@ export async function setProductActive(productId: string, isActive: boolean) {
 
 /** Update a product's price (whole rupees). */
 export async function setProductPrice(productId: string, price: number) {
-  await requireAdmin();
+  await requireProductManager();
   if (!Number.isFinite(price) || price < 0) return { ok: false, message: 'Invalid price' };
   const svc = createServiceClient();
   const { error } = await svc
@@ -130,7 +134,7 @@ function buildRow(input: ProductInput) {
 
 /** Create a new product. */
 export async function createProduct(input: ProductInput) {
-  await requireAdmin();
+  await requireProductManager();
   if (!input.sku?.trim() || !input.name?.trim() || !input.category?.trim() || !input.sub_category?.trim()) {
     return { ok: false, message: 'SKU, name, category and sub-category are required.' };
   }
@@ -146,7 +150,7 @@ export async function createProduct(input: ProductInput) {
 
 /** Update an existing product. */
 export async function updateProduct(input: ProductInput) {
-  await requireAdmin();
+  await requireProductManager();
   if (!input.id) return { ok: false, message: 'Missing product id.' };
   const svc = createServiceClient();
   const row = buildRow(input);
@@ -160,7 +164,7 @@ export async function updateProduct(input: ProductInput) {
 
 /** Delete a product. */
 export async function deleteProduct(productId: string) {
-  await requireAdmin();
+  await requireProductManager();
   const svc = createServiceClient();
   const { error } = await svc.from('products').delete().eq('id', productId);
   if (error) return { ok: false, message: error.message };
@@ -319,9 +323,9 @@ export async function setOrderStatus(orderId: string, status: OrderStatus) {
   return { ok: true };
 }
 
-/** Change the signed-in admin's password. */
+/** Change the signed-in admin/staff user's own password. */
 export async function changePassword(newPassword: string) {
-  await requireAdmin();
+  await requireProductManager();
   if (!newPassword || newPassword.length < 4) {
     return { ok: false, message: 'Password must be at least 4 characters.' };
   }

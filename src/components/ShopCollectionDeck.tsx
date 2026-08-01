@@ -259,6 +259,42 @@ export default function ShopCollectionDeck({ collections, products }: Props) {
               {c.label}
             </motion.h2>
           </div>
+
+          {/* Scroll cue. Every collection is a full-height panel, so without
+              this the visitor has no way of knowing four more sit below the
+              fold — the card itself carries nothing but the name. Shows the
+              position in the deck, and on any panel but the last a chevron
+              that jumps to the next one. */}
+          {collections.length > 1 && (
+            <div className="heShop-cue">
+              <span className="heShop-cueIdx">
+                {String(i + 1).padStart(2, '0')} / {String(collections.length).padStart(2, '0')}
+              </span>
+              {i < collections.length - 1 && (
+                <button
+                  type="button"
+                  className="heShop-cueBtn"
+                  aria-label={`Next collection: ${collections[i + 1].label}`}
+                  onClick={(e) => {
+                    // The panel itself opens the collection on click, so this
+                    // must not bubble up to it.
+                    e.stopPropagation();
+                    scrollToPanel(i + 1);
+                  }}
+                >
+                  <span className="heShop-cueNext">{collections[i + 1].label}</span>
+                  <svg
+                    className="heShop-cueChev"
+                    width="18" height="18" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"
+                    strokeLinejoin="round" aria-hidden="true"
+                  >
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          )}
         </article>
       ))}
 
@@ -422,18 +458,57 @@ const styles = `
     line-height: 0.98; letter-spacing: -0.02em;
   }
 
+  /* ---------- scroll cue ---------- */
+  .heShop-cue {
+    position: absolute; z-index: 3;
+    left: 50%; transform: translateX(-50%);
+    bottom: clamp(1.5rem, 5vh, 3rem);
+    display: flex; flex-direction: column; align-items: center; gap: 0.6rem;
+    pointer-events: none;
+  }
+  .heShop-cueIdx {
+    font-size: 0.68rem; letter-spacing: 0.28em; color: var(--ink-soft);
+    font-variant-numeric: tabular-nums;
+  }
+  .heShop-cueBtn {
+    pointer-events: auto;
+    display: flex; flex-direction: column; align-items: center; gap: 0.3rem;
+    background: none; border: none; padding: 0.35rem 0.75rem; cursor: pointer;
+    color: var(--ink-soft);
+    transition: color 240ms var(--ease-out);
+  }
+  .heShop-cueBtn:hover { color: var(--gold); }
+  .heShop-cueBtn:focus-visible { outline: 1px solid var(--gold); outline-offset: 4px; border-radius: 8px; }
+  .heShop-cueNext {
+    font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase;
+  }
+  /* A slow bob — enough to read as "there is more below" without nagging. */
+  .heShop-cueChev { animation: heShopBob 2.1s ease-in-out infinite; }
+  @keyframes heShopBob {
+    0%, 100% { transform: translateY(0); opacity: 0.75; }
+    50%      { transform: translateY(5px); opacity: 1; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .heShop-cueChev { animation: none; }
+  }
+
   .heShop-rail {
     position: fixed; right: clamp(0.75rem, 2.5vw, 1.75rem); top: 50%;
-    transform: translateY(-50%); display: flex; flex-direction: column; gap: 0.8rem; z-index: 40;
+    transform: translateY(-50%); display: flex; flex-direction: column; gap: 0.7rem; z-index: 40;
   }
   .heShop-dot {
-    width: 8px; height: 8px; border-radius: 50%; border: 1px solid var(--line-strong);
+    width: 10px; height: 10px; border-radius: 50%; border: 1px solid var(--ink-soft);
     background: transparent; padding: 0; cursor: pointer;
-    transition: background 280ms var(--ease-out), transform 280ms var(--ease-out);
+    transition: background 280ms var(--ease-out), transform 280ms var(--ease-out),
+                border-color 280ms var(--ease-out);
   }
-  .heShop-dot[data-on='true'] { background: var(--gold); transform: scale(1.3); }
+  .heShop-dot:hover { border-color: var(--gold); }
+  .heShop-dot[data-on='true'] { background: var(--gold); border-color: var(--gold); transform: scale(1.35); }
   @media (max-width: 720px) {
-    .heShop-rail { top: auto; bottom: clamp(1rem, 4vh, 2rem); right: 50%; transform: translateX(50%); flex-direction: row; }
+    /* The cue owns the bottom centre on mobile, so the rail tucks in below it. */
+    .heShop-rail { top: auto; bottom: 0.85rem; right: 50%; transform: translateX(50%); flex-direction: row; }
+    .heShop-cue { bottom: 3.25rem; }
+    .heShop-cueNext { display: none; }
   }
 
   .heShop-overlay { position: fixed; inset: 0; z-index: 90; overflow-y: auto; -webkit-overflow-scrolling: touch; }

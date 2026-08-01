@@ -42,7 +42,23 @@ html, body {
   font-family: var(--font-display, 'Cormorant Garamond'), 'Times New Roman', serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  overflow-x: hidden;
+
+  /* MUST be `clip`, not `hidden`.
+     Per CSS Overflow 3, when one axis is `hidden` the other computes from
+     `visible` to `auto` — so `overflow-x: hidden` here quietly turned BOTH
+     <html> and <body> into scroll containers. That is what killed scrolling
+     on the shop deck: Lenis captures the wheel and scrolls the window, but
+     the real scroller had become <body>, so the page never moved.
+     `clip` suppresses the horizontal overflow without making either element
+     a scroll container, leaving overflow-y genuinely `visible`. */
+  overflow-x: clip;
+}
+
+/* Safari < 16 has no `overflow: clip`. Fall back to the old behaviour there
+   rather than leaving a horizontal scrollbar — smooth scroll degrades to
+   native on those builds, which is the lesser problem. */
+@supports not (overflow: clip) {
+  html, body { overflow-x: hidden; }
 }
 
 body {

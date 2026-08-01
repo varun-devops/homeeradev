@@ -1,5 +1,10 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter, Cormorant_Garamond } from 'next/font/google';
+// Lenis needs its own stylesheet to work: it sets `html.lenis body { height:
+// auto }` and the `[data-lenis-prevent]` escape hatch that lets an inner
+// scroll container (the sub-collection deck) keep its own wheel events.
+// Without this import Lenis captures the wheel and the page does not move.
+import 'lenis/dist/lenis.css';
 import '../styles/globals.css';
 import Chrome from '@/components/Chrome';
 

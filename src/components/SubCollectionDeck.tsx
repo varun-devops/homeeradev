@@ -69,11 +69,21 @@ export default function SubCollectionDeck({ collectionLabel, subs, onOpen }: Pro
         }
 
         if (!reduce) {
-          // Ease the falloff so the focused card stays crisp and only the
-          // neighbours drop away.
-          const t = Math.min(1, dist);
-          card.style.transform = `scale(${(1 - t * 0.16).toFixed(4)})`;
-          card.style.opacity = String((1 - t * 0.75).toFixed(3));
+          // The card is full-bleed now, so scaling the whole thing would
+          // expose the page behind its edges. Move the photo and the copy
+          // independently instead: the image drifts slower than the scroll
+          // (held oversized so it never uncovers a corner), and the caption
+          // lifts and fades as its slide leaves the middle of the screen.
+          const photo = card.querySelector<HTMLElement>('[data-photo]');
+          const body = card.querySelector<HTMLElement>('[data-body]');
+          if (photo) {
+            photo.style.transform = `translate3d(0, ${(phase * -9).toFixed(2)}%, 0) scale(1.16)`;
+          }
+          if (body) {
+            const t = Math.min(1, dist * 1.6);
+            body.style.opacity = (1 - t).toFixed(3);
+            body.style.transform = `translate3d(0, ${(phase * 46).toFixed(1)}px, 0)`;
+          }
         }
       });
 
@@ -129,15 +139,16 @@ export default function SubCollectionDeck({ collectionLabel, subs, onOpen }: Pro
                   <img
                     src={s.image}
                     alt=""
+                    data-photo
                     className="heSub-photo"
                     loading={i === 0 ? 'eager' : 'lazy'}
                   />
                 ) : (
-                  <span className="heSub-photo heSub-noimg" />
+                  <span data-photo className="heSub-photo heSub-noimg" />
                 )}
                 <span className="heSub-scrim" aria-hidden="true" />
 
-                <span className="heSub-body">
+                <span data-body className="heSub-body">
                   <span className="heSub-name">{s.label}</span>
                   {SUB_COLLECTION_COPY[s.slug] && (
                     <span className="heSub-copy">{SUB_COLLECTION_COPY[s.slug]}</span>
@@ -211,13 +222,14 @@ const styles = `
     place-items: center;
   }
 
-  /* ---------- the card ---------- */
+  /* ---------- the card ----------
+     Full-bleed: the sub-collection fills the viewport exactly like a
+     collection panel does one level up, so the two levels read as the same
+     kind of surface. No rounded corner, border or max-height — anything
+     inset would letterbox the photo against the overlay behind it. */
   .heSub-card {
-    width: min(100%, 780px);
+    width: 100%;
     height: 100%;
-    max-height: 68svh;
-    /* transform/opacity are written each frame by the rAF loop */
-    will-change: transform, opacity;
   }
   .heSub-cardBtn {
     position: relative;
@@ -225,32 +237,35 @@ const styles = `
     width: 100%;
     height: 100%;
     padding: 0;
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 22px;
+    border: none;
+    border-radius: 0;
     overflow: hidden;
     background: #15140f;
     cursor: pointer;
     text-align: left;
   }
-  .heSub-cardBtn:focus-visible { outline: 2px solid var(--gold); outline-offset: 4px; }
+  .heSub-cardBtn:focus-visible { outline: 2px solid var(--gold); outline-offset: -4px; }
   .heSub-photo {
     position: absolute; inset: 0;
     width: 100%; height: 100%;
     object-fit: cover; display: block;
-    transition: transform 900ms var(--ease-out);
+    /* transform is written every frame by the rAF loop — a CSS transition
+       here would lag behind the scroll and judder. */
+    will-change: transform;
   }
-  .heSub-cardBtn:hover .heSub-photo { transform: scale(1.04); }
   .heSub-noimg { background: linear-gradient(140deg, #2a2820, #14130f); }
   .heSub-scrim {
     position: absolute; inset: 0;
-    background: linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.35) 45%, rgba(0,0,0,0.88) 100%);
+    background: linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.18) 38%, rgba(0,0,0,0.92) 100%);
   }
 
   .heSub-body {
     position: absolute; left: 0; right: 0; bottom: 0;
     display: flex; flex-direction: column; align-items: flex-start;
-    gap: 0.7rem;
-    padding: clamp(1.25rem, 4vw, 2.25rem);
+    gap: 0.8rem;
+    padding: clamp(2rem, 6vw, 4.5rem) var(--pad-x) clamp(3.5rem, 10vh, 6rem);
+    max-width: 900px;
+    will-change: transform, opacity;
   }
   .heSub-name {
     font-family: var(--font-display);
@@ -283,8 +298,9 @@ const styles = `
 
   .heSub-count {
     position: absolute;
-    top: clamp(1rem, 3vw, 1.5rem);
-    right: clamp(1rem, 3vw, 1.5rem);
+    /* Clear of the fixed HUD, which sits centred at the very top. */
+    top: clamp(4.5rem, 11vh, 6rem);
+    right: var(--pad-x);
     padding: 0.4rem 0.9rem;
     border-radius: 999px;
     background: rgba(10,10,10,0.6);
@@ -313,8 +329,11 @@ const styles = `
   .heSub-dot[data-on='true'] { background: var(--gold); border-color: var(--gold); transform: scale(1.35); }
 
   @media (max-width: 720px) {
-    .heSub-card { max-height: 75svh; }
-    .heSub-copy { display: none; }
+    /* The card is full-bleed at every size now, so the old max-height cap
+       no longer applies. Copy stays — there is room for it on a full
+       screen, unlike in the inset card it used to be hidden in. */
+    .heSub-copy { font-size: 0.82rem; }
     .heSub-rail { right: 0.5rem; }
+    .heSub-body { padding-bottom: clamp(4rem, 12vh, 6rem); }
   }
 `;

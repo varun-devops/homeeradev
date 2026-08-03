@@ -209,7 +209,6 @@ const styles = `
     scroll-snap-align: center;
     display: grid;
     place-items: center;
-    padding: clamp(4.5rem, 10vh, 6rem) var(--pad-x) clamp(3rem, 8vh, 4.5rem);
   }
 
   /* ---------- the card ---------- */
@@ -314,7 +313,7 @@ const styles = `
   .heSub-dot[data-on='true'] { background: var(--gold); border-color: var(--gold); transform: scale(1.35); }
 
   @media (max-width: 720px) {
-    .heSub-card { max-height: 62svh; }
+    .heSub-card { max-height: 75svh; }
     .heSub-copy { display: none; }
     .heSub-rail { right: 0.5rem; }
   }

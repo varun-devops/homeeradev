@@ -535,8 +535,7 @@ const styles = `
      otherwise sits over this button and eats the click. */
   .heShop-back {
     position: fixed; top: 5.25rem; left: var(--pad-x); z-index: 95;
-    width: 44px; height: 44px; display: grid; place-items: center;
-    background: rgba(0,0,0,0.35); border: 1px solid var(--line-strong);
+    width: 44px; height: 44px; display: grid; place-items: center; border: 1px solid var(--line-strong);
     color: var(--ink); border-radius: 999px; cursor: pointer; padding: 0;
     transition: background 240ms var(--ease-out), border-color 240ms var(--ease-out),
                 transform 240ms var(--ease-out);
@@ -553,7 +552,17 @@ const styles = `
     gap: clamp(2rem, 4vw, 3rem) clamp(1.5rem, 3vw, 2.5rem); max-width: 1100px; margin: 0 auto;
   }
   @media (max-width: 980px) { .heShop-grid { grid-template-columns: repeat(2, 1fr); } }
-  @media (max-width: 620px) { .heShop-grid { grid-template-columns: 1fr; } }
+  /* Two columns all the way down to the narrowest phone. A single column
+     showed one product per screen and made a 22-piece sub-collection feel
+     endless. The gutters and type tighten here so two cards still breathe
+     at 360px — the uppercase title especially, whose 0.2em tracking wraps
+     badly in a half-width column. */
+  @media (max-width: 620px) {
+    .heShop-grid { grid-template-columns: repeat(2, 1fr); gap: 1.6rem 0.9rem; }
+    .heShop-cardMeta { margin-top: 0.7rem; }
+    .heShop-cardTitle { font-size: 0.68rem; letter-spacing: 0.1em; line-height: 1.35; }
+    .heShop-cardPrice { margin-top: 0.25rem; font-size: 0.8rem; }
+  }
 
   .heShop-card { display: block; }
   .heShop-cardImg {

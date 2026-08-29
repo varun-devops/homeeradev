@@ -29,7 +29,16 @@ const envPath = join(root, '.env.local');
 if (existsSync(envPath)) {
   for (const line of readFileSync(envPath, 'utf8').split('\n')) {
     const m = line.match(/^([A-Z0-9_]+)=(.*)$/);
-    if (m && !process.env[m[1]]) process.env[m[1]] = m[2].trim();
+    if (!m || process.env[m[1]]) continue;
+    // Strip an unquoted trailing comment. Without this a line written as
+    //   R2_ACCESS_KEY_ID=<32 hex>   # SECRET
+    // yields a 45-character "key", and every upload fails on a length error.
+    let value = m[2].replace(/s+#.*$/, "").trim();
+    const q = value[0];
+    if (value.length > 1 && (q === '"' || q === "'") && value[value.length-1] === q) {
+      value = value.slice(1, -1);
+    }
+    process.env[m[1]] = value;
   }
 }
 

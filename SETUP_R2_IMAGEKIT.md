@@ -89,17 +89,30 @@ Add these to **`.env.local`** (local) and to **Vercel → Project → Settings �
 Environment Variables** (production). Values marked SECRET must never be
 prefixed `NEXT_PUBLIC_`.
 
+> **Paste them into `.env.local`, not into `.env.example` or this file.** Both
+> of those are committed to git; `.env.local` is the only one `.gitignore`
+> covers. Keep each value alone on its line — a trailing `# comment` after a
+> value is read as part of the value by some parsers, which turns a 32-character
+> key into a 45-character one and fails every upload.
+>
+> `.env.local` is local only. Vercel never sees it, so the same values must be
+> entered in the Vercel dashboard separately for the live site.
+
 ```bash
 # ---- ImageKit (delivery) ----
 # Setting this one variable switches all delivery over to ImageKit.
 NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT=https://ik.imagekit.io/tggbtkbmp
 IMAGEKIT_PUBLIC_KEY=public_xxxxxxxxxxxxxxxxxxxxxxxx
-IMAGEKIT_PRIVATE_KEY=private_xxxxxxxxxxxxxxxxxxxxxx   # SECRET
+# SECRET — server only
+IMAGEKIT_PRIVATE_KEY=private_xxxxxxxxxxxxxxxxxxxxxx
 
 # ---- Cloudflare R2 (storage) ----
+# Account id and access key id are 32 hex characters; the secret is 64.
 R2_ACCOUNT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-R2_ACCESS_KEY_ID=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx     # SECRET
-R2_SECRET_ACCESS_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxx     # SECRET
+# SECRET — server only
+R2_ACCESS_KEY_ID=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+# SECRET — server only
+R2_SECRET_ACCESS_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 R2_BUCKET=homeera-media
 # The r2.dev public URL from Step 1.3 — used by the migration script only.
 R2_PUBLIC_URL=https://pub-xxxxxxxxxxxxxxxxxxxx.r2.dev

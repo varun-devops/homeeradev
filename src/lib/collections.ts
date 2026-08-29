@@ -1,4 +1,6 @@
-import { createServiceClient } from '@/lib/supabase/server';
+import { unstable_cache } from 'next/cache';
+import { createCatalogClient } from '@/lib/supabase/server';
+import { CATALOG_TAG } from '@/lib/cache-tags';
 
 export type Collection = {
   slug: string;
@@ -16,25 +18,38 @@ export type SubCollection = {
   sort_order: number;
 };
 
-/** All collections, ordered. Falls back to empty if the table is absent. */
-export async function getCollections(): Promise<Collection[]> {
-  const svc = createServiceClient();
-  const { data, error } = await svc
-    .from('collections')
-    .select('*')
-    .order('sort_order', { ascending: true })
-    .order('label', { ascending: true });
-  if (error) return [];
-  return (data ?? []) as Collection[];
-}
+/** All collections, ordered. Falls back to empty if the table is absent.
+ *  Cached under the catalogue tag — admin edits invalidate it immediately. */
+export const getCollections = unstable_cache(
+  async (): Promise<Collection[]> => {
+    const svc = createCatalogClient();
+    const { data, error } = await svc
+      .from('collections')
+      .select('*')
+      .order('sort_order', { ascending: true })
+      .order('label', { ascending: true });
+    if (error) return [];
+    return (data ?? []) as Collection[];
+  },
+  ['collections'],
+  // Tag invalidation is the fast path; this TTL is the backstop for rows
+  // edited outside the admin panel, which cannot call revalidateTag.
+  { tags: [CATALOG_TAG], revalidate: 3600 },
+);
 
-export async function getSubCollections(): Promise<SubCollection[]> {
-  const svc = createServiceClient();
-  const { data, error } = await svc
-    .from('sub_collections')
-    .select('*')
-    .order('sort_order', { ascending: true })
-    .order('label', { ascending: true });
-  if (error) return [];
-  return (data ?? []) as SubCollection[];
-}
+export const getSubCollections = unstable_cache(
+  async (): Promise<SubCollection[]> => {
+    const svc = createCatalogClient();
+    const { data, error } = await svc
+      .from('sub_collections')
+      .select('*')
+      .order('sort_order', { ascending: true })
+      .order('label', { ascending: true });
+    if (error) return [];
+    return (data ?? []) as SubCollection[];
+  },
+  ['sub-collections'],
+  // Tag invalidation is the fast path; this TTL is the backstop for rows
+  // edited outside the admin panel, which cannot call revalidateTag.
+  { tags: [CATALOG_TAG], revalidate: 3600 },
+);

@@ -1,8 +1,10 @@
 # Homeera — Project Details & Handoff
 
 A production-ready e-commerce site for Homeera (brass / wood / marble home décor).
-Built on **Next.js 14 (App Router)**, **Supabase** (Postgres + Auth), **Cloudinary**
-(product images), and **Razorpay** (payments).
+Built on **Next.js 14 (App Router)**, **Supabase** (Postgres + Auth),
+**Cloudflare R2 + ImageKit** (product media), and **Razorpay** (payments).
+
+Media setup and the Cloudinary migration: **[SETUP_R2_IMAGEKIT.md](SETUP_R2_IMAGEKIT.md)**.
 
 ---
 
@@ -63,7 +65,7 @@ Built on **Next.js 14 (App Router)**, **Supabase** (Postgres + Auth), **Cloudina
 > `node scripts/build-catalog.mjs && node scripts/import-catalog.mjs` works.)
 >
 > Step 1 reads the workbook and writes `scripts/data/import.json` plus one
-> `<SKU>.jpg` per product. Step 2 uploads to Cloudinary and upserts Supabase.
+> `<SKU>.jpg` per product. Step 2 uploads the images and upserts Supabase.
 > Products no longer in the sheet are deactivated, not deleted, so past
 > orders keep resolving. Product copy lives in `scripts/product-copy.mjs`,
 > keyed by SKU — edit it there, not in `import.json`, which is regenerated.
@@ -81,7 +83,15 @@ All secrets live in `.env.local` (git-ignored). **Never commit this file.**
 NEXT_PUBLIC_SUPABASE_URL=https://fbyslpmwppbqoxixseus.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...        # public, safe in browser
 SUPABASE_SERVICE_ROLE_KEY=...            # SECRET — server only
-CLOUDINARY_CLOUD_NAME=dcdchbc8p
+NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT=       # https://ik.imagekit.io/<id> — switches delivery on
+IMAGEKIT_PUBLIC_KEY=
+IMAGEKIT_PRIVATE_KEY=                    # SECRET
+R2_ACCOUNT_ID=
+R2_ACCESS_KEY_ID=                        # SECRET
+R2_SECRET_ACCESS_KEY=                    # SECRET
+R2_BUCKET=homeera-media
+R2_PUBLIC_URL=                           # the bucket's r2.dev URL (ImageKit's origin)
+CLOUDINARY_CLOUD_NAME=dcdchbc8p          # legacy — remove after the migration
 CLOUDINARY_API_KEY=...
 CLOUDINARY_API_SECRET=...                # SECRET
 RAZORPAY_KEY_ID=rzp_test_xxxxx           # paste real key to enable payments
@@ -90,7 +100,8 @@ NEXT_PUBLIC_SITE_URL=http://localhost:3000
 ```
 
 - **Supabase project:** `fbyslpmwppbqoxixseus` (dashboard → SQL ran from `supabase/schema.sql`)
-- **Cloudinary folder:** `homeera/products/<SKU>`
+- **R2 bucket:** `homeera-media`, keys `products/<SKU>.jpg`, `uploads/…`, `hero/clip.mp4`
+- **Cloudinary folder:** `homeera/products/<SKU>` (legacy, until the migration runs)
 - **Razorpay:** Test mode until real keys + business KYC for live mode.
 
 > ⚠️ The keys above were shared in chat during the build. **Rotate the
@@ -161,7 +172,21 @@ which bypasses RLS.
 
 ---
 
-## 8. Responsiveness
+## 8. Performance model
+
+| Layer | How it is fast |
+|---|---|
+| **Shop + product pages** | Prerendered and served from Vercel's edge. Nothing on the render path reads cookies, so the HTML is identical for every visitor. |
+| **Catalogue reads** | `unstable_cache` in `src/lib/catalog.ts`, tagged `catalog`. Every admin write calls `revalidateTag(CATALOG_TAG)`, so a price edit or show/hide is live immediately — no visitor pays a Supabase round trip in the meantime. A 1-hour TTL backstops rows edited straight in the Supabase dashboard. |
+| **Images** | `src/components/Img.tsx` emits a `srcset` and ImageKit resizes on the fly (`f-auto` → AVIF/WebP, `q-auto`). A phone fetches ~30 KB per card instead of the 1600px original. |
+| **Video** | `preload="metadata"` plus a CDN-generated poster frame, so the hero paints as an image and the clip only downloads for visitors who stay. |
+| **Bag quantity** | Fetched by `AddToCart` on the client (`getCartQuantity`), which is what keeps the product page cacheable. |
+
+> **If you add a new storefront read**, cache it the same way — `unstable_cache(fn, [key], { tags: [CATALOG_TAG], revalidate: 3600 })` — and make sure whatever writes it calls `revalidateTag(CATALOG_TAG)`. An uncached read silently reintroduces a per-request database call on every page view.
+
+---
+
+## 9. Responsiveness
 
 - Global side gutter is the `--pad-x` token (`clamp(1.75rem, 5.5vw, 5rem)`) — every page
   uses it via `.container` or component padding, so left/right spacing adapts to mobile.

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState, useTransition } from 'react';
 import { formatINR } from '@/lib/format';
 import { setProductActive, setProductPrice } from '@/app/admin/actions';
+import Img from '@/components/Img';
 
 type Row = {
   id: string;
@@ -80,7 +81,7 @@ export default function AdminProductsTable({ products }: { products: Row[] }) {
                     <div style={{ width: 42, height: 52, borderRadius: 5, overflow: 'hidden', background: '#15140f', flexShrink: 0 }}>
                       {r.image_url && (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={r.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <Img src={r.image_url} alt="" sizes="56px" widths={[56, 112, 168]} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       )}
                     </div>
                     <span>{r.name}</span>

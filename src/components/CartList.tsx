@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useTransition } from 'react';
 import { formatINR } from '@/lib/format';
 import { updateQuantity, removeFromCart } from '@/app/cart/actions';
+import Img from '@/components/Img';
 
 export type CartItem = {
   id: string;
@@ -59,10 +60,11 @@ export default function CartList({ items }: { items: CartItem[] }) {
               }}
             >
               {it.image_url && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
+                <Img
                   src={it.image_url}
                   alt={it.name}
+                  sizes="88px"
+                  widths={[88, 176, 264]}
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />
               )}

@@ -1,8 +1,9 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
+import { CATALOG_TAG } from '@/lib/catalog';
 import { getAdminIdentity } from '@/lib/admin-auth';
 
 /** Guard: redirects unless the caller is a full admin. Returns user id. */
@@ -37,7 +38,9 @@ export async function setProductActive(productId: string, isActive: boolean) {
   const { error } = await svc.from('products').update({ is_active: isActive }).eq('id', productId);
   if (error) return { ok: false, message: error.message };
   revalidatePath('/admin/products');
+  revalidateTag(CATALOG_TAG);
   revalidatePath('/shop');
+  revalidatePath('/shop/[id]', 'page');
   return { ok: true };
 }
 
@@ -52,7 +55,9 @@ export async function setProductPrice(productId: string, price: number) {
     .eq('id', productId);
   if (error) return { ok: false, message: error.message };
   revalidatePath('/admin/products');
+  revalidateTag(CATALOG_TAG);
   revalidatePath('/shop');
+  revalidatePath('/shop/[id]', 'page');
   return { ok: true };
 }
 
@@ -144,7 +149,9 @@ export async function createProduct(input: ProductInput) {
   if (error) return { ok: false, message: error.message };
   await ensureCollectionRows(row.category, row.category_slug, row.sub_category, row.sub_category_slug, row.image_url);
   revalidatePath('/admin/products');
+  revalidateTag(CATALOG_TAG);
   revalidatePath('/shop');
+  revalidatePath('/shop/[id]', 'page');
   return { ok: true, id: data.id };
 }
 
@@ -158,7 +165,9 @@ export async function updateProduct(input: ProductInput) {
   if (error) return { ok: false, message: error.message };
   await ensureCollectionRows(row.category, row.category_slug, row.sub_category, row.sub_category_slug, row.image_url);
   revalidatePath('/admin/products');
-  revalidatePath(`/shop`);
+  revalidateTag(CATALOG_TAG);
+  revalidatePath('/shop');
+  revalidatePath('/shop/[id]', 'page');
   return { ok: true, id: input.id };
 }
 
@@ -169,7 +178,9 @@ export async function deleteProduct(productId: string) {
   const { error } = await svc.from('products').delete().eq('id', productId);
   if (error) return { ok: false, message: error.message };
   revalidatePath('/admin/products');
+  revalidateTag(CATALOG_TAG);
   revalidatePath('/shop');
+  revalidatePath('/shop/[id]', 'page');
   return { ok: true };
 }
 
@@ -219,6 +230,7 @@ export async function saveCollection(input: {
   );
   if (error) return { ok: false, message: error.message };
   revalidatePath('/admin/collections');
+  revalidateTag(CATALOG_TAG);
   revalidatePath('/shop');
   return { ok: true, slug };
 }
@@ -229,6 +241,7 @@ export async function deleteCollection(slug: string) {
   const { error } = await svc.from('collections').delete().eq('slug', slug);
   if (error) return { ok: false, message: error.message };
   revalidatePath('/admin/collections');
+  revalidateTag(CATALOG_TAG);
   revalidatePath('/shop');
   return { ok: true };
 }
@@ -258,6 +271,7 @@ export async function saveSubCollection(input: {
   );
   if (error) return { ok: false, message: error.message };
   revalidatePath('/admin/collections');
+  revalidateTag(CATALOG_TAG);
   revalidatePath('/shop');
   return { ok: true, slug };
 }
@@ -268,6 +282,7 @@ export async function deleteSubCollection(slug: string) {
   const { error } = await svc.from('sub_collections').delete().eq('slug', slug);
   if (error) return { ok: false, message: error.message };
   revalidatePath('/admin/collections');
+  revalidateTag(CATALOG_TAG);
   revalidatePath('/shop');
   return { ok: true };
 }

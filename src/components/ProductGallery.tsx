@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import Img from '@/components/Img';
+import { videoPoster, videoUrl } from '@/lib/media';
 
 /**
  * Product media gallery: a large active view (image or video) with a row
@@ -39,17 +41,29 @@ export default function ProductGallery({
       <div style={{ aspectRatio: '4 / 5', background: '#15140f', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
         {current.type === 'video' ? (
           <video
-            src={current.url}
+            src={videoUrl(current.url)}
+            poster={videoPoster(current.url, 800) || undefined}
             controls
             autoPlay
             muted
             loop
             playsInline
+            // The visitor chose this tab, so the clip is wanted — but the
+            // poster paints first so there is no black box while it buffers.
+            preload="metadata"
             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
           />
         ) : (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={current.url} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+          <Img
+            src={current.url}
+            alt={name}
+            // The gallery is one column of a two-column split above 700px.
+            sizes="(max-width: 700px) 100vw, min(50vw, 640px)"
+            widths={[320, 480, 640, 828, 1080]}
+            // The product photo is the LCP element on this page.
+            priority
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+          />
         )}
       </div>
 
@@ -76,7 +90,15 @@ export default function ProductGallery({
             >
               {m.type === 'video' ? (
                 <>
-                  <video src={m.url} muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  {/* A poster image, not the clip — loading every video in
+                      the strip just to show a 64px thumbnail was megabytes. */}
+                  <Img
+                    src={videoPoster(m.url, 128) || m.url}
+                    alt=""
+                    sizes="64px"
+                    widths={[64, 128, 192]}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
                   <span
                     style={{
                       position: 'absolute',
@@ -93,8 +115,13 @@ export default function ProductGallery({
                   </span>
                 </>
               ) : (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={m.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <Img
+                  src={m.url}
+                  alt=""
+                  sizes="64px"
+                  widths={[64, 128, 192]}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
               )}
             </button>
           ))}

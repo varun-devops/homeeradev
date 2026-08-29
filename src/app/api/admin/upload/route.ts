@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { uploadBuffer, cloudinaryConfigured } from '@/lib/cloudinary';
+import { r2Configured, r2Key, r2Put } from '@/lib/r2';
+import { storedUrlForKey } from '@/lib/media';
 import { getAdminIdentity } from '@/lib/admin-auth';
 
 export const runtime = 'nodejs';
@@ -9,17 +11,24 @@ export const maxDuration = 60;
 /**
  * POST /api/admin/upload   (multipart/form-data, field "file")
  *
- * Product managers only (admin or staff). Streams the uploaded image/video
- * to Cloudinary and returns { url, resourceType }. The admin product form
- * calls this for each file and stores the returned URLs on the product.
+ * Product managers only (admin or staff). Stores the file and returns
+ * { url, resourceType }. The admin product form calls this per file and saves
+ * the returned URLs on the product.
+ *
+ * Storage goes to Cloudflare R2 when configured, delivered through ImageKit.
+ * Cloudinary remains the fallback so uploads keep working before the migration
+ * in SETUP_R2_IMAGEKIT.md is done, and if R2 is ever unreachable.
  */
 export async function POST(req: Request) {
   // --- auth: admin or staff may upload product media ---
   const identity = await getAdminIdentity();
   if (!identity) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  if (!cloudinaryConfigured()) {
-    return NextResponse.json({ error: 'Cloudinary is not configured' }, { status: 503 });
+  if (!r2Configured() && !cloudinaryConfigured()) {
+    return NextResponse.json(
+      { error: 'No media storage configured — see SETUP_R2_IMAGEKIT.md' },
+      { status: 503 },
+    );
   }
 
   const form = await req.formData();
@@ -43,10 +52,21 @@ export async function POST(req: Request) {
     );
   }
 
+  const resourceType = isVideo ? 'video' : 'image';
+
   try {
     const buffer = Buffer.from(await file.arrayBuffer());
-    const url = await uploadBuffer(buffer, isVideo ? 'video' : 'image');
-    return NextResponse.json({ url, resourceType: isVideo ? 'video' : 'image' });
+
+    if (r2Configured()) {
+      const key = r2Key(isVideo ? 'videos' : 'products', file.name || `upload.${isVideo ? 'mp4' : 'jpg'}`);
+      await r2Put(key, buffer, file.type || 'application/octet-stream');
+      // No resize on the way in — the original is kept and ImageKit derives
+      // every size from it on demand.
+      return NextResponse.json({ url: storedUrlForKey(key), resourceType });
+    }
+
+    const url = await uploadBuffer(buffer, resourceType);
+    return NextResponse.json({ url, resourceType });
   } catch (err: unknown) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Upload failed' },

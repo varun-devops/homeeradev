@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { CATALOG_TAG } from '@/lib/cache-tags';
 
 /**
  * Supabase talks to PostgREST over the global `fetch`, and Next.js replaces
@@ -13,11 +14,27 @@ import { cookies } from 'next/headers';
  * been deactivated, while the database held the correct five collections.
  * `export const dynamic = 'force-dynamic'` on the page did NOT prevent it.
  *
- * Every Supabase read here is live data by definition, so opt out
- * explicitly rather than relying on route-segment config to imply it.
+ * So reads opt out explicitly rather than relying on route-segment config
+ * to imply it. Two flavours:
+ *
+ *   freshFetch    — never cached. The default, and correct for anything
+ *                   per-user or admin-facing (carts, orders, payments).
+ *
+ *   catalogFetch  — cached, but TAGGED. The catalogue is the same for every
+ *                   visitor, so serving it per-request was a Supabase round
+ *                   trip on every page view. Tagging it means an admin write
+ *                   can flush it by name, which is what the earlier stale
+ *                   snapshot had no way to do.
+ *
+ * `no-store` also forces a route to render dynamically — even inside
+ * unstable_cache — so the catalogue pages could not be prerendered at all
+ * while every read used freshFetch.
  */
 const freshFetch: typeof fetch = (input, init) =>
   fetch(input, { ...init, cache: 'no-store' });
+
+const catalogFetch: typeof fetch = (input, init) =>
+  fetch(input, { ...init, cache: 'force-cache', next: { tags: [CATALOG_TAG] } });
 
 /**
  * Server-side Supabase client bound to the request cookies (anon key,
@@ -56,15 +73,29 @@ export function createClient() {
  * payment capture.
  */
 export function createServiceClient() {
+  return serviceClientWith(freshFetch);
+}
+
+/**
+ * Service-role client for CATALOGUE reads only. SERVER ONLY.
+ *
+ * Its fetches land in the Data Cache under CATALOG_TAG, so they survive
+ * between requests and are dropped the moment an admin write calls
+ * revalidateTag. Never use it for per-user or order data — that must not be
+ * shared between visitors.
+ */
+export function createCatalogClient() {
+  return serviceClientWith(catalogFetch);
+}
+
+function serviceClientWith(fetchImpl: typeof fetch) {
   const { createClient: createSb } = require('@supabase/supabase-js');
   return createSb(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     {
       auth: { persistSession: false, autoRefreshToken: false },
-      // See freshFetch above — the catalogue must never be served from
-      // Next's Data Cache.
-      global: { fetch: freshFetch },
+      global: { fetch: fetchImpl },
     },
   );
 }

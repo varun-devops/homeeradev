@@ -3,7 +3,6 @@
 import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
 import Header from '@/components/Header';
-import LoadingGate from '@/components/LoadingGate';
 import PageTransition from '@/components/PageTransition';
 
 // Smooth scroll is the one remaining decorative client-only piece.
@@ -18,6 +17,9 @@ const SmoothScroll = dynamic(() => import('@/components/SmoothScroll'));
  * Animation is Framer-Motion-only now: the GSAP curtain transition and the
  * canvas decorations (sparkle/shard background, film grain, custom cursor)
  * have been removed. The page cross-fade lives in PageTransition.
+ *
+ * The first-visit loading video was removed too — it held the first paint
+ * behind a full-screen MP4 before the visitor saw anything of the site.
  */
 export default function Chrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -30,7 +32,6 @@ export default function Chrome({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      <LoadingGate />
       <SmoothScroll />
       <Header />
       <PageTransition>{children}</PageTransition>

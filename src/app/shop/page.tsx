@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { getActiveProducts, buildCollections } from '@/lib/catalog';
+import { getShopProducts, buildCollections } from '@/lib/catalog';
 import ShopCollectionDeck from '@/components/ShopCollectionDeck';
 
 export const metadata: Metadata = {
@@ -9,8 +9,11 @@ export const metadata: Metadata = {
   alternates: { canonical: '/shop' },
 };
 
-// Always reflect the live catalogue (admin show/hide, price edits).
-export const dynamic = 'force-dynamic';
+// Rendered once and served from the edge. Admin writes call
+// revalidateTag(CATALOG_TAG), so show/hide and price edits still appear
+// immediately — without every visitor paying a Supabase round trip. The
+// hourly revalidate is only a backstop for changes made outside the app.
+export const revalidate = 3600;
 
 /**
  * Shop page — a three-level browser built from the live Supabase catalogue:
@@ -18,7 +21,7 @@ export const dynamic = 'force-dynamic';
  * component; this page only shapes the data it needs.
  */
 export default async function ShopPage() {
-  const products = await getActiveProducts();
+  const products = await getShopProducts();
   const collections = buildCollections(products);
 
   // Shape the products for the client deck — only what the grid renders.

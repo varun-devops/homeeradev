@@ -2,15 +2,19 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { heroPosterUrl, heroVideoUrl } from '@/lib/media';
 
 /**
  * Single full-screen hero with an autoplaying, looping background video.
  *
- * Two clips live on Cloudinary (folder `homeera/hero`):
+ * Two clips are stored under `hero/`:
  *   • clip  — landscape, shown on desktop / laptop
  *   • slim  — portrait, shown on tablet & mobile (fits tall screens better)
- * We pick the source from a media query after mount so only one video ever
- * loads. Delivered with `q_auto,f_auto` for fast, well-compressed streaming.
+ *
+ * The choice is made by `<source media>` rather than by a matchMedia effect
+ * after mount. That matters: the browser's preload scanner can then start the
+ * right clip while it is still parsing the HTML, instead of waiting for React
+ * to hydrate — and phones stop briefly fetching the desktop clip first.
  *
  * The centred favicon emblem + wordmark ("HOME ERA / SINCE 1960") appear on
  * load and, after 15s, slowly fade away together (a soft 1.4s fade + blur).
@@ -21,12 +25,12 @@ import { AnimatePresence, motion } from 'framer-motion';
  * Fully responsive: sized in svh/dvh, video covers via object-fit, fluid type.
  */
 
-const CLOUD_NAME = 'dcdchbc8p';
-const base = (id: string) =>
-  `https://res.cloudinary.com/${CLOUD_NAME}/video/upload/q_auto,f_auto/homeera/hero/${id}.mp4`;
-
-const DESKTOP_URL = base('clip');
-const MOBILE_URL = base('slim');
+const DESKTOP_URL = heroVideoUrl('clip');
+const MOBILE_URL = heroVideoUrl('slim');
+// The poster is what the visitor actually sees first, and what counts as the
+// LCP element. Serving it as an image means the hero paints without waiting
+// on any part of the video.
+const POSTER_URL = heroPosterUrl('clip');
 
 /** Logo + wordmark stay this long, then slowly fade away together. */
 const REVEAL_MS = 15000;
@@ -35,18 +39,6 @@ export default function HeroVideo() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [ready, setReady] = useState(false);
   const [showIntro, setShowIntro] = useState(true);
-  // Decide the source from the viewport. Default to desktop for SSR; corrected
-  // on mount before paint so phones/tablets get the portrait `slim` clip.
-  const [src, setSrc] = useState(DESKTOP_URL);
-
-  // Pick the right clip for this device (≤ 1024px → mobile/tablet portrait).
-  useEffect(() => {
-    const mq = window.matchMedia('(max-width: 1024px)');
-    const apply = () => setSrc(mq.matches ? MOBILE_URL : DESKTOP_URL);
-    apply();
-    mq.addEventListener('change', apply);
-    return () => mq.removeEventListener('change', apply);
-  }, []);
 
   // Autoplay handling: fade the video in once it can play.
   useEffect(() => {
@@ -60,7 +52,7 @@ export default function HeroVideo() {
     if (v.readyState >= 3) onCanPlay();
     v.addEventListener('canplay', onCanPlay);
     return () => v.removeEventListener('canplay', onCanPlay);
-  }, [src]);
+  }, []);
 
   // Whenever the intro is showing, arm a fresh 15s timer to fade it away.
   // Re-runs each time it's brought back (by tap), restarting the countdown.
@@ -194,18 +186,23 @@ export default function HeroVideo() {
 
       <video
         ref={videoRef}
-        key={src}
         className="heHero-video"
         data-ready={ready}
-        src={src}
-        poster="/images/parallax/home-decor.jpg"
+        poster={POSTER_URL}
         autoPlay
         muted
         loop
         playsInline
-        preload="auto"
+        // `metadata`, not `auto`: the poster already fills the screen, so
+        // forcing the whole clip down at high priority only delayed it and
+        // burned CDN bandwidth for visitors who scroll straight past.
+        preload="metadata"
         aria-hidden="true"
-      />
+      >
+        {/* Order matters — the first matching source wins. */}
+        <source src={MOBILE_URL} media="(max-width: 1024px)" type="video/mp4" />
+        <source src={DESKTOP_URL} type="video/mp4" />
+      </video>
 
       <div className="heHero-scrim" aria-hidden="true" />
 

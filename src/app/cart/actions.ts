@@ -97,3 +97,30 @@ export async function removeFromCart(itemId: string): Promise<Result> {
   revalidatePath('/cart');
   return { ok: true };
 }
+
+/**
+ * How many of one product the signed-in visitor has in their bag.
+ *
+ * Called from the client on mount rather than read during render. That is
+ * what lets the product page be fully static: nothing on the server render
+ * path touches cookies, so the HTML is identical for everyone and can be
+ * served straight from the CDN edge. The per-visitor bit resolves after.
+ */
+export async function getCartQuantity(
+  productId: string,
+): Promise<{ signedIn: boolean; quantity: number }> {
+  const sb = createClient();
+  const {
+    data: { user },
+  } = await sb.auth.getUser();
+  if (!user) return { signedIn: false, quantity: 0 };
+
+  const { data } = await sb
+    .from('cart_items')
+    .select('quantity')
+    .eq('user_id', user.id)
+    .eq('product_id', productId)
+    .maybeSingle();
+
+  return { signedIn: true, quantity: data?.quantity ?? 0 };
+}

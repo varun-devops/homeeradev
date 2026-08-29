@@ -91,9 +91,7 @@ R2_ACCESS_KEY_ID=                        # SECRET
 R2_SECRET_ACCESS_KEY=                    # SECRET
 R2_BUCKET=homeera-media
 R2_PUBLIC_URL=                           # the bucket's r2.dev URL (ImageKit's origin)
-CLOUDINARY_CLOUD_NAME=dcdchbc8p          # legacy — remove after the migration
-CLOUDINARY_API_KEY=...
-CLOUDINARY_API_SECRET=...                # SECRET
+CLOUDINARY_CLOUD_NAME=dcdchbc8p          # legacy, migration script only
 RAZORPAY_KEY_ID=rzp_test_xxxxx           # paste real key to enable payments
 RAZORPAY_KEY_SECRET=...                  # SECRET
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
@@ -101,7 +99,8 @@ NEXT_PUBLIC_SITE_URL=http://localhost:3000
 
 - **Supabase project:** `fbyslpmwppbqoxixseus` (dashboard → SQL ran from `supabase/schema.sql`)
 - **R2 bucket:** `homeera-media`, keys `products/<SKU>.jpg`, `uploads/…`, `hero/clip.mp4`
-- **Cloudinary folder:** `homeera/products/<SKU>` (legacy, until the migration runs)
+- **Cloudinary:** retired. The npm package is uninstalled and all media has been
+  migrated to R2; only `CLOUDINARY_CLOUD_NAME` remains, for the migration script.
 - **Razorpay:** Test mode until real keys + business KYC for live mode.
 
 > ⚠️ The keys above were shared in chat during the build. **Rotate the

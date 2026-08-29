@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { uploadBuffer, cloudinaryConfigured } from '@/lib/cloudinary';
 import { r2Configured, r2Key, r2Put } from '@/lib/r2';
 import { storedUrlForKey } from '@/lib/media';
 import { getAdminIdentity } from '@/lib/admin-auth';
@@ -11,22 +10,19 @@ export const maxDuration = 60;
 /**
  * POST /api/admin/upload   (multipart/form-data, field "file")
  *
- * Product managers only (admin or staff). Stores the file and returns
- * { url, resourceType }. The admin product form calls this per file and saves
- * the returned URLs on the product.
- *
- * Storage goes to Cloudflare R2 when configured, delivered through ImageKit.
- * Cloudinary remains the fallback so uploads keep working before the migration
- * in SETUP_R2_IMAGEKIT.md is done, and if R2 is ever unreachable.
+ * Product managers only (admin or staff). Stores the file in Cloudflare R2
+ * and returns { url, resourceType } pointing at the ImageKit endpoint, which
+ * resizes and format-converts on delivery. The admin product form calls this
+ * per file and saves the returned URLs on the product.
  */
 export async function POST(req: Request) {
   // --- auth: admin or staff may upload product media ---
   const identity = await getAdminIdentity();
   if (!identity) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  if (!r2Configured() && !cloudinaryConfigured()) {
+  if (!r2Configured()) {
     return NextResponse.json(
-      { error: 'No media storage configured — see SETUP_R2_IMAGEKIT.md' },
+      { error: 'Media storage is not configured — see SETUP_R2_IMAGEKIT.md' },
       { status: 503 },
     );
   }
@@ -56,17 +52,14 @@ export async function POST(req: Request) {
 
   try {
     const buffer = Buffer.from(await file.arrayBuffer());
-
-    if (r2Configured()) {
-      const key = r2Key(isVideo ? 'videos' : 'products', file.name || `upload.${isVideo ? 'mp4' : 'jpg'}`);
-      await r2Put(key, buffer, file.type || 'application/octet-stream');
-      // No resize on the way in — the original is kept and ImageKit derives
-      // every size from it on demand.
-      return NextResponse.json({ url: storedUrlForKey(key), resourceType });
-    }
-
-    const url = await uploadBuffer(buffer, resourceType);
-    return NextResponse.json({ url, resourceType });
+    const key = r2Key(
+      isVideo ? 'videos' : 'products',
+      file.name || `upload.${isVideo ? 'mp4' : 'jpg'}`,
+    );
+    // The original is stored as-is; ImageKit derives every size from it on
+    // demand, so there is nothing to resize on the way in.
+    await r2Put(key, buffer, file.type || 'application/octet-stream');
+    return NextResponse.json({ url: storedUrlForKey(key), resourceType });
   } catch (err: unknown) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Upload failed' },

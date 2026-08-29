@@ -10,94 +10,66 @@
  *
  * Idempotent. Object keys are derived from the Cloudinary public_id, so a
  * re-run produces the same keys; anything already pointing at ImageKit or R2
- * is skipped. Every old -> new pair is written to
- * scripts/data/media-migration.json so the change can be reversed.
+ * is skipped, so once the migration has run this reports zero product and
+ * collection rows -- a cheap way to confirm the catalogue is fully moved.
+ * The two hero clips are keyed by a fixed override rather than read from the
+ * database, so they are always listed; re-uploading them overwrites the same
+ * objects and is harmless.
+ *
+ * Every old -> new pair is written to scripts/data/media-migration.json so
+ * the change can be reversed.
  *
  * Setup and env vars: SETUP_R2_IMAGEKIT.md
  */
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { createHash, createHmac } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
+import {
+  loadEnv,
+  r2Configured,
+  r2CredentialProblems,
+  R2_CREDENTIAL_HELP,
+  r2Put,
+  contentTypeFor,
+  deliveryUrl,
+} from './r2-client.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, '..');
-
-// Load .env.local manually (no dotenv dependency) - same as import-catalog.mjs.
-const envPath = join(root, '.env.local');
-if (existsSync(envPath)) {
-  for (const line of readFileSync(envPath, 'utf8').split('\n')) {
-    const m = line.match(/^([A-Z0-9_]+)=(.*)$/);
-    if (!m || process.env[m[1]]) continue;
-    // Strip an unquoted trailing comment. Without this a line written as
-    //   R2_ACCESS_KEY_ID=<32 hex>   # SECRET
-    // yields a 45-character "key", and every upload fails on a length error.
-    let value = m[2].replace(/s+#.*$/, "").trim();
-    const q = value[0];
-    if (value.length > 1 && (q === '"' || q === "'") && value[value.length-1] === q) {
-      value = value.slice(1, -1);
-    }
-    process.env[m[1]] = value;
-  }
-}
+loadEnv(join(root, '.env.local'));
 
 const DRY = process.argv.includes('--dry-run');
-
-const {
-  R2_ACCOUNT_ID,
-  R2_ACCESS_KEY_ID,
-  R2_SECRET_ACCESS_KEY,
-  R2_BUCKET,
-  R2_PUBLIC_URL,
-  NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT,
-  NEXT_PUBLIC_SUPABASE_URL,
-  SUPABASE_SERVICE_ROLE_KEY,
-} = process.env;
 
 function die(msg) {
   console.error(`\n[x] ${msg}\n`);
   process.exit(1);
 }
 
+const { NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = process.env;
 if (!NEXT_PUBLIC_SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   die('Supabase env missing (NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY).');
 }
-if (!DRY && (!R2_ACCOUNT_ID || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY || !R2_BUCKET)) {
-  die(
-    'R2 env missing. Fill R2_ACCOUNT_ID / R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY / R2_BUCKET ' +
-      '- see SETUP_R2_IMAGEKIT.md step 1.',
-  );
-}
 
-// Fail fast on malformed R2 credentials. Cloudflare's token screen shows
-// three different values; pasting the "Token value" into R2_ACCESS_KEY_ID is
-// an easy mistake, and without this check it surfaces as one opaque 400 per
-// file instead of a single actionable message.
 if (!DRY) {
-  const shape = [
-    ['R2_ACCOUNT_ID', R2_ACCOUNT_ID, 32],
-    ['R2_ACCESS_KEY_ID', R2_ACCESS_KEY_ID, 32],
-    ['R2_SECRET_ACCESS_KEY', R2_SECRET_ACCESS_KEY, 64],
-  ];
-  const bad = shape.filter(([, v, len]) => !new RegExp(`^[0-9a-f]{${len}}$`).test(v || ''));
-  if (bad.length) {
-    console.error('\n[x] These R2 credentials are not the right shape:\n');
-    for (const [name, v, len] of bad) {
-      console.error(`    ${name}: got ${(v || '').length} chars, expected ${len} hex characters`);
-    }
-    console.error(
-      '\n    Cloudflare dashboard -> R2 -> Manage API tokens -> your token.\n' +
-        '    Copy "Access Key ID" (32 hex) and "Secret Access Key" (64 hex).\n' +
-        '    NOT the "Token value", which is longer and is only for Bearer auth.\n' +
-        '    The secret is shown once — create a new token if you no longer have it.\n',
+  if (!r2Configured()) {
+    die(
+      'R2 env missing. Fill R2_ACCOUNT_ID / R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY / ' +
+        'R2_BUCKET — see SETUP_R2_IMAGEKIT.md step 1.',
     );
+  }
+  // Catch a malformed key here rather than as one opaque 400 per file.
+  const problems = r2CredentialProblems();
+  if (problems.length) {
+    console.error('\n[x] These R2 credentials are not the right shape:\n');
+    for (const problem of problems) console.error(`    ${problem}`);
+    console.error(`\n${R2_CREDENTIAL_HELP}\n`);
     process.exit(1);
   }
 }
 
-const IK = (NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT || '').replace(/\/+$/, '');
-const R2_PUB = (R2_PUBLIC_URL || '').replace(/\/+$/, '');
+const IK = (process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT || '').replace(/\/+$/, '');
+const R2_PUB = (process.env.R2_PUBLIC_URL || '').replace(/\/+$/, '');
 if (!IK && !R2_PUB) {
   die('Set NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT (preferred) or R2_PUBLIC_URL so the new URLs can be built.');
 }
@@ -114,67 +86,6 @@ const sb = createClient(NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
   // realtime transport rather than let its constructor throw on init.
   realtime: { transport: function () {} },
 });
-
-// -------------------------------------------------------------------
-// R2 upload (AWS SigV4, single PUT). Mirrors src/lib/r2.ts.
-// -------------------------------------------------------------------
-const sha256 = (d) => createHash('sha256').update(d).digest('hex');
-const hmac = (k, d) => createHmac('sha256', k).update(d).digest();
-const uriEncode = (s) =>
-  encodeURIComponent(s).replace(/[!'()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`);
-const encodeKey = (k) => k.split('/').map(uriEncode).join('/');
-
-async function r2Put(key, body, contentType) {
-  const host = `${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`;
-  const canonicalUri = `/${encodeKey(R2_BUCKET)}/${encodeKey(key)}`;
-  const amzDate = new Date().toISOString().replace(/[:-]|\.\d{3}/g, '');
-  const dateStamp = amzDate.slice(0, 8);
-  const payloadHash = sha256(body);
-  const cacheControl = 'public, max-age=31536000, immutable';
-  const signedHeaders = 'cache-control;content-type;host;x-amz-content-sha256;x-amz-date';
-
-  const canonicalHeaders =
-    `cache-control:${cacheControl}\n` +
-    `content-type:${contentType}\n` +
-    `host:${host}\n` +
-    `x-amz-content-sha256:${payloadHash}\n` +
-    `x-amz-date:${amzDate}\n`;
-
-  const canonicalRequest = [
-    'PUT',
-    canonicalUri,
-    '',
-    canonicalHeaders,
-    signedHeaders,
-    payloadHash,
-  ].join('\n');
-
-  const scope = `${dateStamp}/auto/s3/aws4_request`;
-  const stringToSign = ['AWS4-HMAC-SHA256', amzDate, scope, sha256(canonicalRequest)].join('\n');
-  const signingKey = hmac(
-    hmac(hmac(hmac(`AWS4${R2_SECRET_ACCESS_KEY}`, dateStamp), 'auto'), 's3'),
-    'aws4_request',
-  );
-  const signature = createHmac('sha256', signingKey).update(stringToSign).digest('hex');
-
-  const res = await fetch(`https://${host}${canonicalUri}`, {
-    method: 'PUT',
-    body,
-    headers: {
-      Authorization:
-        `AWS4-HMAC-SHA256 Credential=${R2_ACCESS_KEY_ID}/${scope}, ` +
-        `SignedHeaders=${signedHeaders}, Signature=${signature}`,
-      'Cache-Control': cacheControl,
-      'Content-Type': contentType,
-      'x-amz-content-sha256': payloadHash,
-      'x-amz-date': amzDate,
-    },
-  });
-  if (!res.ok) {
-    const detail = await res.text().catch(() => '');
-    throw new Error(`R2 PUT ${res.status} ${detail.slice(0, 200)}`);
-  }
-}
 
 // -------------------------------------------------------------------
 // URL helpers
@@ -194,30 +105,10 @@ function keyForCloudinaryUrl(url) {
   const segments = after.split('/');
   // Leading segments are transformations (a_b,c_d) or a version (v123).
   while (segments.length > 1 && /^(v\d+|[a-z]{1,3}_[^/]*)$/.test(segments[0])) segments.shift();
-  let key = segments.join('/');
   // Everything already lives under a "homeera/" prefix on Cloudinary; the
   // bucket is Homeera's, so that level is redundant.
-  key = key.replace(/^homeera\//, '');
+  const key = segments.join('/').replace(/^homeera\//, '');
   return key || null;
-}
-
-const deliveryUrl = (key) => (IK ? `${IK}/${key}` : `${R2_PUB}/${key}`);
-
-const EXT_TYPES = {
-  jpg: 'image/jpeg',
-  jpeg: 'image/jpeg',
-  png: 'image/png',
-  webp: 'image/webp',
-  avif: 'image/avif',
-  gif: 'image/gif',
-  mp4: 'video/mp4',
-  webm: 'video/webm',
-};
-
-function contentTypeFor(key, headerValue) {
-  if (headerValue) return headerValue;
-  const ext = key.split('.').pop();
-  return EXT_TYPES[(ext || '').toLowerCase()] || 'application/octet-stream';
 }
 
 // -------------------------------------------------------------------
@@ -337,7 +228,7 @@ if (cloud) {
 }
 
 // ---- record ----
-if (!DRY) {
+if (!DRY && moved.size) {
   writeFileSync(
     join(root, 'scripts/data/media-migration.json'),
     JSON.stringify(
@@ -359,9 +250,12 @@ console.log(
     ` - ${productUpdates} product row(s) - ${collectionUpdates} collection row(s)` +
     ` - ${failures.length} failure(s)`,
 );
+if (!moved.size && !failures.length) {
+  console.log('Nothing left to migrate — every row already points at the CDN.');
+}
 if (failures.length) {
   console.log('\nFailures:');
   for (const f of failures) console.log(`  ${f.url} - ${f.error}`);
   console.log('\nThose rows still point at Cloudinary and keep working. Re-run to retry.');
 }
-if (DRY) console.log('\nRe-run without --dry-run to perform the migration.');
+if (DRY && moved.size) console.log('\nRe-run without --dry-run to perform the migration.');

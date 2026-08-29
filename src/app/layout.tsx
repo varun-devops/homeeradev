@@ -6,6 +6,8 @@ import { Inter, Cormorant_Garamond } from 'next/font/google';
 // Without this import Lenis captures the wheel and the page does not move.
 import 'lenis/dist/lenis.css';
 import '../styles/globals.css';
+import { Analytics } from '@vercel/analytics/next';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 import Chrome from '@/components/Chrome';
 import { mediaOrigins } from '@/lib/media';
 
@@ -116,6 +118,16 @@ export default function RootLayout({
       </head>
       <body>
         <Chrome>{children}</Chrome>
+        {/*
+         * Vercel page analytics and Core Web Vitals reporting. Both inject a
+         * small script that loads after the page is interactive, so neither
+         * competes with the hero or the product images for bandwidth.
+         *
+         * They only report from a Vercel deployment with the corresponding
+         * feature enabled in the project dashboard; locally they no-op.
+         */}
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

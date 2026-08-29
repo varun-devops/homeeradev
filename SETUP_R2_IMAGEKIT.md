@@ -155,8 +155,12 @@ Cloudinary; the script moves those too and they are served from
    Network that image requests go to `ik.imagekit.io` and come back as
    `image/avif` at roughly the size of the box they render in.
 2. Push to Vercel with the same env vars set.
-3. Once production looks right, delete the `CLOUDINARY_*` vars and run
-   `npm uninstall cloudinary`.
+3. Once production looks right, run `npm uninstall cloudinary` and delete the
+   `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` vars. Keep
+   `CLOUDINARY_CLOUD_NAME` until you retire the account — the migration script
+   uses it to reach the old assets, and it is not a secret.
+   **Done.** The app no longer depends on the Cloudinary package at all:
+   uploads go straight to R2 via `src/lib/r2.ts`.
 
 > Leave the Cloudinary account itself alone for a couple of weeks — it costs
 > nothing and is your rollback if anything went wrong in the migration.

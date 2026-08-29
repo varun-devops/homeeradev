@@ -21,7 +21,7 @@
  * `unzip` binary being on PATH (it isn't, on stock Windows).
  *
  * Run:  node scripts/build-catalog.mjs
- * Then: node scripts/import-catalog.mjs   (pushes to Supabase + Cloudinary)
+ * Then: node scripts/import-catalog.mjs   (pushes to Supabase + Cloudflare R2)
  * PowerShell one-liner for both:
  *   node scripts/build-catalog.mjs; if ($?) { node scripts/import-catalog.mjs }
  *

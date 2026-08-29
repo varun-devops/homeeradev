@@ -1,37 +1,47 @@
 /**
- * Imports the Homeera catalogue into Supabase + Cloudinary.
+ * Imports the Homeera catalogue into Supabase + Cloudflare R2.
  *
  *   1. Reads scripts/data/import.json (66 products, parsed from the xlsx).
  *   2. Uploads each product's photo (scripts/data/media/<SKU>.jpg) to
- *      Cloudinary under folder "homeera/products", public_id = SKU.
+ *      Cloudflare R2 as products/<SKU>.jpg, delivered through ImageKit.
  *   3. Upserts each product row into public.products with the returned
  *      secure image URL.
  *
  * Run AFTER applying supabase/schema.sql:
  *   node scripts/import-catalog.mjs
  *
- * Idempotent: re-running upserts on `sku` and reuses Cloudinary public_ids
- * (overwrite=true), so it's safe to run again.
+ * Idempotent: re-running upserts on `sku` and writes the same R2 object
+ * keys, so it's safe to run again.
  */
 import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { createClient } from '@supabase/supabase-js';
-import { v2 as cloudinary } from 'cloudinary';
+import {
+  loadEnv,
+  r2Configured,
+  r2CredentialProblems,
+  R2_CREDENTIAL_HELP,
+  r2Put,
+  contentTypeFor,
+  deliveryUrl,
+} from './r2-client.mjs';
 
-// Load .env.local manually (no dotenv dependency).
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, '..');
-for (const line of readFileSync(join(root, '.env.local'), 'utf8').split('\n')) {
-  const m = line.match(/^([A-Z0-9_]+)=(.*)$/);
-  if (m && !process.env[m[1]]) process.env[m[1]] = m[2].trim();
-}
+loadEnv(join(root, '.env.local'));
 
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
+if (!r2Configured()) {
+  console.error('\nR2 is not configured. See SETUP_R2_IMAGEKIT.md.\n');
+  process.exit(1);
+}
+const credentialProblems = r2CredentialProblems();
+if (credentialProblems.length) {
+  console.error('\nR2 credentials are not the right shape:\n');
+  for (const problem of credentialProblems) console.error('    ' + problem);
+  console.error('\n' + R2_CREDENTIAL_HELP + '\n');
+  process.exit(1);
+}
 
 const sb = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -68,13 +78,11 @@ for (const p of products) {
     let imageUrl = null;
     const imgPath = join(root, 'scripts/data/media', `${p.sku}.jpg`);
     if (p.image_file && existsSync(imgPath)) {
-      const res = await cloudinary.uploader.upload(imgPath, {
-        folder: 'homeera/products',
-        public_id: p.sku,
-        overwrite: true,
-        resource_type: 'image',
-      });
-      imageUrl = res.secure_url;
+      // A stable key per SKU, so re-running overwrites the same object
+      // rather than accumulating duplicates.
+      const key = `products/${p.sku}.jpg`;
+      await r2Put(key, readFileSync(imgPath), contentTypeFor(key));
+      imageUrl = deliveryUrl(key);
       uploaded++;
     }
 

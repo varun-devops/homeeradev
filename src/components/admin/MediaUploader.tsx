@@ -4,7 +4,7 @@ import { useRef, useState } from 'react';
 import Img from '@/components/Img';
 
 /**
- * Uploads images/videos to Cloudinary via /api/admin/upload and reports
+ * Uploads images/videos to Cloudflare R2 via /api/admin/upload and reports
  * back the secure URLs. Used for:
  *   - product main image (single image)
  *   - product gallery (multiple images)

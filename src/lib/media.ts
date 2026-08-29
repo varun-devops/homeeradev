@@ -80,7 +80,12 @@ export function imageUrl(src: string | null | undefined, opts: ImageOpts = {}): 
   const tr: string[] = [];
   if (opts.width) tr.push(`w-${Math.round(opts.width)}`);
   if (opts.height) tr.push(`h-${Math.round(opts.height)}`);
-  if (opts.width && opts.height) tr.push(`c-${opts.crop ?? 'maintain_ratio'}`);
+  // `at_max` caps at the requested box but never enlarges past the original.
+  // That matters here: the catalogue photos are around 275px wide, so asking
+  // for w-828 produced a blurry upscale that was *larger* than the source
+  // (23 KB vs 7 KB). Anything bigger than the original now returns the
+  // original, compressed.
+  tr.push(`c-${opts.crop ?? 'at_max'}`);
   if (opts.videoFrame !== undefined) tr.push(`so-${opts.videoFrame}`);
   tr.push('f-auto');
   tr.push(`q-${opts.quality ?? 'auto'}`);
@@ -115,7 +120,11 @@ export function videoPoster(src: string | null | undefined, width = 1280): strin
   if (!path) return '';
   // ImageKit derives a still by appending /ik-thumbnail.jpg to the *whole*
   // video URL — the .mp4 extension stays in the path.
-  return `${IK_ENDPOINT}${path}/ik-thumbnail.jpg?tr=w-${width},f-auto,q-auto`;
+  //
+  // No `q-auto` here: on a video thumbnail it is rejected with a 400, which
+  // left the hero with no poster at all. `f-auto` is fine, so the browser
+  // still negotiates WebP/AVIF.
+  return `${IK_ENDPOINT}${path}/ik-thumbnail.jpg?tr=w-${width},f-auto`;
 }
 
 /** Video delivery URL. ImageKit transcodes to a web-friendly bitrate. */
@@ -170,7 +179,8 @@ export function heroVideoUrl(name: 'clip' | 'slim'): string {
 
 /** Still frame for a hero clip, used as its poster. */
 export function heroPosterUrl(name: 'clip' | 'slim', width = 1280): string {
-  if (IK_ENDPOINT) return `${IK_ENDPOINT}/hero/${name}.mp4/ik-thumbnail.jpg?tr=w-${width},f-auto,q-auto`;
+  // See videoPoster(): `q-auto` 400s on video thumbnails, `f-auto` does not.
+  if (IK_ENDPOINT) return `${IK_ENDPOINT}/hero/${name}.mp4/ik-thumbnail.jpg?tr=w-${width},f-auto`;
   const cloud = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dcdchbc8p';
   return `https://res.cloudinary.com/${cloud}/video/upload/so_0,w_${width},q_auto,f_auto/homeera/hero/${name}.jpg`;
 }

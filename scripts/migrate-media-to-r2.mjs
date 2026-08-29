@@ -61,6 +61,32 @@ if (!DRY && (!R2_ACCOUNT_ID || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY || !R2
   );
 }
 
+// Fail fast on malformed R2 credentials. Cloudflare's token screen shows
+// three different values; pasting the "Token value" into R2_ACCESS_KEY_ID is
+// an easy mistake, and without this check it surfaces as one opaque 400 per
+// file instead of a single actionable message.
+if (!DRY) {
+  const shape = [
+    ['R2_ACCOUNT_ID', R2_ACCOUNT_ID, 32],
+    ['R2_ACCESS_KEY_ID', R2_ACCESS_KEY_ID, 32],
+    ['R2_SECRET_ACCESS_KEY', R2_SECRET_ACCESS_KEY, 64],
+  ];
+  const bad = shape.filter(([, v, len]) => !new RegExp(`^[0-9a-f]{${len}}$`).test(v || ''));
+  if (bad.length) {
+    console.error('\n[x] These R2 credentials are not the right shape:\n');
+    for (const [name, v, len] of bad) {
+      console.error(`    ${name}: got ${(v || '').length} chars, expected ${len} hex characters`);
+    }
+    console.error(
+      '\n    Cloudflare dashboard -> R2 -> Manage API tokens -> your token.\n' +
+        '    Copy "Access Key ID" (32 hex) and "Secret Access Key" (64 hex).\n' +
+        '    NOT the "Token value", which is longer and is only for Bearer auth.\n' +
+        '    The secret is shown once — create a new token if you no longer have it.\n',
+    );
+    process.exit(1);
+  }
+}
+
 const IK = (NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT || '').replace(/\/+$/, '');
 const R2_PUB = (R2_PUBLIC_URL || '').replace(/\/+$/, '');
 if (!IK && !R2_PUB) {

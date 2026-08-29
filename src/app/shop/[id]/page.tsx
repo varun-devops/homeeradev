@@ -3,7 +3,6 @@ import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { getProductBySlug, getAllProductSlugs, formatINR } from '@/lib/catalog';
-import { createClient } from '@/lib/supabase/server';
 import AddToCart from '@/components/AddToCart';
 import ProductGallery from '@/components/ProductGallery';
 import ProductOptions from '@/components/ProductOptions';
@@ -13,7 +12,13 @@ export async function generateStaticParams() {
   return slugs.map((id) => ({ id }));
 }
 
-export const dynamic = 'force-dynamic';
+// Prerendered per product and served from the edge. Nothing on this render
+// path reads cookies any more — the visitor's bag quantity is fetched by
+// AddToCart on the client — so the HTML is identical for everyone and fully
+// cacheable. Admin edits flush it through revalidateTag(CATALOG_TAG).
+export const revalidate = 3600;
+// A product added after the last build still renders, on first request.
+export const dynamicParams = true;
 
 export async function generateMetadata({
   params,
@@ -37,23 +42,6 @@ export async function generateMetadata({
 export default async function ProductPage({ params }: { params: { id: string } }) {
   const p = await getProductBySlug(params.id);
   if (!p) notFound();
-
-  // How many of this product the signed-in visitor already has in the bag,
-  // so the stepper opens on the right number.
-  const sb = createClient();
-  const {
-    data: { user },
-  } = await sb.auth.getUser();
-  let cartQty = 0;
-  if (user) {
-    const { data: cartItem } = await sb
-      .from('cart_items')
-      .select('quantity')
-      .eq('user_id', user.id)
-      .eq('product_id', p.id)
-      .maybeSingle();
-    cartQty = cartItem?.quantity ?? 0;
-  }
 
   const price = (p.discount_percent ?? 0) > 0
     ? Math.round(p.price * (1 - (p.discount_percent ?? 0) / 100))
@@ -200,7 +188,7 @@ export default async function ProductPage({ params }: { params: { id: string } }
             {/* AddToCart reads ?intent= to resume a Buy-now that was
                 interrupted by sign-in, so it needs a Suspense boundary. */}
             <Suspense fallback={null}>
-              <AddToCart productId={p.id} initialQty={cartQty} signedIn={Boolean(user)} />
+              <AddToCart productId={p.id} />
             </Suspense>
           </div>
         </div>

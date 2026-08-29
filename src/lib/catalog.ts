@@ -1,4 +1,6 @@
-import { createServiceClient } from '@/lib/supabase/server';
+import { unstable_cache } from 'next/cache';
+import { CATALOG_TAG } from '@/lib/cache-tags';
+import { createCatalogClient } from '@/lib/supabase/server';
 export { formatINR } from '@/lib/format';
 
 /**
@@ -7,7 +9,17 @@ export { formatINR } from '@/lib/format';
  * Reads products from Supabase. The public storefront only ever shows
  * `is_active = true` rows; admin views use the service client to see all.
  * These helpers run on the server (Server Components / route handlers).
+ *
+ * Reads are cached and tagged. Admin writes call `revalidateTag(CATALOG_TAG)`,
+ * which is what makes caching safe here: a price edit or a show/hide flips the
+ * storefront immediately rather than waiting out a timer.
+ *
+ * The individual Supabase fetches stay `cache: 'no-store'` (see
+ * lib/supabase/server.ts) — not a contradiction. The implicit Next Data Cache
+ * is what served a stale catalogue before, because nothing could name it to
+ * invalidate it. Caching here is explicit, tagged, and invalidated by name.
  */
+export { CATALOG_TAG };
 
 export type DBProduct = {
   id: string;
@@ -42,6 +54,29 @@ export type DBProduct = {
   customization_note?: string | null;
 };
 
+/**
+ * The columns the shop grid actually renders. Selecting these instead of `*`
+ * keeps `description` and `gallery_urls` — by far the heaviest columns — out
+ * of a payload that gets serialized to the browser for every product at once.
+ */
+const SHOP_COLUMNS =
+  'id, slug, name, price, image_url, category, category_slug, sub_category, sub_category_slug, discount_percent, is_new';
+
+export type ShopProduct = Pick<
+  DBProduct,
+  | 'id'
+  | 'slug'
+  | 'name'
+  | 'price'
+  | 'image_url'
+  | 'category'
+  | 'category_slug'
+  | 'sub_category'
+  | 'sub_category_slug'
+  | 'discount_percent'
+  | 'is_new'
+>;
+
 export type SubCollectionGroup = {
   slug: string;
   label: string;
@@ -57,51 +92,92 @@ export type CollectionGroup = {
   subCollections: SubCollectionGroup[];
 };
 
-/** All active products, newest first by category for stable grouping. */
-export async function getActiveProducts(): Promise<DBProduct[]> {
-  const sb = createServiceClient();
-  const { data, error } = await sb
-    .from('products')
-    .select('*')
-    .eq('is_active', true)
-    .order('category', { ascending: true })
-    .order('sub_category', { ascending: true })
-    .order('name', { ascending: true });
-  if (error) throw error;
-  return (data ?? []) as DBProduct[];
-}
+/**
+ * All active products as full rows, ordered for stable grouping.
+ * Prefer `getShopProducts` for the storefront grid — it needs far less.
+ */
+export const getActiveProducts = unstable_cache(
+  async (): Promise<DBProduct[]> => {
+    const sb = createCatalogClient();
+    const { data, error } = await sb
+      .from('products')
+      .select('*')
+      .eq('is_active', true)
+      .order('category', { ascending: true })
+      .order('sub_category', { ascending: true })
+      .order('name', { ascending: true });
+    if (error) throw error;
+    return (data ?? []) as DBProduct[];
+  },
+  ['active-products'],
+  // Tag invalidation is the fast path; this TTL is the backstop for rows
+  // edited outside the admin panel, which cannot call revalidateTag.
+  { tags: [CATALOG_TAG], revalidate: 3600 },
+);
+
+/** Active products with only the columns the storefront grid renders. */
+export const getShopProducts = unstable_cache(
+  async (): Promise<ShopProduct[]> => {
+    const sb = createCatalogClient();
+    const { data, error } = await sb
+      .from('products')
+      .select(SHOP_COLUMNS)
+      .eq('is_active', true)
+      .order('category', { ascending: true })
+      .order('sub_category', { ascending: true })
+      .order('name', { ascending: true });
+    if (error) throw error;
+    return (data ?? []) as unknown as ShopProduct[];
+  },
+  ['shop-products'],
+  // Tag invalidation is the fast path; this TTL is the backstop for rows
+  // edited outside the admin panel, which cannot call revalidateTag.
+  { tags: [CATALOG_TAG], revalidate: 3600 },
+);
 
 /** One product by its URL slug (active only). */
-export async function getProductBySlug(slug: string): Promise<DBProduct | null> {
-  const sb = createServiceClient();
-  const { data, error } = await sb
-    .from('products')
-    .select('*')
-    .eq('slug', slug)
-    .eq('is_active', true)
-    .maybeSingle();
-  if (error) throw error;
-  return (data as DBProduct) ?? null;
-}
+export const getProductBySlug = unstable_cache(
+  async (slug: string): Promise<DBProduct | null> => {
+    const sb = createCatalogClient();
+    const { data, error } = await sb
+      .from('products')
+      .select('*')
+      .eq('slug', slug)
+      .eq('is_active', true)
+      .maybeSingle();
+    if (error) throw error;
+    return (data as DBProduct) ?? null;
+  },
+  ['product-by-slug'],
+  // Tag invalidation is the fast path; this TTL is the backstop for rows
+  // edited outside the admin panel, which cannot call revalidateTag.
+  { tags: [CATALOG_TAG], revalidate: 3600 },
+);
 
 /** Active product slugs — for generateStaticParams. */
-export async function getAllProductSlugs(): Promise<string[]> {
-  const sb = createServiceClient();
-  const { data, error } = await sb
-    .from('products')
-    .select('slug')
-    .eq('is_active', true);
-  if (error) throw error;
-  return ((data ?? []) as { slug: string }[]).map((r) => r.slug);
-}
+export const getAllProductSlugs = unstable_cache(
+  async (): Promise<string[]> => {
+    const sb = createCatalogClient();
+    const { data, error } = await sb
+      .from('products')
+      .select('slug')
+      .eq('is_active', true);
+    if (error) throw error;
+    return ((data ?? []) as { slug: string }[]).map((r) => r.slug);
+  },
+  ['product-slugs'],
+  // Tag invalidation is the fast path; this TTL is the backstop for rows
+  // edited outside the admin panel, which cannot call revalidateTag.
+  { tags: [CATALOG_TAG], revalidate: 3600 },
+);
 
 /**
  * Build the collection → sub-collection tree from the active products,
  * with a representative image (first product image) per top-level
  * collection. Used by the storefront's collection deck.
  */
-export function buildCollections(products: DBProduct[]): CollectionGroup[] {
-  const byCat = new Map<string, DBProduct[]>();
+export function buildCollections(products: ShopProduct[]): CollectionGroup[] {
+  const byCat = new Map<string, ShopProduct[]>();
   for (const p of products) {
     if (!byCat.has(p.category_slug)) byCat.set(p.category_slug, []);
     byCat.get(p.category_slug)!.push(p);
@@ -112,7 +188,7 @@ export function buildCollections(products: DBProduct[]): CollectionGroup[] {
     const label = items[0].category;
     const image = items.find((p) => p.image_url)?.image_url ?? null;
 
-    const subMap = new Map<string, DBProduct[]>();
+    const subMap = new Map<string, ShopProduct[]>();
     for (const p of items) {
       if (!subMap.has(p.sub_category_slug)) subMap.set(p.sub_category_slug, []);
       subMap.get(p.sub_category_slug)!.push(p);

@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import MediaUploader from '@/components/admin/MediaUploader';
+import Img from '@/components/Img';
 import {
   saveCollection,
   deleteCollection,
@@ -94,7 +95,7 @@ function CollectionCard({
           <div style={{ width: 64, height: 64, borderRadius: 8, overflow: 'hidden', background: '#15140f', flexShrink: 0 }}>
             {collection.image_url && (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={collection.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <Img src={collection.image_url} alt="" sizes="64px" widths={[64, 128, 192]} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             )}
           </div>
           <div style={{ flex: 1 }}>

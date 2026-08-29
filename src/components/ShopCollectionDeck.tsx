@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion, type Variants } from 'framer-motion';
 import { formatINR } from '@/lib/format';
 import SubCollectionDeck from '@/components/SubCollectionDeck';
+import Img from '@/components/Img';
 
 export type LiteProduct = {
   id: string;
@@ -241,10 +242,20 @@ export default function ShopCollectionDeck({ collections, products }: Props) {
             <motion.div
               layoutId={`card-bg-${c.slug}`}
               className="heShop-bg"
-              style={c.image ? { backgroundImage: `url(${c.image})` } : { background: '#1a1916' }}
               animate={{ opacity: openSlug === c.slug ? 0 : 1 }}
               transition={{ duration: 0.2 }}
-            />
+            >
+              {/* A CSS background-image cannot be lazy-loaded or given a
+                  srcset, so a phone was fetching the full-size original for
+                  every one of these full-screen panels. */}
+              <Img
+                src={c.image}
+                alt=""
+                className="heShop-bgPhoto"
+                sizes="100vw"
+                priority={i === 0}
+              />
+            </motion.div>
           </motion.div>
           <div className="heShop-scrim" aria-hidden="true" />
           <div data-content className="heShop-content">
@@ -333,13 +344,10 @@ export default function ShopCollectionDeck({ collections, products }: Props) {
             <motion.div
               layoutId={`card-bg-${openCol.slug}`}
               className="heShop-overlayBg"
-              style={
-                openCol.image
-                  ? { backgroundImage: `url(${openCol.image})` }
-                  : { background: '#1a1916' }
-              }
               transition={{ type: 'spring', stiffness: 200, damping: 30 }}
-            />
+            >
+              <Img src={openCol.image} alt="" className="heShop-bgPhoto" sizes="100vw" priority />
+            </motion.div>
             <div className="heShop-overlayTint" aria-hidden="true" />
 
             {/* The only chrome: a back arrow under the logo. */}
@@ -399,12 +407,14 @@ export default function ShopCollectionDeck({ collections, products }: Props) {
                           <Link key={p.id} href={`/shop/${p.slug}`} data-hover className="heShop-card">
                             <div className="heShop-cardImg">
                               {p.image_url ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img
+                                <Img
                                   src={p.image_url}
                                   alt={p.name}
-                                  loading="lazy"
                                   className="heShop-cardPhoto"
+                                  // 3 columns inside a 1100px rail above
+                                  // 980px, 2 columns of the viewport below.
+                                  sizes="(max-width: 980px) 50vw, 340px"
+                                  widths={[240, 320, 480, 640, 828]}
                                 />
                               ) : (
                                 <div className="heShop-cardPhoto heShop-cardNoimg" />
@@ -440,7 +450,11 @@ const styles = `
   .heShop-bgWrap { position: absolute; inset: 0; z-index: 0; overflow: hidden; }
   .heShop-bg {
     position: absolute; inset: 0; height: 100%; width: 100%;
-    background-size: cover; background-position: center; z-index: 0;
+    background: #1a1916; z-index: 0;
+  }
+  .heShop-bgPhoto {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: cover; object-position: center; display: block;
   }
   .heShop-scrim {
     position: absolute; inset: 0; z-index: 1; pointer-events: none;
@@ -513,7 +527,7 @@ const styles = `
 
   .heShop-overlay { position: fixed; inset: 0; z-index: 90; overflow-y: auto; -webkit-overflow-scrolling: touch; }
   .heShop-overlay[data-level='subs'] { overflow: hidden; }
-  .heShop-overlayBg { position: fixed; inset: 0; z-index: 0; background-size: cover; background-position: center; }
+  .heShop-overlayBg { position: fixed; inset: 0; z-index: 0; background: #1a1916; }
   .heShop-overlayTint {
     position: fixed; inset: 0; z-index: 1; pointer-events: none;
     background: linear-gradient(180deg, rgba(8,8,8,0.80), rgba(8,8,8,0.93) 42%, #080808 80%);

@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import Img from '@/components/Img';
 
 /**
  * Uploads images/videos to Cloudinary via /api/admin/upload and reports
@@ -66,7 +67,7 @@ export default function MediaUploader({ label, accept, multiple = false, value, 
                 <video src={url} muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               ) : (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <Img src={url} alt="" sizes="96px" widths={[96, 192, 288]} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               )}
               <button
                 type="button"

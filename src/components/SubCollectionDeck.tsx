@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useReducedMotion } from 'framer-motion';
 import { SUB_COLLECTION_COPY } from '@/lib/collection-copy';
+import Img from '@/components/Img';
 
 export type SubCollectionItem = {
   slug: string;
@@ -135,13 +136,14 @@ export default function SubCollectionDeck({ collectionLabel, subs, onOpen }: Pro
                 aria-label={`Open ${s.label}`}
               >
                 {s.image ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
+                  <Img
                     src={s.image}
                     alt=""
                     data-photo
                     className="heSub-photo"
-                    loading={i === 0 ? 'eager' : 'lazy'}
+                    // Each card is a full-screen panel.
+                    sizes="100vw"
+                    priority={i === 0}
                   />
                 ) : (
                   <span data-photo className="heSub-photo heSub-noimg" />

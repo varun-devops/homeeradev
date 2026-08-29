@@ -7,6 +7,7 @@ import { Inter, Cormorant_Garamond } from 'next/font/google';
 import 'lenis/dist/lenis.css';
 import '../styles/globals.css';
 import Chrome from '@/components/Chrome';
+import { mediaOrigins } from '@/lib/media';
 
 const sans = Inter({
   subsets: ['latin'],
@@ -99,14 +100,15 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${sans.variable} ${display.variable}`}>
       <head>
-        {/*
-         * The loading video is intentionally NOT preloaded here: it plays
-         * only on the first visit of a session, so an eager <link preload>
-         * would force a ~300 KB high-priority download on every page for
-         * nothing. The <video preload="auto"> in LoadingGate fetches it
-         * exactly when the gate actually renders.
-         */}
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        {/*
+         * Every product photo comes from the media CDN, so the TLS handshake
+         * to it is on the critical path of the first image. Opening it during
+         * HTML parse takes that round trip off the visitor's LCP.
+         */}
+        {mediaOrigins().map((origin) => (
+          <link key={origin} rel="preconnect" href={origin} crossOrigin="" />
+        ))}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}

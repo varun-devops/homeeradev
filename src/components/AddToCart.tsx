@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition } from 'react';
-import { setCartQuantity } from '@/app/cart/actions';
+import { getCartQuantity, setCartQuantity } from '@/app/cart/actions';
 
 /**
  * Product purchase block.
@@ -17,21 +17,37 @@ import { setCartQuantity } from '@/app/cart/actions';
  * what they were trying to do — so after signing in they land back on this
  * product with the item added and checkout already open, rather than on a
  * cold product page having forgotten why they logged in.
+ *
+ * The current bag quantity is fetched here on mount rather than passed down
+ * from the server. Reading it during the page render meant touching cookies,
+ * which forced every product page to be rendered per-request; fetching it
+ * from the client lets those pages be fully static and served from the edge.
  */
-export default function AddToCart({
-  productId,
-  initialQty = 0,
-  signedIn = false,
-}: {
-  productId: string;
-  initialQty?: number;
-  signedIn?: boolean;
-}) {
+export default function AddToCart({ productId }: { productId: string }) {
   const router = useRouter();
   const params = useSearchParams();
   const [pending, start] = useTransition();
-  const [qty, setQty] = useState(initialQty);
+  const [qty, setQty] = useState(0);
+  const [signedIn, setSignedIn] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+
+  // Hydrate the stepper with this visitor's actual bag quantity. Cheap, and
+  // it keeps the page itself cacheable for everyone.
+  useEffect(() => {
+    let cancelled = false;
+    getCartQuantity(productId)
+      .then((res) => {
+        if (cancelled) return;
+        setSignedIn(res.signedIn);
+        setQty(res.quantity);
+      })
+      .catch(() => {
+        // Network hiccup — leave the stepper at 0; adding still works.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [productId]);
 
   // Send a guest to sign in, remembering the page AND the pending intent.
   const goLogin = (intent?: 'buy' | 'bag') => {
@@ -50,7 +66,7 @@ export default function AddToCart({
         router.refresh();
         then?.();
       } else if (res.reason === 'auth') {
-        setQty(initialQty);
+        setQty(0);
         goLogin(intent);
       } else {
         setErr(res.message ?? 'Could not update bag');
@@ -76,7 +92,7 @@ export default function AddToCart({
     url.searchParams.delete('intent');
     window.history.replaceState({}, '', url.pathname + url.search);
 
-    sync(Math.max(1, initialQty), intent, intent === 'buy' ? () => router.push('/checkout') : undefined);
+    sync(Math.max(1, qty), intent, intent === 'buy' ? () => router.push('/checkout') : undefined);
     // `sync` is stable enough for this one-shot resume; re-running on every
     // render would re-add the item.
     // eslint-disable-next-line react-hooks/exhaustive-deps

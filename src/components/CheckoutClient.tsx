@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
 import { formatINR } from '@/lib/format';
 import { removeFromCart } from '@/app/cart/actions';
 import { saveAddress } from '@/app/checkout/actions';
+import Img from '@/components/Img';
 import {
   EMPTY_ADDRESS,
   INDIAN_STATES,
@@ -405,8 +406,7 @@ export default function CheckoutClient({ items, total, email, saved }: Props) {
                 <li key={it.cartItemId} className="heCo-item">
                   <div className="heCo-thumb">
                     {it.image_url && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={it.image_url} alt="" />
+                      <Img src={it.image_url} alt="" sizes="72px" widths={[72, 144, 216]} />
                     )}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>

@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import ProductImages from '@/components/admin/ProductImages';
-import SavingBar from '@/components/admin/SavingBar';
+import AdminLoader from '@/components/admin/AdminLoader';
 import { isVideoUrl } from '@/lib/media';
 import { createProduct, updateProduct, deleteProduct, type ProductInput } from '@/app/admin/actions';
 
@@ -150,7 +150,7 @@ export default function ProductForm({ product, collections, subCollections }: Pr
 
   return (
     <form onSubmit={submit} style={{ maxWidth: 760, display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-      <SavingBar active={pending} />
+      <AdminLoader active={pending} label="Saving" />
       <div style={grid2}>
         <Field label="Product name*"><input required value={f.name} onChange={set('name')} style={input} /></Field>
         <Field label="Item No.*"><input required value={f.sku} onChange={set('sku')} style={input} /></Field>

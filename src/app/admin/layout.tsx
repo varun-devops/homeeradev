@@ -84,34 +84,47 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           gap: 1.25rem;
         }
 
-        /* ---- saving indicator (components/admin/SavingBar.tsx) ----
-           Defined here so the keyframes exist once, however many bars are
-           on screen: the route loading boundary and an in-page form can
-           both be showing one at the same moment, and they overlap exactly. */
-        @keyframes adminSavingSlide {
-          0%   { transform: translateX(-100%); }
-          100% { transform: translateX(400%); }
+        /* ---- loading overlay (components/admin/AdminLoader.tsx) ----
+           Defined here so the keyframes exist once: the route loading
+           boundary and an in-page save can both mount a loader at the same
+           moment, and they stack exactly. */
+        @keyframes adminLoaderSpin { to { transform: rotate(360deg); } }
+        @keyframes adminLoaderIn {
+          from { opacity: 0; }
+          to   { opacity: 1; }
         }
-        .adminSaving {
+        .adminLoader {
           position: fixed;
-          top: 0; left: 0; right: 0;
-          height: 2px;
+          inset: 0;
           z-index: 200;
-          overflow: hidden;
-          background: rgba(212, 181, 116, 0.15);
-          pointer-events: none;
+          display: grid;
+          place-items: center;
+          /* The work underneath stays visible, just pushed back — the page
+             never disappears out from under whoever is looking at it. */
+          background: rgba(8, 8, 7, 0.45);
+          backdrop-filter: blur(3px) saturate(120%);
+          -webkit-backdrop-filter: blur(3px) saturate(120%);
+          /* A short fade in: a spinner that flashes up for one frame on a
+             fast save is more distracting than no spinner at all. */
+          animation: adminLoaderIn 140ms ease-out both;
         }
-        .adminSaving::after {
-          content: '';
-          position: absolute;
-          inset: 0 auto 0 0;
-          width: 25%;
-          background: var(--gold);
-          animation: adminSavingSlide 1.1s ease-in-out infinite;
+        .adminLoader-ring {
+          /* Scales a little with the viewport rather than sitting at one
+             fixed size on a phone and a desktop alike. */
+          width: clamp(34px, 7vw, 46px);
+          height: clamp(34px, 7vw, 46px);
+          border-radius: 50%;
+          border: 2px solid rgba(212, 181, 116, 0.22);
+          border-top-color: var(--gold);
+          animation: adminLoaderSpin 620ms linear infinite;
         }
         @media (prefers-reduced-motion: reduce) {
-          /* No travelling bar; hold a static fill so the state still shows. */
-          .adminSaving::after { animation: none; width: 100%; opacity: 0.5; }
+          .adminLoader { animation: none; }
+          /* A pulse rather than a spin — still clearly "busy", no rotation. */
+          .adminLoader-ring {
+            animation: adminLoaderIn 700ms ease-in-out infinite alternate;
+            border-top-color: var(--gold);
+          }
         }
 
         /* ---- form controls ----

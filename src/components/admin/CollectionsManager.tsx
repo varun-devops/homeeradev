@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import MediaUploader from '@/components/admin/MediaUploader';
 import Img from '@/components/Img';
-import SavingBar from '@/components/admin/SavingBar';
+import AdminLoader from '@/components/admin/AdminLoader';
 import {
   saveCollection,
   deleteCollection,
@@ -45,7 +45,7 @@ export default function CollectionsManager({
   // loading signal stacked on top of the bar.
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-      <SavingBar active={pending} />
+      <AdminLoader active={pending} label="Saving" />
       {collections.map((c) => (
         <CollectionCard
           key={c.slug}

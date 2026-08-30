@@ -3,7 +3,11 @@
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import MediaUploader from '@/components/admin/MediaUploader';
+import ProductImages from '@/components/admin/ProductImages';
 import { createProduct, updateProduct, deleteProduct, type ProductInput } from '@/app/admin/actions';
+
+/** Sentinel for the "type a new one" option in the sub-category select. */
+const NEW_SUB = '__new__';
 
 type Collection = { slug: string; label: string };
 type SubCollection = { slug: string; label: string; collection_slug: string };
@@ -42,10 +46,17 @@ export default function ProductForm({ product, collections, subCollections }: Pr
     customizable: product?.customizable ?? false,
     customization_note: product?.customization_note ?? '',
   });
-  const [mainImage, setMainImage] = useState<string[]>(product?.image_url ? [product.image_url] : []);
-  const [gallery, setGallery] = useState<string[]>(product?.gallery_urls ?? []);
+  // One ordered list: [0] is the main image, the rest are the gallery.
+  // Split back apart only on save, so the form has a single source of truth.
+  const [images, setImages] = useState<string[]>(() =>
+    [product?.image_url, ...(product?.gallery_urls ?? [])].filter(
+      (u): u is string => typeof u === 'string' && u.length > 0,
+    ),
+  );
   const [video, setVideo] = useState<string[]>(product?.video_url ? [product.video_url] : []);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  // True while the sub-category is being typed rather than picked.
+  const [addingSub, setAddingSub] = useState(false);
 
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
     setF((s) => ({ ...s, [k]: e.target.value }));
@@ -69,8 +80,8 @@ export default function ProductForm({ product, collections, subCollections }: Pr
       size: f.size || null,
       weight_kg: f.weight_kg === '' ? null : Number(f.weight_kg),
       price: f.price === '' ? 0 : Number(f.price),
-      image_url: mainImage[0] ?? null,
-      gallery_urls: gallery,
+      image_url: images[0] ?? null,
+      gallery_urls: images.slice(1),
       video_url: video[0] ?? null,
       is_active: f.is_active,
       // migration-05 attributes
@@ -118,23 +129,60 @@ export default function ProductForm({ product, collections, subCollections }: Pr
 
       <div style={grid2}>
         <Field label="Category*">
-          <select value={f.category} onChange={(e) => { set('category')(e); setF((s) => ({ ...s, sub_category: '' })); }} style={input}>
+          <select
+            value={f.category}
+            onChange={(e) => {
+              const category = e.target.value;
+              // Sub-categories belong to a category, so the old pick cannot stand.
+              setAddingSub(false);
+              setF((s) => ({ ...s, category, sub_category: '' }));
+            }}
+            style={input}
+          >
             {collections.map((c) => <option key={c.slug} value={c.label}>{c.label}</option>)}
             {!collections.some((c) => c.label === f.category) && f.category && <option value={f.category}>{f.category}</option>}
           </select>
         </Field>
         <Field label="Sub-category*">
-          <input
-            list="subcats"
+          {/* A <select>, not a <datalist>. The datalist showed nothing until
+              you happened to type a matching prefix, so it read as a broken
+              dropdown. NEW_SUB switches in a text box for a value that is
+              not on the list yet. */}
+          <select
             required
-            value={f.sub_category}
-            onChange={set('sub_category')}
-            placeholder="Pick or type a new one"
+            value={addingSub ? NEW_SUB : f.sub_category}
+            onChange={(e) => {
+              if (e.target.value === NEW_SUB) {
+                setAddingSub(true);
+                setF((s) => ({ ...s, sub_category: '' }));
+                return;
+              }
+              setAddingSub(false);
+              setF((s) => ({ ...s, sub_category: e.target.value }));
+            }}
             style={input}
-          />
-          <datalist id="subcats">
-            {subOptions.map((s) => <option key={s.slug} value={s.label} />)}
-          </datalist>
+          >
+            <option value="" disabled>Choose a sub-category…</option>
+            {subOptions.map((s) => (
+              <option key={s.slug} value={s.label}>{s.label}</option>
+            ))}
+            {/* A product may already sit in a sub-collection that has no row
+                in sub_collections; keep its value selectable. */}
+            {f.sub_category && !addingSub && !subOptions.some((s) => s.label === f.sub_category) && (
+              <option value={f.sub_category}>{f.sub_category}</option>
+            )}
+            <option value={NEW_SUB}>+ Add a new sub-category…</option>
+          </select>
+          {addingSub && (
+            <input
+              required
+              autoFocus
+              value={f.sub_category}
+              onChange={set('sub_category')}
+              placeholder="New sub-category name"
+              style={{ ...input, marginTop: '0.5rem' }}
+            />
+          )}
         </Field>
       </div>
 
@@ -186,8 +234,7 @@ export default function ProductForm({ product, collections, subCollections }: Pr
 
       {/* Media */}
       <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-        <MediaUploader label="Main image" accept="image" value={mainImage} onChange={setMainImage} />
-        <MediaUploader label="Gallery images (extra photos)" accept="image" multiple value={gallery} onChange={setGallery} />
+        <ProductImages value={images} onChange={setImages} />
         <MediaUploader label="Product video" accept="video" value={video} onChange={setVideo} />
       </div>
 

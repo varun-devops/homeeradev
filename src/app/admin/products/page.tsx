@@ -1,29 +1,32 @@
 import Link from 'next/link';
 import { createServiceClient } from '@/lib/supabase/server';
-import AdminProductsTable from '@/components/admin/AdminProductsTable';
+import AdminProductsTable, { type ProductRow } from '@/components/admin/AdminProductsTable';
 
 export const metadata = { title: 'Products' };
 export const dynamic = 'force-dynamic';
 
+const BASE_COLUMNS =
+  'id, sku, name, category, sub_category, price, image_url, is_active, created_at';
+
 export default async function AdminProductsPage() {
   const svc = createServiceClient();
-  const { data } = await svc
+
+  // updated_at arrives with supabase/migration-10-product-updated-at.sql.
+  // Ask for it, but fall back if the migration has not been applied yet —
+  // an unapplied migration should not take the whole admin page down.
+  let { data, error } = await svc
     .from('products')
-    .select('id, sku, name, category, sub_category, price, image_url, is_active')
-    .order('category', { ascending: true })
-    .order('sub_category', { ascending: true })
+    .select(`${BASE_COLUMNS}, updated_at`)
     .order('name', { ascending: true });
 
-  const products = (data ?? []) as {
-    id: string;
-    sku: string;
-    name: string;
-    category: string;
-    sub_category: string;
-    price: number;
-    image_url: string | null;
-    is_active: boolean;
-  }[];
+  if (error) {
+    ({ data } = await svc
+      .from('products')
+      .select(BASE_COLUMNS)
+      .order('name', { ascending: true }));
+  }
+
+  const products = (data ?? []) as ProductRow[];
 
   return (
     <div>
@@ -39,8 +42,9 @@ export default async function AdminProductsPage() {
           + New product
         </Link>
       </div>
-      <p style={{ color: 'var(--ink-soft)', marginBottom: '2rem' }}>
-        {products.length} products · click a row to edit, or toggle visibility / price inline.
+      <p style={{ color: 'var(--ink-soft)', marginBottom: '1.5rem' }}>
+        Filter by category, sub-category, name or item number. Prices and visibility
+        can be edited inline.
       </p>
       <AdminProductsTable products={products} />
     </div>

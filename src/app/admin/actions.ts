@@ -4,6 +4,7 @@ import { revalidatePath, revalidateTag } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { CATALOG_TAG } from '@/lib/catalog';
+import { ORDER_STATUSES, STATUS_MESSAGE, type OrderStatus } from '@/lib/order-status';
 import { getAdminIdentity } from '@/lib/admin-auth';
 
 /** Guard: redirects unless the caller is a full admin. Returns user id. */
@@ -291,24 +292,6 @@ export async function deleteSubCollection(slug: string) {
 // Orders — status updates + customer notification
 // ──────────────────────────────────────────────────────────────────
 
-export const ORDER_STATUSES = [
-  'created',
-  'paid',
-  'processing',
-  'shipped',
-  'delivered',
-  'cancelled',
-] as const;
-export type OrderStatus = (typeof ORDER_STATUSES)[number];
-
-const STATUS_MESSAGE: Record<OrderStatus, string> = {
-  created: 'Your order has been placed.',
-  paid: 'Payment received — thank you!',
-  processing: 'Your order is being prepared.',
-  shipped: 'Your order has shipped.',
-  delivered: 'Your order has been delivered.',
-  cancelled: 'Your order has been cancelled.',
-};
 
 /** Admin updates an order's status and notifies the customer in-site. */
 export async function setOrderStatus(orderId: string, status: OrderStatus) {

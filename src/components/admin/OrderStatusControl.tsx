@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { setOrderStatus, ORDER_STATUSES, type OrderStatus } from '@/app/admin/actions';
+import { setOrderStatus } from '@/app/admin/actions';
+import { ORDER_STATUSES, type OrderStatus } from '@/lib/order-status';
 
 const COLORS: Record<string, string> = {
   paid: 'var(--gold)',

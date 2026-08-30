@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { formatINR } from '@/lib/catalog';
+import { effectivePrice } from '@/lib/pricing';
 import CartList from '@/components/CartList';
 
 export const metadata: Metadata = { title: 'Your bag' };
@@ -16,6 +17,7 @@ type CartRow = {
     name: string;
     slug: string;
     price: number;
+    discount_percent: number | null;
     image_url: string | null;
     sku: string | null;
   } | null;
@@ -31,14 +33,18 @@ export default async function CartPage() {
   const { data } = await sb
     .from('cart_items')
     .select(
-      'id, quantity, product:products(id, name, slug, price, image_url, sku)',
+      'id, quantity, product:products(id, name, slug, price, discount_percent, image_url, sku)',
     )
     .eq('user_id', user.id)
     .order('created_at', { ascending: true });
 
   const rows = ((data as unknown) as CartRow[]) ?? [];
   const items = rows.filter((r) => r.product);
-  const total = items.reduce((s, r) => s + (r.product!.price * r.quantity), 0);
+  // The discounted price, so the bag total matches what checkout will bill.
+  const total = items.reduce(
+    (s, r) => s + effectivePrice(r.product!.price, r.product!.discount_percent) * r.quantity,
+    0,
+  );
 
   return (
     <main className="container" style={{ paddingTop: '8rem', paddingBottom: '4rem', minHeight: '70svh' }}>
@@ -71,7 +77,9 @@ export default async function CartPage() {
               quantity: r.quantity,
               name: r.product!.name,
               slug: r.product!.slug,
-              price: r.product!.price,
+              price: effectivePrice(r.product!.price, r.product!.discount_percent),
+              list_price: r.product!.price,
+              discount_percent: r.product!.discount_percent ?? 0,
               image_url: r.product!.image_url,
               sku: r.product!.sku,
             }))}

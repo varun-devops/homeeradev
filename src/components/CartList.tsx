@@ -11,7 +11,11 @@ export type CartItem = {
   quantity: number;
   name: string;
   slug: string;
+  /** What this line is actually charged, after any discount. */
   price: number;
+  /** Pre-discount price, shown struck through when the two differ. */
+  list_price: number;
+  discount_percent: number;
   image_url: string | null;
   sku: string | null;
 };
@@ -109,8 +113,14 @@ export default function CartList({ items }: { items: CartItem[] }) {
             </div>
           </div>
 
-          <div style={{ textAlign: 'right', color: 'var(--gold)', fontVariantNumeric: 'tabular-nums' }}>
-            {formatINR(it.price * it.quantity)}
+          <div style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+            <div style={{ color: 'var(--gold)' }}>{formatINR(it.price * it.quantity)}</div>
+            {it.discount_percent > 0 && (
+              <div style={{ fontSize: '0.78rem', color: 'var(--ink-mute)', marginTop: '0.15rem' }}>
+                <s>{formatINR(it.list_price * it.quantity)}</s>{' '}
+                <span style={{ color: 'var(--gold)' }}>-{it.discount_percent}%</span>
+              </div>
+            )}
           </div>
         </li>
       ))}

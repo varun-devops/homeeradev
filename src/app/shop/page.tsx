@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { getShopProducts, buildCollections } from '@/lib/catalog';
 import { getCollections, getSubCollections } from '@/lib/collections';
+import { effectivePrice } from '@/lib/pricing';
 import ShopCollectionDeck from '@/components/ShopCollectionDeck';
 
 export const metadata: Metadata = {
@@ -45,7 +46,7 @@ export default async function ShopPage() {
       slug: p.slug,
       name: p.name,
       price: p.price,
-      effective_price: discount > 0 ? Math.round(p.price * (1 - discount / 100)) : p.price,
+      effective_price: effectivePrice(p.price, discount),
       image_url: p.image_url,
       category_slug: p.category_slug,
       sub_category: p.sub_category,

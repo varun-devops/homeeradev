@@ -90,7 +90,8 @@ export default function ProductForm({ product, collections, subCollections }: Pr
       colors: splitList(f.colors),
       sizes: splitList(f.sizes),
       discount_percent: f.discount_percent === '' ? 0 : Number(f.discount_percent),
-      stock: f.stock === '' ? 0 : Number(f.stock),
+      // Blank = not tracked (null), not zero — see migration-12.
+      stock: f.stock === '' ? null : Number(f.stock),
       is_new: f.is_new,
       customizable: f.customizable,
       customization_note: f.customization_note || null,
@@ -204,7 +205,16 @@ export default function ProductForm({ product, collections, subCollections }: Pr
         <div style={grid3}>
           <Field label="Brand"><input value={f.brand} onChange={set('brand')} style={input} /></Field>
           <Field label="Style"><input value={f.style} onChange={set('style')} style={input} /></Field>
-          <Field label="Stock (units)"><input type="number" min="0" value={f.stock} onChange={set('stock')} style={input} /></Field>
+          <Field label="Stock (blank = untracked)">
+            <input
+              type="number"
+              min="0"
+              value={f.stock}
+              onChange={set('stock')}
+              placeholder="Leave blank to sell freely"
+              style={input}
+            />
+          </Field>
         </div>
         <div style={grid2}>
           <Field label="Colors (comma-separated)"><input value={f.colors} onChange={set('colors')} placeholder="Gold, Silver, Antique" style={input} /></Field>

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { verifyWebhookSignature, toPaymentFacts } from '@/lib/razorpay';
+import { consumeOrderStock } from '@/lib/stock';
 
 /**
  * POST /api/razorpay/webhook
@@ -123,6 +124,10 @@ export async function POST(req: Request) {
           last_synced_at: new Date().toISOString(),
         })
         .eq('id', order.id);
+
+      // Take the sold items out of stock. Idempotent — the browser callback
+      // may already have done this, and Razorpay retries this webhook.
+      await consumeOrderStock(order.id);
 
       // The cart may still be sitting there if the customer bailed before
       // the browser callback ran.

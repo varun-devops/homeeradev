@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { razorpay, isConfigured } from '@/lib/razorpay';
 import { EMPTY_ADDRESS, formatAddress, type Address } from '@/lib/address';
+import { effectivePrice } from '@/lib/pricing';
 
 /**
  * POST /api/razorpay/order
@@ -51,7 +52,7 @@ export async function POST(req: Request) {
   // Cart with live prices (service client so the join is reliable).
   const { data: cart, error: cartErr } = await svc
     .from('cart_items')
-    .select('quantity, product:products(id, name, sku, price, is_active)')
+    .select('quantity, product:products(id, name, sku, price, discount_percent, stock, is_active)')
     .eq('user_id', user.id);
   if (cartErr) {
     return NextResponse.json({ error: cartErr.message }, { status: 500 });
@@ -59,7 +60,16 @@ export async function POST(req: Request) {
 
   type CartJoin = {
     quantity: number;
-    product: { id: string; name: string; sku: string; price: number; is_active: boolean } | null;
+    product: {
+      id: string;
+      name: string;
+      sku: string;
+      price: number;
+      discount_percent: number | null;
+      /** null = not stock-tracked (see migration-12). */
+      stock: number | null;
+      is_active: boolean;
+    } | null;
   };
   const items = ((cart ?? []) as unknown as CartJoin[])
     .map((r) => ({ quantity: r.quantity, product: r.product }))
@@ -72,8 +82,32 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Your bag is empty' }, { status: 400 });
   }
 
+  // Refuse to sell more than exists, before any money moves. Products with
+  // stock = null are not tracked and sell freely (see migration-12); the
+  // check constraint added there is the backstop for the race between this
+  // read and the decrement at payment confirmation.
+  const short = items.filter(
+    (r) => r.product.stock !== null && r.product.stock < r.quantity,
+  );
+  if (short.length > 0) {
+    const detail = short
+      .map((r) =>
+        r.product.stock === 0
+          ? `${r.product.name} is out of stock`
+          : `only ${r.product.stock} left of ${r.product.name}`,
+      )
+      .join('; ');
+    return NextResponse.json(
+      { error: `Please update your bag — ${detail}.` },
+      { status: 409 },
+    );
+  }
+
+  // Discounted price, matching what the shop and product page advertise.
+  // This used to use product.price, so a product on offer was displayed at
+  // one price and billed at another.
   const amount = items.reduce(
-    (sum, r) => sum + r.product.price * r.quantity,
+    (sum, r) => sum + effectivePrice(r.product.price, r.product.discount_percent) * r.quantity,
     0,
   ); // whole rupees
 
@@ -133,7 +167,9 @@ export async function POST(req: Request) {
     product_id: r.product.id,
     name: r.product.name,
     sku: r.product.sku,
-    price: r.product.price,
+    // The price actually charged, so the order history stays truthful even
+    // after the product's list price or discount changes later.
+    price: effectivePrice(r.product.price, r.product.discount_percent),
     quantity: r.quantity,
   }));
   await svc.from('order_items').insert(orderItems);

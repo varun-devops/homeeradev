@@ -3,6 +3,7 @@ import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { getProductBySlug, getAllProductSlugs, formatINR } from '@/lib/catalog';
+import { effectivePrice } from '@/lib/pricing';
 import AddToCart from '@/components/AddToCart';
 import ProductGallery from '@/components/ProductGallery';
 import ProductOptions from '@/components/ProductOptions';
@@ -43,9 +44,7 @@ export default async function ProductPage({ params }: { params: { id: string } }
   const p = await getProductBySlug(params.id);
   if (!p) notFound();
 
-  const price = (p.discount_percent ?? 0) > 0
-    ? Math.round(p.price * (1 - (p.discount_percent ?? 0) / 100))
-    : p.price;
+  const price = effectivePrice(p.price, p.discount_percent);
 
   const jsonLd = {
     '@context': 'https://schema.org',

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { verifyPaymentSignature, fetchPayment } from '@/lib/razorpay';
+import { consumeOrderStock } from '@/lib/stock';
 
 /**
  * POST /api/razorpay/verify
@@ -89,6 +90,10 @@ export async function POST(req: Request) {
     .select('id, user_id')
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Take the sold items out of stock. Idempotent — the webhook may also
+  // confirm this same order moments from now.
+  await consumeOrderStock(order.id);
 
   // Clear the cart now that it's purchased.
   await svc.from('cart_items').delete().eq('user_id', user.id);

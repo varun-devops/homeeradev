@@ -154,7 +154,13 @@ function buildRow(input: ProductInput) {
     sizes: input.sizes ?? [],
     discount_percent: Math.max(0, Math.min(90, Math.round(input.discount_percent || 0))),
     is_new: input.is_new ?? false,
-    stock: Math.max(0, Math.round(input.stock || 0)),
+    // null means not stock-tracked; 0 means genuinely sold out. An empty
+    // field must stay null, or saving any product would take it off sale
+    // (see migration-12).
+    stock:
+      input.stock === null || input.stock === undefined
+        ? null
+        : Math.max(0, Math.round(input.stock)),
     customizable: input.customizable ?? false,
     customization_note: input.customization_note?.trim() || null,
   };

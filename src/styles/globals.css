@@ -99,6 +99,11 @@ body {
 
 a { color: inherit; text-decoration: none; }
 
+/* The browser sets these bold by default, which would reintroduce a second
+   weight through the back door. They stay Light and lean on colour for
+   emphasis, like everything else here. */
+strong, b, th, optgroup { font-weight: 300; }
+
 img, svg, video { display: block; max-width: 100%; }
 
 h1, h2, h3, h4 {

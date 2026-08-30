@@ -119,7 +119,7 @@ export default function AboutPage() {
               fontSize: 'clamp(3.5rem, 11vw, 8rem)',
               lineHeight: 0.95,
               letterSpacing: '-0.02em',
-              fontWeight: 400,
+              fontWeight: 300,
               color: 'var(--ink)',
             }}
           >

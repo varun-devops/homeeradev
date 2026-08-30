@@ -35,7 +35,7 @@ export default function SyncPaymentsButton({ disabled }: { disabled?: boolean })
           fontSize: '0.72rem',
           letterSpacing: '0.14em',
           textTransform: 'uppercase',
-          fontWeight: 600,
+          fontWeight: 300,
           cursor: pending || disabled ? 'not-allowed' : 'pointer',
           opacity: pending ? 0.7 : 1,
         }}

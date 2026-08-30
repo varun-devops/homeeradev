@@ -84,7 +84,7 @@ export default async function AdminOrderDetailPage({ params }: { params: { id: s
         {/* Customer */}
         <section style={card}>
           <h2 style={cardH}>Customer</h2>
-          <p style={{ margin: 0, fontWeight: 500 }}>{o.full_name || 'Guest'}</p>
+          <p style={{ margin: 0, fontWeight: 300 }}>{o.full_name || 'Guest'}</p>
           <p style={{ margin: '0.25rem 0 0', fontSize: '0.84rem', color: 'var(--ink-soft)' }}>{o.email}</p>
           {o.phone && <p style={{ margin: '0.2rem 0 0', fontSize: '0.84rem', color: 'var(--ink-soft)' }}>{o.phone}</p>}
           {o.user_id && (

@@ -83,7 +83,7 @@ const primary: React.CSSProperties = {
   borderRadius: 8,
   background: 'var(--gold)',
   color: '#0e0e0e',
-  fontWeight: 600,
+  fontWeight: 300,
   fontSize: '0.78rem',
   letterSpacing: '0.12em',
   textTransform: 'uppercase',

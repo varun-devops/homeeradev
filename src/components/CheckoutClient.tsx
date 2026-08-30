@@ -546,11 +546,11 @@ const styles = `
   }
   .heCo-h2 {
     font-size: 0.78rem; letter-spacing: 0.18em; text-transform: uppercase;
-    color: var(--ink); margin: 0; font-family: var(--font-sans); font-weight: 500;
+    color: var(--ink); margin: 0; font-family: var(--font-sans); font-weight: 300;
   }
   .heCo-kicker {
     font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase;
-    color: var(--ink-soft); margin: 0 0 1rem; font-family: var(--font-sans); font-weight: 400;
+    color: var(--ink-soft); margin: 0 0 1rem; font-family: var(--font-sans); font-weight: 300;
   }
   .heCo-link {
     background: none; border: none; padding: 0; cursor: pointer;
@@ -607,7 +607,7 @@ const styles = `
   .heCo-save {
     padding: 0.9rem 2.75rem; border-radius: 999px; border: none;
     background: var(--gold); color: #0e0e0e; cursor: pointer;
-    font-size: 0.8rem; letter-spacing: 0.18em; text-transform: uppercase; font-weight: 600;
+    font-size: 0.8rem; letter-spacing: 0.18em; text-transform: uppercase; font-weight: 300;
   }
   .heCo-save:disabled { opacity: 0.6; cursor: wait; }
 
@@ -663,7 +663,7 @@ const styles = `
   .heCo-pay {
     width: 100%; margin-top: 1.4rem; padding: 1rem; border-radius: 999px; border: none;
     background: rgba(212,181,116,0.25); color: rgba(14,14,14,0.55);
-    font-size: 0.8rem; letter-spacing: 0.18em; text-transform: uppercase; font-weight: 600;
+    font-size: 0.8rem; letter-spacing: 0.18em; text-transform: uppercase; font-weight: 300;
     cursor: not-allowed; transition: background 240ms var(--ease-out), color 240ms var(--ease-out);
   }
   .heCo-pay[data-on='true'] { background: var(--gold); color: #0e0e0e; cursor: pointer; }

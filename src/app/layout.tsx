@@ -26,7 +26,9 @@ const sans = Inter({
   display: 'swap',
   variable: '--font-inter',
   // 300 matters — the whole site is set Light.
-  weight: ['300', '400', '500', '600'],
+  // Light only — the brief is one weight everywhere, and each extra weight
+  // is another file on the critical path for nothing.
+  weight: ['300'],
   preload: true,
 });
 

@@ -61,7 +61,7 @@ export default function ChangePasswordForm() {
           borderRadius: 8,
           background: 'var(--gold)',
           color: '#0e0e0e',
-          fontWeight: 600,
+          fontWeight: 300,
           fontSize: '0.8rem',
           letterSpacing: '0.14em',
           textTransform: 'uppercase',

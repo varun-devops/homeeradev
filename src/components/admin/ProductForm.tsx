@@ -325,7 +325,7 @@ const grid3: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repe
 const input: React.CSSProperties = { width: '100%' };
 const primaryBtn: React.CSSProperties = {
   padding: '0.8rem 1.6rem', borderRadius: 8, background: 'var(--gold)', color: '#0e0e0e',
-  fontWeight: 600, fontSize: '0.8rem', letterSpacing: '0.12em', textTransform: 'uppercase', border: 'none', cursor: 'pointer',
+  fontWeight: 300, fontSize: '0.8rem', letterSpacing: '0.12em', textTransform: 'uppercase', border: 'none', cursor: 'pointer',
 };
 const ghostBtn: React.CSSProperties = {
   padding: '0.8rem 1.6rem', borderRadius: 8, background: 'transparent', color: 'var(--ink)',

@@ -290,7 +290,7 @@ const badgeBase: React.CSSProperties = {
   display: 'grid',
   placeItems: 'center',
   fontSize: '0.66rem',
-  fontWeight: 700,
+  fontWeight: 300,
   letterSpacing: '0.06em',
 };
 const orderBadge: React.CSSProperties = {

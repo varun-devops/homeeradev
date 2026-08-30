@@ -126,7 +126,7 @@ export default function HeroVideo() {
         /* Wordmark */
         .heHero-mark {
           font-family: var(--font-display);
-          font-weight: 700;
+          font-weight: 300;
           font-size: clamp(3rem, 13vw, 11rem);
           letter-spacing: clamp(0.12em, 1.4vw, 0.5em);
           text-transform: uppercase;
@@ -157,7 +157,7 @@ export default function HeroVideo() {
         }
         .heHero-since {
           font-family: var(--font-sans, system-ui), sans-serif;
-          font-weight: 700;
+          font-weight: 300;
           font-size: clamp(1rem, 3.6vw, 1.9rem);
           letter-spacing: clamp(0.22em, 1.2vw, 0.55em);
           text-transform: uppercase;

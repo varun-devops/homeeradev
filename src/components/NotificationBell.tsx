@@ -78,7 +78,7 @@ export default function NotificationBell() {
           <path d="M13.73 21a2 2 0 0 1-3.46 0" />
         </svg>
         {unread > 0 && (
-          <span style={{ position: 'absolute', top: 4, right: 4, minWidth: 16, height: 16, padding: '0 4px', borderRadius: 999, background: 'var(--gold)', color: '#0e0e0e', fontSize: '0.62rem', display: 'grid', placeItems: 'center', fontWeight: 700 }}>
+          <span style={{ position: 'absolute', top: 4, right: 4, minWidth: 16, height: 16, padding: '0 4px', borderRadius: 999, background: 'var(--gold)', color: '#0e0e0e', fontSize: '0.62rem', display: 'grid', placeItems: 'center', fontWeight: 300 }}>
             {unread}
           </span>
         )}

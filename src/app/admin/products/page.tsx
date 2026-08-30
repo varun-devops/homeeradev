@@ -42,7 +42,7 @@ export default async function AdminProductsPage({
           href="/admin/products/new"
           style={{
             padding: '0.7rem 1.4rem', borderRadius: 8, background: 'var(--gold)', color: '#0e0e0e',
-            fontWeight: 600, fontSize: '0.78rem', letterSpacing: '0.12em', textTransform: 'uppercase',
+            fontWeight: 300, fontSize: '0.78rem', letterSpacing: '0.12em', textTransform: 'uppercase',
           }}
         >
           + New product

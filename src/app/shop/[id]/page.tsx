@@ -125,7 +125,7 @@ export default async function ProductPage({ params }: { params: { id: string } }
                 </span>
               )}
               {(p.discount_percent ?? 0) > 0 && (
-                <span style={{ fontSize: '0.66rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: '#0e0e0e', background: 'var(--gold)', borderRadius: 999, padding: '0.25rem 0.6rem', fontWeight: 700 }}>
+                <span style={{ fontSize: '0.66rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: '#0e0e0e', background: 'var(--gold)', borderRadius: 999, padding: '0.25rem 0.6rem', fontWeight: 300 }}>
                   {p.discount_percent}% off
                 </span>
               )}
@@ -167,7 +167,7 @@ export default async function ProductPage({ params }: { params: { id: string } }
                   textTransform: 'uppercase',
                   color: 'var(--ink-soft)',
                   fontFamily: 'var(--font-sans)',
-                  fontWeight: 400,
+                  fontWeight: 300,
                   margin: '0 0 0.7rem',
                 }}
               >

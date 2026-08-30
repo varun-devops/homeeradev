@@ -51,9 +51,9 @@ export default async function AdminOrdersPage() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap' }}>
                 <div>
                   <Link href={`/admin/orders/${o.id}`} data-hover style={{ display: 'inline-block' }}>
-                    <p style={{ margin: 0, fontWeight: 500 }}>
+                    <p style={{ margin: 0, fontWeight: 300 }}>
                       {o.full_name || o.email || 'Guest'}
-                      <span style={{ color: 'var(--ink-mute)', fontWeight: 400 }}> · #{o.id.slice(0, 8)} →</span>
+                      <span style={{ color: 'var(--ink-mute)', fontWeight: 300 }}> · #{o.id.slice(0, 8)} →</span>
                     </p>
                   </Link>
                   <p style={{ margin: '0.2rem 0 0', fontSize: '0.8rem', color: 'var(--ink-soft)' }}>

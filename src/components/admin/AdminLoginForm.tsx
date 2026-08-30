@@ -86,7 +86,7 @@ export default function AdminLoginForm() {
           borderRadius: 8,
           background: 'var(--gold)',
           color: '#0e0e0e',
-          fontWeight: 600,
+          fontWeight: 300,
           fontSize: '0.82rem',
           letterSpacing: '0.16em',
           textTransform: 'uppercase',

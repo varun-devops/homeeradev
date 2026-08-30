@@ -119,8 +119,10 @@ export default function OrderStatusSteps({
                 fontSize: labelSize,
                 letterSpacing: '0.1em',
                 textTransform: 'uppercase',
+                // The current step is marked by colour (GOLD above), not
+                // weight — the site is one weight throughout.
                 color: done ? (isCurrent ? GOLD : SOFT) : MUTE,
-                fontWeight: isCurrent ? 600 : 400,
+                fontWeight: 300,
               }}
             >
               {step.label}

@@ -165,14 +165,30 @@ export function storedUrlForKey(key: string): string {
 }
 
 /**
+ * Which encode of the hero clips to serve.
+ *
+ * The originals were 1080p at ~3.5 Mbps — around 6 MB each over the wire, on
+ * a clip that autoplays for every visitor to the homepage. These are the same
+ * footage re-encoded at CRF 28: 1280x720 for the landscape clip and 720x1280
+ * for the portrait one, roughly 2.7 MB each.
+ *
+ * It is a suffix rather than an overwrite because R2 objects are stored
+ * `immutable, max-age=1yr` and ImageKit caches its origin pull — replacing
+ * hero/clip.mp4 in place would have kept serving the old file. Bumping this
+ * publishes a new encode; the previous objects stay as a rollback.
+ */
+const HERO_ENCODE = '-720';
+
+/**
  * A hero clip by name ('clip' = landscape, 'slim' = portrait).
  *
  * Resolves to ImageKit once the migration has run, and to the original
  * Cloudinary delivery URL before that, so the homepage never breaks
- * mid-migration. Both paths already ask for auto format and quality.
+ * mid-migration. Note the fallback serves the *uncompressed* originals, so
+ * the saving above only applies once the ImageKit endpoint is configured.
  */
 export function heroVideoUrl(name: 'clip' | 'slim'): string {
-  if (IK_ENDPOINT) return `${IK_ENDPOINT}/hero/${name}.mp4`;
+  if (IK_ENDPOINT) return `${IK_ENDPOINT}/hero/${name}${HERO_ENCODE}.mp4`;
   const cloud = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dcdchbc8p';
   return `https://res.cloudinary.com/${cloud}/video/upload/q_auto,f_auto/homeera/hero/${name}.mp4`;
 }
@@ -180,7 +196,9 @@ export function heroVideoUrl(name: 'clip' | 'slim'): string {
 /** Still frame for a hero clip, used as its poster. */
 export function heroPosterUrl(name: 'clip' | 'slim', width = 1280): string {
   // See videoPoster(): `q-auto` 400s on video thumbnails, `f-auto` does not.
-  if (IK_ENDPOINT) return `${IK_ENDPOINT}/hero/${name}.mp4/ik-thumbnail.jpg?tr=w-${width},f-auto`;
+  if (IK_ENDPOINT) {
+    return `${IK_ENDPOINT}/hero/${name}${HERO_ENCODE}.mp4/ik-thumbnail.jpg?tr=w-${width},f-auto`;
+  }
   const cloud = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dcdchbc8p';
   return `https://res.cloudinary.com/${cloud}/video/upload/so_0,w_${width},q_auto,f_auto/homeera/hero/${name}.jpg`;
 }

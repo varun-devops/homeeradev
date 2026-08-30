@@ -471,7 +471,9 @@ const styles = `
     position: absolute; inset: 0; z-index: 1; pointer-events: none;
     background:
       radial-gradient(ellipse 95% 70% at 50% 50%, transparent 45%, rgba(0,0,0,0.62) 100%),
-      linear-gradient(180deg, rgba(0,0,0,0.35), transparent 28%, transparent 64%, rgba(0,0,0,0.55));
+      /* Heavier at the foot than it was: the title moved to the bottom-left,
+         so that is where white type has to survive a bright photograph. */
+      linear-gradient(180deg, rgba(0,0,0,0.35), transparent 26%, transparent 52%, rgba(0,0,0,0.82));
   }
   /* Bottom-left, matching the sub-collection cards one level down, so
      the title sits in the same place all the way through the deck. */
@@ -533,7 +535,10 @@ const styles = `
 
   .heShop-overlay { position: fixed; inset: 0; z-index: 90; overflow-y: auto; -webkit-overflow-scrolling: touch; }
   .heShop-overlay[data-level='subs'] { overflow: hidden; }
-  .heShop-overlayBg { position: fixed; inset: 0; z-index: 0; background: #1a1916; }
+  /* Was #1a1916, a warm grey noticeably lighter than the page behind it —
+     the level everything else is read against, so it set the floor for how
+     legible white text could get. */
+  .heShop-overlayBg { position: fixed; inset: 0; z-index: 0; background: #0d0c0b; }
   .heShop-overlayTint {
     position: fixed; inset: 0; z-index: 1; pointer-events: none;
     background: linear-gradient(180deg, rgba(8,8,8,0.80), rgba(8,8,8,0.93) 42%, #080808 80%);

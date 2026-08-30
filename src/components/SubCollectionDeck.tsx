@@ -146,7 +146,6 @@ export default function SubCollectionDeck({ subs, onOpen }: Props) {
                   {SUB_COLLECTION_COPY[s.slug] && (
                     <span className="heSub-copy">{SUB_COLLECTION_COPY[s.slug]}</span>
                   )}
-                  <span className="heSub-cta">View collection</span>
                 </span>
 
               </button>
@@ -257,20 +256,9 @@ const styles = `
     line-height: 1.55;
     color: var(--ink-soft);
   }
-  .heSub-cta {
-    margin-top: 0.35rem;
-    display: inline-block;
-    padding: 0.7rem 1.5rem;
-    border-radius: 999px;
-    background: var(--gold);
-    color: #0e0e0e;
-    font-size: 0.7rem;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    font-weight: 600;
-    transition: background 240ms var(--ease-out);
-  }
-  .heSub-cardBtn:hover .heSub-cta { background: var(--gold-bright); }
+  /* No CTA pill. The whole card is the button — it always was, so the
+     pill was a second target for the same action, and a filled gold
+     shape competing with the photograph it sat on. */
 
 
   /* ---------- position counter ---------- */

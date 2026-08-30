@@ -1,52 +1,15 @@
-/* ---- Helvetica Now Light ------------------------------------------
-   Helvetica Now is a licensed Monotype face, so the files are not in this
-   repo. Drop the woff2 you have licensed into public/fonts/ under the
-   names below and these rules pick them up with no code change.
-
-   Until then every rule still resolves: the stack falls through to Inter
-   (loaded in layout.tsx), then to the system Helvetica, then Arial. That
-   ordering matters — Inter is the closest free grotesque, so the site
-   looks intentional rather than broken while the licence is sorted out.
-
-   font-display: swap keeps text visible during the swap rather than
-   holding a blank page for a font that may not be there at all. */
-@font-face {
-  font-family: 'Helvetica Now Text';
-  src: url('/fonts/HelveticaNowText-Light.woff2') format('woff2');
-  font-weight: 300;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Helvetica Now Text';
-  src: url('/fonts/HelveticaNowText-LightItalic.woff2') format('woff2');
-  font-weight: 300;
-  font-style: italic;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Helvetica Now Text';
-  src: url('/fonts/HelveticaNowText-Regular.woff2') format('woff2');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  /* Display cut, for the large card titles. Optional: if it is absent the
-     Text cut above covers those sizes perfectly well. */
-  font-family: 'Helvetica Now Display';
-  src: url('/fonts/HelveticaNowDisplay-Light.woff2') format('woff2');
-  font-weight: 300;
-  font-style: normal;
-  font-display: swap;
-}
 :root {
-  --bg: #0a0a0a;
-  --bg-deep: #050505;
-  --bg-elev: #141414;
-  --ink: #f5f1e8;
-  --ink-soft: #b8b2a3;
-  --ink-mute: #7a7568;
+  /* Measured against WCAG AA (4.5:1 for normal text). --ink-mute used to be
+     #7a7568, which came out at 4.31:1 on the page and 3.83:1 on the
+     collection overlay — under the minimum, and legibly so: it is the colour
+     the dates, counts and captions are set in. The background drops a shade
+     at the same time, which buys contrast without touching the type. */
+  --bg: #070707;
+  --bg-deep: #030303;
+  --bg-elev: #0f0f0f;
+  --ink: #f5f1e8;        /* 17.9:1 */
+  --ink-soft: #cfc9ba;   /* 12.2:1 */
+  --ink-mute: #918b7c;   /*  5.9:1 */
   --leaf: #d4b574;
   --leaf-bright: #e8c885;
   --accent: #d4b574;
@@ -57,9 +20,15 @@
   --radius: 14px;
   --maxw: 1320px;
   /* One face across the storefront and the admin panel. Everything reads
-     these two variables, so this is the only place the family is set. */
-  --font-sans: 'Helvetica Now Text', var(--font-inter), 'Helvetica Neue', Helvetica, Arial, sans-serif;
-  --font-display: 'Helvetica Now Display', 'Helvetica Now Text', var(--font-inter), 'Helvetica Neue', Helvetica, Arial, sans-serif;
+     these two variables, so this is the only place the family is set.
+
+     Helvetica Neue ships with macOS and iOS, so most visitors get the
+     real thing with nothing to download and nothing to licence. Windows
+     and Android have neither Neue nor Helvetica, which is what Inter is
+     doing in the stack: it is the closest free grotesque, so those
+     visitors get a near match rather than Arial. */
+  --font-sans: 'Helvetica Neue', Helvetica, var(--font-inter), Arial, sans-serif;
+  --font-display: var(--font-sans);
 
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);

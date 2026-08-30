@@ -31,14 +31,39 @@ export default function ProductGallery({
   const [active, setActive] = useState(0);
 
   if (media.length === 0) {
-    return <div style={{ aspectRatio: '1 / 1', background: '#15140f', borderRadius: 'var(--radius)' }} />;
+    return <div className="heGallery-frame" />;
   }
 
   const current = media[Math.min(active, media.length - 1)];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-      <div style={{ aspectRatio: '1 / 1', background: '#15140f', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+        /* Square by default. On a phone the frame goes 9:16 to match the
+           tall cards the rest of the site is built from.
+
+           object-fit is contain there, not cover: every product photo in
+           the catalogue is square (the newer ones are 1569x1569), and
+           cover in a 9:16 frame would crop about 44% off the width — on a
+           centred object that clips the product itself. Contain keeps the
+           whole piece visible and lets the frame letterbox instead. */
+        .heGallery-frame {
+          aspect-ratio: 1 / 1;
+          background: #15140f;
+          border-radius: var(--radius);
+          overflow: hidden;
+        }
+        .heGallery-media { width: 100%; height: 100%; object-fit: cover; display: block; }
+        @media (max-width: 700px) {
+          .heGallery-frame { aspect-ratio: 9 / 16; }
+          .heGallery-media { object-fit: contain; }
+        }
+      `,
+        }}
+      />
+      <div className="heGallery-frame">
         {current.type === 'video' ? (
           <video
             src={videoUrl(current.url)}
@@ -51,7 +76,7 @@ export default function ProductGallery({
             // The visitor chose this tab, so the clip is wanted — but the
             // poster paints first so there is no black box while it buffers.
             preload="metadata"
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            className="heGallery-media"
           />
         ) : (
           <Img
@@ -62,7 +87,7 @@ export default function ProductGallery({
             widths={[320, 480, 640, 828, 1080]}
             // The product photo is the LCP element on this page.
             priority
-            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            className="heGallery-media"
           />
         )}
       </div>

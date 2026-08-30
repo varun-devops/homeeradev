@@ -34,6 +34,12 @@
 
 * { box-sizing: border-box; }
 
+/* The whole site is a dark surface. Saying so lets the browser theme the
+   parts the page cannot reach: a <select>'s popup list is drawn by the OS,
+   so without this the checkout's State dropdown opened light-on-light.
+   It also darkens scrollbars, spinners, date pickers and autofill. */
+:root { color-scheme: dark; }
+
 html, body {
   margin: 0;
   padding: 0;

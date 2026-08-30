@@ -34,8 +34,12 @@ export default async function ShopPage() {
   // falls back to the first product photo in each group, which is why a
   // sub-collection image set in the admin panel never showed up here.
   const collections = buildCollections(products, {
-    collections: Object.fromEntries(collectionRows.map((c) => [c.slug, c.image_url])),
-    subCollections: Object.fromEntries(subCollectionRows.map((s) => [s.slug, s.image_url])),
+    collections: Object.fromEntries(
+      collectionRows.map((c) => [c.slug, { image: c.image_url, video: c.video_url }]),
+    ),
+    subCollections: Object.fromEntries(
+      subCollectionRows.map((s) => [s.slug, { image: s.image_url, video: s.video_url }]),
+    ),
   });
 
   // Shape the products for the client deck — only what the grid renders.

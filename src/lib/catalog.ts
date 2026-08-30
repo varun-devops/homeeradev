@@ -81,6 +81,8 @@ export type SubCollectionGroup = {
   slug: string;
   label: string;
   image: string | null;
+  /** Optional looping clip; `image` is its poster frame. */
+  video: string | null;
   count: number;
 };
 
@@ -88,6 +90,7 @@ export type CollectionGroup = {
   slug: string;
   label: string;
   image: string | null;
+  video: string | null;
   count: number;
   subCollections: SubCollectionGroup[];
 };
@@ -176,8 +179,8 @@ export const getAllProductSlugs = unstable_cache(
  * tables. Whatever an admin sets there wins over the fallback below.
  */
 export type CollectionArt = {
-  collections?: Record<string, string | null>;
-  subCollections?: Record<string, string | null>;
+  collections?: Record<string, { image: string | null; video: string | null }>;
+  subCollections?: Record<string, { image: string | null; video: string | null }>;
 };
 
 /**
@@ -202,8 +205,10 @@ export function buildCollections(
   const groups: CollectionGroup[] = [];
   for (const [catSlug, items] of byCat) {
     const label = items[0].category;
+    const curated = art.collections?.[catSlug];
     const image =
-      art.collections?.[catSlug] ?? items.find((p) => p.image_url)?.image_url ?? null;
+      curated?.image ?? items.find((p) => p.image_url)?.image_url ?? null;
+    const video = curated?.video ?? null;
 
     const subMap = new Map<string, ShopProduct[]>();
     for (const p of items) {
@@ -215,7 +220,10 @@ export function buildCollections(
         slug,
         label: sItems[0].sub_category,
         image:
-          art.subCollections?.[slug] ?? sItems.find((p) => p.image_url)?.image_url ?? null,
+          art.subCollections?.[slug]?.image ??
+          sItems.find((p) => p.image_url)?.image_url ??
+          null,
+        video: art.subCollections?.[slug]?.video ?? null,
         count: sItems.length,
       }))
       // Richest sub-collections lead, so the grid opens on real depth.
@@ -225,6 +233,7 @@ export function buildCollections(
       slug: catSlug,
       label,
       image,
+      video,
       count: items.length,
       subCollections,
     });

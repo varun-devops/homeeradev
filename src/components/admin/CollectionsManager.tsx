@@ -13,13 +13,21 @@ import {
   deleteSubCollection,
 } from '@/app/admin/actions';
 
-type Collection = { slug: string; label: string; copy: string | null; image_url: string | null; sort_order: number };
+type Collection = {
+  slug: string;
+  label: string;
+  copy: string | null;
+  image_url: string | null;
+  video_url: string | null;
+  sort_order: number;
+};
 type SubCollection = {
   slug: string;
   label: string;
   collection_slug: string;
   copy: string | null;
   image_url: string | null;
+  video_url: string | null;
   sort_order: number;
 };
 
@@ -205,20 +213,40 @@ function CollectionEditor({
   onCancel,
 }: {
   collection?: Collection;
-  onSave: (input: { label: string; copy: string | null; image_url: string | null }) => void;
+  onSave: (input: {
+    label: string;
+    copy: string | null;
+    image_url: string | null;
+    video_url: string | null;
+  }) => void;
   onCancel: () => void;
 }) {
   const [label, setLabel] = useState(collection?.label ?? '');
   const [copy, setCopy] = useState(collection?.copy ?? '');
   const [image, setImage] = useState<string[]>(collection?.image_url ? [collection.image_url] : []);
+  const [video, setVideo] = useState<string[]>(collection?.video_url ? [collection.video_url] : []);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
       <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Collection name" style={input} />
       <input value={copy} onChange={(e) => setCopy(e.target.value)} placeholder="Short description (optional)" style={input} />
-      <MediaUploader label="Collection image" accept="image" value={image} onChange={setImage} />
+      <MediaUploader label="Card image (also the video’s poster)" accept="image" value={image} onChange={setImage} />
+      <MediaUploader label="Card video (optional, loops silently)" accept="video" value={video} onChange={setVideo} />
       <div style={{ display: 'flex', gap: '0.75rem' }}>
-        <button type="button" onClick={() => onSave({ label, copy: copy || null, image_url: image[0] ?? null })} style={saveBtn}>Save</button>
+        <button
+          type="button"
+          onClick={() =>
+            onSave({
+              label,
+              copy: copy || null,
+              image_url: image[0] ?? null,
+              video_url: video[0] ?? null,
+            })
+          }
+          style={saveBtn}
+        >
+          Save
+        </button>
         <button type="button" onClick={onCancel} style={miniBtn}>Cancel</button>
       </div>
     </div>
@@ -327,16 +355,27 @@ function SubCollectionEditor({
   onCancel,
 }: {
   sub?: SubCollection;
-  onSave: (input: { label: string; copy: string | null; image_url: string | null }) => void;
+  onSave: (input: {
+    label: string;
+    copy: string | null;
+    image_url: string | null;
+    video_url: string | null;
+  }) => void;
   onCancel: () => void;
 }) {
   const [label, setLabel] = useState(sub?.label ?? '');
   const [copy, setCopy] = useState(sub?.copy ?? '');
   const [image, setImage] = useState<string[]>(sub?.image_url ? [sub.image_url] : []);
+  const [video, setVideo] = useState<string[]>(sub?.video_url ? [sub.video_url] : []);
 
   const submit = () => {
     if (!label.trim()) return;
-    onSave({ label: label.trim(), copy: copy || null, image_url: image[0] ?? null });
+    onSave({
+      label: label.trim(),
+      copy: copy || null,
+      image_url: image[0] ?? null,
+      video_url: video[0] ?? null,
+    });
   };
 
   return (
@@ -358,7 +397,8 @@ function SubCollectionEditor({
         placeholder="Short description (optional)"
         style={input}
       />
-      <MediaUploader label="Card image" accept="image" value={image} onChange={setImage} />
+      <MediaUploader label="Card image (also the video’s poster)" accept="image" value={image} onChange={setImage} />
+      <MediaUploader label="Card video (optional, loops silently)" accept="video" value={video} onChange={setVideo} />
       <div style={{ display: 'flex', gap: '0.5rem' }}>
         <button type="button" onClick={submit} style={saveBtn}>Save</button>
         <button type="button" onClick={onCancel} style={miniBtn}>Cancel</button>

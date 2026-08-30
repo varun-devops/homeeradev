@@ -3,12 +3,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { useReducedMotion } from 'framer-motion';
 import { SUB_COLLECTION_COPY } from '@/lib/collection-copy';
-import Img from '@/components/Img';
+import CardMedia from '@/components/CardMedia';
 
 export type SubCollectionItem = {
   slug: string;
   label: string;
   image: string | null;
+  /** Optional looping clip; `image` is its poster frame. */
+  video: string | null;
   count: number;
 };
 
@@ -128,10 +130,10 @@ export default function SubCollectionDeck({ subs, onOpen }: Props) {
                 onClick={() => onOpen(s.slug)}
                 aria-label={`Open ${s.label}`}
               >
-                {s.image ? (
-                  <Img
-                    src={s.image}
-                    alt=""
+                {s.image || s.video ? (
+                  <CardMedia
+                    image={s.image}
+                    video={s.video}
                     data-photo
                     className="heSub-photo"
                     // Each card is a full-screen panel.

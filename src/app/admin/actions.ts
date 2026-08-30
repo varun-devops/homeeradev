@@ -267,6 +267,7 @@ export async function saveCollection(input: {
   label: string;
   copy?: string | null;
   image_url?: string | null;
+  video_url?: string | null;
   sort_order?: number;
 }) {
   const actor = await requireAdmin();
@@ -280,6 +281,7 @@ export async function saveCollection(input: {
       label: input.label.trim(),
       copy: input.copy ?? null,
       image_url: input.image_url ?? null,
+      video_url: input.video_url ?? null,
       sort_order: input.sort_order ?? 0,
     },
     { onConflict: 'slug' },
@@ -322,6 +324,7 @@ export async function saveSubCollection(input: {
   collection_slug: string;
   copy?: string | null;
   image_url?: string | null;
+  video_url?: string | null;
   sort_order?: number;
 }) {
   const actor = await requireAdmin();
@@ -338,6 +341,7 @@ export async function saveSubCollection(input: {
       collection_slug: input.collection_slug,
       copy: input.copy ?? null,
       image_url: input.image_url ?? null,
+      video_url: input.video_url ?? null,
       sort_order: input.sort_order ?? 0,
     },
     { onConflict: 'slug' },

@@ -7,6 +7,7 @@ import { AnimatePresence, motion, useReducedMotion, type Variants } from 'framer
 import { formatINR } from '@/lib/format';
 import SubCollectionDeck from '@/components/SubCollectionDeck';
 import Img from '@/components/Img';
+import CardMedia from '@/components/CardMedia';
 import { lockScroll } from '@/lib/scroll-lock';
 
 export type LiteProduct = {
@@ -27,6 +28,8 @@ export type SubCollection = {
   slug: string;
   label: string;
   image: string | null;
+  /** Optional looping clip; `image` is its poster frame. */
+  video: string | null;
   count: number;
 };
 
@@ -34,6 +37,7 @@ export type Collection = {
   slug: string;
   label: string;
   image: string | null;
+  video: string | null;
   count: number;
   subCollections: SubCollection[];
 };
@@ -270,10 +274,11 @@ export default function ShopCollectionDeck({ collections, products }: Props) {
             >
               {/* A CSS background-image cannot be lazy-loaded or given a
                   srcset, so a phone was fetching the full-size original for
-                  every one of these full-screen panels. */}
-              <Img
-                src={c.image}
-                alt=""
+                  every one of these full-screen panels. CardMedia adds the
+                  optional looping clip on top of that still. */}
+              <CardMedia
+                image={c.image}
+                video={c.video}
                 className="heShop-bgPhoto"
                 sizes="100vw"
                 priority={i === 0}

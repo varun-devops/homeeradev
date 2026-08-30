@@ -7,6 +7,8 @@ export type Collection = {
   label: string;
   copy: string | null;
   image_url: string | null;
+  /** Optional looping clip (migration-13); image_url is its poster. */
+  video_url: string | null;
   sort_order: number;
 };
 
@@ -17,6 +19,8 @@ export type SubCollection = {
   copy: string | null;
   /** Added by migration-08/09; the shop card's background image. */
   image_url: string | null;
+  /** Optional looping clip (migration-13); image_url is its poster. */
+  video_url: string | null;
   sort_order: number;
 };
 

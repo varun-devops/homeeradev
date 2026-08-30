@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { AnimatePresence, motion, useReducedMotion, type Variants } from 'framer-motion';
 import { formatINR } from '@/lib/format';
 import SubCollectionDeck from '@/components/SubCollectionDeck';
@@ -104,11 +105,18 @@ const fold: Variants = {
 export default function ShopCollectionDeck({ collections, products }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
-  const [openSlug, setOpenSlug] = useState<string | null>(null);
-  const [openSub, setOpenSub] = useState<string | null>(null);
-  const [dir, setDir] = useState<1 | -1>(1);
+  const router = useRouter();
+  const params = useSearchParams();
   const [active, setActive] = useState(0);
   const reduce = useReducedMotion();
+
+  // Which level is open lives in the URL, not in state. Held in state it
+  // produced no history entries, so browser Back skipped every level and
+  // returning from a product page always dumped you at the top of the
+  // deck. As query params each level is a real history entry, and a
+  // product page can link back to the exact sub-collection it came from.
+  const openSlug = params.get('c');
+  const openSub = params.get('s');
 
   const openCol = collections.find((c) => c.slug === openSlug) ?? null;
   const openSubCol = openCol?.subCollections.find((s) => s.slug === openSub) ?? null;
@@ -117,26 +125,29 @@ export default function ShopCollectionDeck({ collections, products }: Props) {
     products.filter((p) => p.sub_category_slug === subSlug);
 
   // ---- navigation ----------------------------------------------------
-  const openCollection = (slug: string) => {
-    setDir(1);
-    setOpenSlug(slug);
-  };
-  const openSubCollection = (slug: string) => {
-    setDir(1);
-    setOpenSub(slug);
-  };
+  // scroll: false — the overlay is fixed, so letting the router scroll to
+  // the top would move the deck behind it for no reason.
+  const go = (href: string) => router.push(href, { scroll: false });
+  const openCollection = (slug: string) => go(`/shop?c=${encodeURIComponent(slug)}`);
+  const openSubCollection = (slug: string) =>
+    go(`/shop?c=${encodeURIComponent(openSlug ?? "")}&s=${encodeURIComponent(slug)}`);
   /** Step back one level: products → sub-collections → deck. */
   const back = () => {
-    setDir(-1);
-    if (openSub) setOpenSub(null);
-    else setOpenSlug(null);
+    if (openSub && openSlug) go(`/shop?c=${encodeURIComponent(openSlug)}`);
+    else go('/shop');
   };
 
-  // Leaving a collection must also drop the sub-collection, or reopening the
-  // collection would land straight back on the old product grid.
-  useEffect(() => {
-    if (!openSlug) setOpenSub(null);
-  }, [openSlug]);
+  // Fold direction is derived from how deep we just moved, so it is right
+  // for browser Back and Forward too — a stored direction only knew about
+  // clicks on our own controls.
+  const depth = openSub ? 2 : openSlug ? 1 : 0;
+  const prevDepth = useRef(depth);
+  const dirRef = useRef<1 | -1>(1);
+  if (prevDepth.current !== depth) {
+    dirRef.current = depth > prevDepth.current ? 1 : -1;
+    prevDepth.current = depth;
+  }
+  const dir = dirRef.current;
 
   // Parallax + active-panel tracking — paused while the overlay is up.
   useEffect(() => {
@@ -191,9 +202,7 @@ export default function ShopCollectionDeck({ collections, products }: Props) {
     const unlock = lockScroll();
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
-      setDir(-1);
-      if (openSub) setOpenSub(null);
-      else setOpenSlug(null);
+      back();
     };
     window.addEventListener('keydown', onKey);
     return () => {

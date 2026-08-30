@@ -70,8 +70,11 @@ export default async function ProductPage({ params }: { params: { id: string } }
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
+      {/* Back to the sub-collection this piece sits in, not the top of the
+          deck. Built from the product's own slugs rather than a referrer, so
+          it is correct even arriving straight from search. */}
       <Link
-        href="/shop"
+        href={`/shop?c=${encodeURIComponent(p.category_slug)}&s=${encodeURIComponent(p.sub_category_slug)}`}
         data-hover
         style={{
           fontSize: '0.78rem',
@@ -80,7 +83,7 @@ export default async function ProductPage({ params }: { params: { id: string } }
           color: 'var(--ink-soft)',
         }}
       >
-        ← Back to collections
+        ← Back to {p.sub_category}
       </Link>
 
       <div

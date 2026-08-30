@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import { getShopProducts, buildCollections } from '@/lib/catalog';
 import { getCollections, getSubCollections } from '@/lib/collections';
 import ShopCollectionDeck from '@/components/ShopCollectionDeck';
@@ -54,5 +55,11 @@ export default async function ShopPage() {
     };
   });
 
-  return <ShopCollectionDeck collections={collections} products={lite} />;
+  // The deck reads its open level from the query string, and useSearchParams
+  // needs a Suspense boundary for this page to stay statically rendered.
+  return (
+    <Suspense fallback={null}>
+      <ShopCollectionDeck collections={collections} products={lite} />
+    </Suspense>
+  );
 }

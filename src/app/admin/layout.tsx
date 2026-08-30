@@ -84,6 +84,36 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           gap: 1.25rem;
         }
 
+        /* ---- saving indicator (components/admin/SavingBar.tsx) ----
+           Defined here so the keyframes exist once, however many bars are
+           on screen: the route loading boundary and an in-page form can
+           both be showing one at the same moment, and they overlap exactly. */
+        @keyframes adminSavingSlide {
+          0%   { transform: translateX(-100%); }
+          100% { transform: translateX(400%); }
+        }
+        .adminSaving {
+          position: fixed;
+          top: 0; left: 0; right: 0;
+          height: 2px;
+          z-index: 200;
+          overflow: hidden;
+          background: rgba(212, 181, 116, 0.15);
+          pointer-events: none;
+        }
+        .adminSaving::after {
+          content: '';
+          position: absolute;
+          inset: 0 auto 0 0;
+          width: 25%;
+          background: var(--gold);
+          animation: adminSavingSlide 1.1s ease-in-out infinite;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          /* No travelling bar; hold a static fill so the state still shows. */
+          .adminSaving::after { animation: none; width: 100%; opacity: 0.5; }
+        }
+
         /* ---- form controls ----
            color-scheme:dark is doing the heavy lifting here. A <select>'s
            popup list is drawn by the OS, not the page, so no amount of CSS on

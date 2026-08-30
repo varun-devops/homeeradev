@@ -41,8 +41,10 @@ export default function CollectionsManager({
   const [adding, setAdding] = useState(false);
   const refresh = () => router.refresh();
 
+  // No dimming while pending: greying the whole list was a second, louder
+  // loading signal stacked on top of the bar.
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', opacity: pending ? 0.6 : 1 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       <SavingBar active={pending} />
       {collections.map((c) => (
         <CollectionCard

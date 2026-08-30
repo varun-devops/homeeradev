@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import NotificationBell from '@/components/NotificationBell';
+import { lockScroll } from '@/lib/scroll-lock';
 
 // Primary links — shown inline on desktop, inside the hamburger drawer
 // on mobile.
@@ -62,15 +63,18 @@ export default function Header() {
   // and flag <html> so the hero text can hide itself (see the global
   // [data-menu-open=true] rule in the scoped <style> block below).
   useEffect(() => {
-    document.body.style.overflow = menuOpen ? 'hidden' : '';
     if (menuOpen) document.documentElement.dataset.menuOpen = 'true';
     else delete document.documentElement.dataset.menuOpen;
+    if (!menuOpen) return;
+    // Reference-counted: see lib/scroll-lock.ts for why this replaced a
+    // direct `document.body.style.overflow = 'hidden'`.
+    const unlock = lockScroll();
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setMenuOpen(false);
     };
     window.addEventListener('keydown', onKey);
     return () => {
-      document.body.style.overflow = '';
+      unlock();
       delete document.documentElement.dataset.menuOpen;
       window.removeEventListener('keydown', onKey);
     };

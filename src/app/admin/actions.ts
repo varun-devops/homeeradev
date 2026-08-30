@@ -5,25 +5,30 @@ import { redirect } from 'next/navigation';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { CATALOG_TAG } from '@/lib/catalog';
 import { ORDER_STATUSES, STATUS_MESSAGE, type OrderStatus } from '@/lib/order-status';
-import { getAdminIdentity } from '@/lib/admin-auth';
+import { getAdminIdentity, type AdminIdentity } from '@/lib/admin-auth';
+import { logAdminAction } from '@/lib/audit-log';
 
-/** Guard: redirects unless the caller is a full admin. Returns user id. */
-async function requireAdmin(): Promise<string> {
+/**
+ * Guard: redirects unless the caller is a full admin. Returns the full
+ * identity (not just the id) so callers can write it straight into the
+ * audit log without a second lookup.
+ */
+async function requireAdmin(): Promise<AdminIdentity> {
   const identity = await getAdminIdentity();
   if (!identity) redirect('/admin/login');
   if (identity.role !== 'admin') redirect('/admin/products?error=admin-only');
-  return identity.userId;
+  return identity;
 }
 
 /**
- * Guard for product operations: allows admin OR staff. Returns user id.
- * Staff exist to manage products, so this is the guard on all product CRUD.
+ * Guard for product operations: allows admin OR staff. Returns the full
+ * identity for the same reason as requireAdmin.
  */
-async function requireProductManager(): Promise<string> {
+async function requireProductManager(): Promise<AdminIdentity> {
   const identity = await getAdminIdentity();
   if (!identity) redirect('/admin/login');
   // Both 'admin' and 'staff' may manage products.
-  return identity.userId;
+  return identity;
 }
 
 export async function signOut() {
@@ -34,10 +39,18 @@ export async function signOut() {
 
 /** Toggle a product's visibility on the storefront. */
 export async function setProductActive(productId: string, isActive: boolean) {
-  await requireProductManager();
+  const actor = await requireProductManager();
   const svc = createServiceClient();
   const { error } = await svc.from('products').update({ is_active: isActive }).eq('id', productId);
   if (error) return { ok: false, message: error.message };
+  await logAdminAction({
+    actor,
+    action: 'product.visibility',
+    entityType: 'product',
+    entityId: productId,
+    summary: isActive ? 'Made a product visible' : 'Hid a product from the shop',
+    detail: { is_active: isActive },
+  });
   revalidatePath('/admin/products');
   revalidateTag(CATALOG_TAG);
   revalidatePath('/shop');
@@ -47,14 +60,23 @@ export async function setProductActive(productId: string, isActive: boolean) {
 
 /** Update a product's price (whole rupees). */
 export async function setProductPrice(productId: string, price: number) {
-  await requireProductManager();
+  const actor = await requireProductManager();
   if (!Number.isFinite(price) || price < 0) return { ok: false, message: 'Invalid price' };
   const svc = createServiceClient();
+  const { data: before } = await svc.from('products').select('price').eq('id', productId).maybeSingle();
   const { error } = await svc
     .from('products')
     .update({ price: Math.round(price) })
     .eq('id', productId);
   if (error) return { ok: false, message: error.message };
+  await logAdminAction({
+    actor,
+    action: 'product.price',
+    entityType: 'product',
+    entityId: productId,
+    summary: `Changed price ₹${before?.price ?? '?'} → ₹${Math.round(price)}`,
+    detail: { from: before?.price ?? null, to: Math.round(price) },
+  });
   revalidatePath('/admin/products');
   revalidateTag(CATALOG_TAG);
   revalidatePath('/shop');
@@ -140,7 +162,7 @@ function buildRow(input: ProductInput) {
 
 /** Create a new product. */
 export async function createProduct(input: ProductInput) {
-  await requireProductManager();
+  const actor = await requireProductManager();
   if (!input.sku?.trim() || !input.name?.trim() || !input.category?.trim() || !input.sub_category?.trim()) {
     return { ok: false, message: 'SKU, name, category and sub-category are required.' };
   }
@@ -149,6 +171,14 @@ export async function createProduct(input: ProductInput) {
   const { data, error } = await svc.from('products').insert(row).select('id').single();
   if (error) return { ok: false, message: error.message };
   await ensureCollectionRows(row.category, row.category_slug, row.sub_category, row.sub_category_slug, row.image_url);
+  await logAdminAction({
+    actor,
+    action: 'product.create',
+    entityType: 'product',
+    entityId: data.id,
+    summary: `Created "${row.name}" (${row.sku})`,
+    detail: { sku: row.sku, category: row.category, sub_category: row.sub_category, price: row.price },
+  });
   revalidatePath('/admin/products');
   revalidateTag(CATALOG_TAG);
   revalidatePath('/shop');
@@ -158,13 +188,21 @@ export async function createProduct(input: ProductInput) {
 
 /** Update an existing product. */
 export async function updateProduct(input: ProductInput) {
-  await requireProductManager();
+  const actor = await requireProductManager();
   if (!input.id) return { ok: false, message: 'Missing product id.' };
   const svc = createServiceClient();
   const row = buildRow(input);
   const { error } = await svc.from('products').update(row).eq('id', input.id);
   if (error) return { ok: false, message: error.message };
   await ensureCollectionRows(row.category, row.category_slug, row.sub_category, row.sub_category_slug, row.image_url);
+  await logAdminAction({
+    actor,
+    action: 'product.update',
+    entityType: 'product',
+    entityId: input.id,
+    summary: `Edited "${row.name}" (${row.sku})`,
+    detail: { sku: row.sku, category: row.category, sub_category: row.sub_category, price: row.price },
+  });
   revalidatePath('/admin/products');
   revalidateTag(CATALOG_TAG);
   revalidatePath('/shop');
@@ -174,10 +212,20 @@ export async function updateProduct(input: ProductInput) {
 
 /** Delete a product. */
 export async function deleteProduct(productId: string) {
-  await requireProductManager();
+  const actor = await requireProductManager();
   const svc = createServiceClient();
+  // Fetched before the delete purely so the log line names the product —
+  // once it's gone there is nothing left to join against.
+  const { data: existing } = await svc.from('products').select('sku, name').eq('id', productId).maybeSingle();
   const { error } = await svc.from('products').delete().eq('id', productId);
   if (error) return { ok: false, message: error.message };
+  await logAdminAction({
+    actor,
+    action: 'product.delete',
+    entityType: 'product',
+    entityId: productId,
+    summary: existing ? `Deleted "${existing.name}" (${existing.sku})` : 'Deleted a product',
+  });
   revalidatePath('/admin/products');
   revalidateTag(CATALOG_TAG);
   revalidatePath('/shop');
@@ -215,10 +263,11 @@ export async function saveCollection(input: {
   image_url?: string | null;
   sort_order?: number;
 }) {
-  await requireAdmin();
+  const actor = await requireAdmin();
   if (!input.label?.trim()) return { ok: false, message: 'Label is required.' };
   const svc = createServiceClient();
   const slug = input.slug || slugify(input.label);
+  const isNew = !input.slug;
   const { error } = await svc.from('collections').upsert(
     {
       slug,
@@ -230,6 +279,13 @@ export async function saveCollection(input: {
     { onConflict: 'slug' },
   );
   if (error) return { ok: false, message: error.message };
+  await logAdminAction({
+    actor,
+    action: isNew ? 'collection.create' : 'collection.update',
+    entityType: 'collection',
+    entityId: slug,
+    summary: `${isNew ? 'Created' : 'Edited'} collection "${input.label.trim()}"`,
+  });
   revalidatePath('/admin/collections');
   revalidateTag(CATALOG_TAG);
   revalidatePath('/shop');
@@ -237,10 +293,17 @@ export async function saveCollection(input: {
 }
 
 export async function deleteCollection(slug: string) {
-  await requireAdmin();
+  const actor = await requireAdmin();
   const svc = createServiceClient();
   const { error } = await svc.from('collections').delete().eq('slug', slug);
   if (error) return { ok: false, message: error.message };
+  await logAdminAction({
+    actor,
+    action: 'collection.delete',
+    entityType: 'collection',
+    entityId: slug,
+    summary: `Deleted collection "${slug}"`,
+  });
   revalidatePath('/admin/collections');
   revalidateTag(CATALOG_TAG);
   revalidatePath('/shop');
@@ -254,12 +317,13 @@ export async function saveSubCollection(input: {
   copy?: string | null;
   sort_order?: number;
 }) {
-  await requireAdmin();
+  const actor = await requireAdmin();
   if (!input.label?.trim() || !input.collection_slug) {
     return { ok: false, message: 'Label and parent collection are required.' };
   }
   const svc = createServiceClient();
   const slug = input.slug || slugify(input.label);
+  const isNew = !input.slug;
   const { error } = await svc.from('sub_collections').upsert(
     {
       slug,
@@ -271,6 +335,13 @@ export async function saveSubCollection(input: {
     { onConflict: 'slug' },
   );
   if (error) return { ok: false, message: error.message };
+  await logAdminAction({
+    actor,
+    action: isNew ? 'sub_collection.create' : 'sub_collection.update',
+    entityType: 'sub_collection',
+    entityId: slug,
+    summary: `${isNew ? 'Created' : 'Edited'} sub-collection "${input.label.trim()}"`,
+  });
   revalidatePath('/admin/collections');
   revalidateTag(CATALOG_TAG);
   revalidatePath('/shop');
@@ -278,10 +349,17 @@ export async function saveSubCollection(input: {
 }
 
 export async function deleteSubCollection(slug: string) {
-  await requireAdmin();
+  const actor = await requireAdmin();
   const svc = createServiceClient();
   const { error } = await svc.from('sub_collections').delete().eq('slug', slug);
   if (error) return { ok: false, message: error.message };
+  await logAdminAction({
+    actor,
+    action: 'sub_collection.delete',
+    entityType: 'sub_collection',
+    entityId: slug,
+    summary: `Deleted sub-collection "${slug}"`,
+  });
   revalidatePath('/admin/collections');
   revalidateTag(CATALOG_TAG);
   revalidatePath('/shop');
@@ -295,9 +373,11 @@ export async function deleteSubCollection(slug: string) {
 
 /** Admin updates an order's status and notifies the customer in-site. */
 export async function setOrderStatus(orderId: string, status: OrderStatus) {
-  await requireAdmin();
+  const actor = await requireAdmin();
   if (!ORDER_STATUSES.includes(status)) return { ok: false, message: 'Invalid status' };
   const svc = createServiceClient();
+
+  const { data: before } = await svc.from('orders').select('status').eq('id', orderId).maybeSingle();
 
   const { data: order, error } = await svc
     .from('orders')
@@ -317,18 +397,35 @@ export async function setOrderStatus(orderId: string, status: OrderStatus) {
     });
   }
 
+  await logAdminAction({
+    actor,
+    action: 'order.status',
+    entityType: 'order',
+    entityId: order.id,
+    summary: `Order #${order.id.slice(0, 8)}: ${before?.status ?? '?'} → ${status}`,
+    detail: { from: before?.status ?? null, to: status },
+  });
+
   revalidatePath('/admin/orders');
   return { ok: true };
 }
 
 /** Change the signed-in admin/staff user's own password. */
 export async function changePassword(newPassword: string) {
-  await requireProductManager();
+  const actor = await requireProductManager();
   if (!newPassword || newPassword.length < 4) {
     return { ok: false, message: 'Password must be at least 4 characters.' };
   }
   const sb = createClient();
   const { error } = await sb.auth.updateUser({ password: newPassword });
   if (error) return { ok: false, message: error.message };
+  // Never logs the password itself — only that a change happened, by whom.
+  await logAdminAction({
+    actor,
+    action: 'account.password_change',
+    entityType: 'user',
+    entityId: actor.userId,
+    summary: `${actor.email} changed their password`,
+  });
   return { ok: true };
 }

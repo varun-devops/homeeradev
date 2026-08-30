@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef } from 'react';
+import { forceUnlockScroll } from '@/lib/scroll-lock';
 
 /**
  * Directional page-fold route transition.
@@ -49,6 +50,17 @@ export default function PageTransition({ children }: { children: React.ReactNode
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
   }, []);
+
+  // Safety net: an overlay open on the page being left (the shop deck, the
+  // header's mobile drawer) locks body scroll and releases it on unmount —
+  // but a stuck lock reads, on the new page, as "this page doesn't scroll
+  // on mobile", and it isn't obvious from there which earlier overlay is
+  // responsible. Every real navigation lands here, so force scroll open
+  // on each one rather than trust every current and future overlay to
+  // release its lock in every case.
+  useEffect(() => {
+    forceUnlockScroll();
+  }, [pathname]);
 
   // Derived during render so the class is correct on the very first frame of
   // the new page — a useEffect would run a frame too late and the fold would

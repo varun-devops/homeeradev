@@ -3,7 +3,8 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createServiceClient } from '@/lib/supabase/server';
-import { getAdminIdentity } from '@/lib/admin-auth';
+import { getAdminIdentity, type AdminIdentity } from '@/lib/admin-auth';
+import { logAdminAction } from '@/lib/audit-log';
 import {
   fetchPaymentForOrder,
   refundPayment,
@@ -21,11 +22,11 @@ import {
  * Admin-only: staff manage products and must not touch money.
  */
 
-async function requireAdmin(): Promise<string> {
+async function requireAdmin(): Promise<AdminIdentity> {
   const identity = await getAdminIdentity();
   if (!identity) redirect('/admin/login');
   if (identity.role !== 'admin') redirect('/admin/products?error=admin-only');
-  return identity.userId;
+  return identity;
 }
 
 export type SyncResult = {
@@ -187,7 +188,7 @@ export async function refundOrder(
   orderId: string,
   amountRupees?: number,
 ): Promise<{ ok: boolean; message: string }> {
-  await requireAdmin();
+  const actor = await requireAdmin();
   if (!isConfigured()) return { ok: false, message: 'Razorpay keys are not configured yet.' };
 
   const svc = createServiceClient();
@@ -233,6 +234,23 @@ export async function refundOrder(
           : {}),
       })
       .eq('id', order.id);
+
+    // Logged after the refund actually succeeds at Razorpay, with the
+    // amount and the gateway's own refund id — this is the one action in
+    // the admin panel that moves real money, so it gets the most detail.
+    await logAdminAction({
+      actor,
+      action: 'order.refund',
+      entityType: 'order',
+      entityId: order.id,
+      summary: `Refunded ₹${amount.toLocaleString('en-IN')} on order #${order.id.slice(0, 8)}`,
+      detail: {
+        amount_rupees: amount,
+        razorpay_refund_id: refund.id,
+        razorpay_payment_id: order.razorpay_payment_id,
+        total_refunded_after: alreadyRefunded + amount,
+      },
+    });
 
     if (order.user_id) {
       await svc.from('notifications').insert({

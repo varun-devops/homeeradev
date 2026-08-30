@@ -6,6 +6,7 @@ import { AnimatePresence, motion, useReducedMotion, type Variants } from 'framer
 import { formatINR } from '@/lib/format';
 import SubCollectionDeck from '@/components/SubCollectionDeck';
 import Img from '@/components/Img';
+import { lockScroll } from '@/lib/scroll-lock';
 
 export type LiteProduct = {
   id: string;
@@ -181,7 +182,13 @@ export default function ShopCollectionDeck({ collections, products }: Props) {
 
   // Lock scroll + Escape steps back one level.
   useEffect(() => {
-    document.body.style.overflow = openSlug ? 'hidden' : '';
+    if (!openSlug) return;
+    // Reference-counted: see lib/scroll-lock.ts. Clicking a product card
+    // navigates away while this overlay is still "open" (openSlug is only
+    // cleared by Escape or the back button, not by following a Link), so
+    // this lock must release cleanly on unmount rather than assume it owns
+    // document.body.style.overflow outright.
+    const unlock = lockScroll();
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
       setDir(-1);
@@ -190,7 +197,7 @@ export default function ShopCollectionDeck({ collections, products }: Props) {
     };
     window.addEventListener('keydown', onKey);
     return () => {
-      document.body.style.overflow = '';
+      unlock();
       window.removeEventListener('keydown', onKey);
     };
   }, [openSlug, openSub]);

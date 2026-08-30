@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
 import { signOut } from '@/app/admin/actions';
+import { lockScroll } from '@/lib/scroll-lock';
 
 type NavRole = 'admin' | 'staff';
 
@@ -14,6 +15,7 @@ const links: { href: string; label: string; roles?: NavRole[] }[] = [
   { href: '/admin/orders', label: 'Orders', roles: ['admin'] },
   { href: '/admin/payments', label: 'Payments', roles: ['admin'] },
   { href: '/admin/users', label: 'Users' },
+  { href: '/admin/audit', label: 'Audit log', roles: ['admin'] },
   { href: '/admin/account', label: 'Account' },
 ];
 
@@ -28,12 +30,14 @@ export default function AdminNav({ email, role }: { email: string; role: NavRole
     setOpen(false);
   }, [pathname]);
 
-  // Lock body scroll while the drawer is open.
+  // Lock body scroll while the drawer is open. Reference-counted (see
+  // lib/scroll-lock.ts) — this is the third component that needed this
+  // exact lock, and a direct `document.body.style.overflow = 'hidden'` in
+  // each one independently is how one of them ends up leaking.
   useEffect(() => {
-    document.body.style.overflow = open ? 'hidden' : '';
-    return () => {
-      document.body.style.overflow = '';
-    };
+    if (!open) return;
+    const unlock = lockScroll();
+    return unlock;
   }, [open]);
 
   const navLinks = visibleLinks.map((l) => {

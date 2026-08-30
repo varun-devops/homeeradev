@@ -172,11 +172,27 @@ export const getAllProductSlugs = unstable_cache(
 );
 
 /**
- * Build the collection → sub-collection tree from the active products,
- * with a representative image (first product image) per top-level
- * collection. Used by the storefront's collection deck.
+ * Curated card art, keyed by slug, from the collections / sub_collections
+ * tables. Whatever an admin sets there wins over the fallback below.
  */
-export function buildCollections(products: ShopProduct[]): CollectionGroup[] {
+export type CollectionArt = {
+  collections?: Record<string, string | null>;
+  subCollections?: Record<string, string | null>;
+};
+
+/**
+ * Build the collection → sub-collection tree from the active products.
+ *
+ * Card images prefer `art` — the image an admin set on the collection or
+ * sub-collection row — and fall back to the first product photo in that
+ * group. The fallback used to be the only source, which meant setting a
+ * sub-collection's image in the admin panel had no visible effect: the
+ * shop went on showing whichever product happened to sort first.
+ */
+export function buildCollections(
+  products: ShopProduct[],
+  art: CollectionArt = {},
+): CollectionGroup[] {
   const byCat = new Map<string, ShopProduct[]>();
   for (const p of products) {
     if (!byCat.has(p.category_slug)) byCat.set(p.category_slug, []);
@@ -186,7 +202,8 @@ export function buildCollections(products: ShopProduct[]): CollectionGroup[] {
   const groups: CollectionGroup[] = [];
   for (const [catSlug, items] of byCat) {
     const label = items[0].category;
-    const image = items.find((p) => p.image_url)?.image_url ?? null;
+    const image =
+      art.collections?.[catSlug] ?? items.find((p) => p.image_url)?.image_url ?? null;
 
     const subMap = new Map<string, ShopProduct[]>();
     for (const p of items) {
@@ -197,7 +214,8 @@ export function buildCollections(products: ShopProduct[]): CollectionGroup[] {
       .map(([slug, sItems]) => ({
         slug,
         label: sItems[0].sub_category,
-        image: sItems.find((p) => p.image_url)?.image_url ?? null,
+        image:
+          art.subCollections?.[slug] ?? sItems.find((p) => p.image_url)?.image_url ?? null,
         count: sItems.length,
       }))
       // Richest sub-collections lead, so the grid opens on real depth.

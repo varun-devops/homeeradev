@@ -13,7 +13,6 @@ export type SubCollectionItem = {
 };
 
 type Props = {
-  collectionLabel: string;
   subs: SubCollectionItem[];
   onOpen: (slug: string) => void;
 };
@@ -36,10 +35,12 @@ type Props = {
  * would otherwise steal these events to scroll the window behind the
  * overlay. That attribute is Lenis's own opt-out for nested scrollers.
  */
-export default function SubCollectionDeck({ collectionLabel, subs, onOpen }: Props) {
+export default function SubCollectionDeck({ subs, onOpen }: Props) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const [index, setIndex] = useState(0);
   const reduce = useReducedMotion();
+  // Still needed by the dot rail, which hides itself for a single card.
+  const total = subs.length;
 
   // Scale/fade each card by how far its centre is from the viewport centre,
   // and track which one is currently in focus for the counter.
@@ -105,19 +106,11 @@ export default function SubCollectionDeck({ collectionLabel, subs, onOpen }: Pro
     target?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
   };
 
-  const total = subs.length;
 
   return (
     <div className="heSub">
       <style dangerouslySetInnerHTML={{ __html: styles }} />
 
-      {/* Fixed chrome — sits above the scroller, never scrolls with it. */}
-      <div className="heSub-hud" aria-hidden="true">
-        <span className="heSub-hudCol">{collectionLabel}</span>
-        <span className="heSub-hudIdx">
-          {String(index + 1).padStart(2, '0')} / {String(total).padStart(2, '0')}
-        </span>
-      </div>
 
       <div
         className="heSub-scroller"
@@ -158,9 +151,6 @@ export default function SubCollectionDeck({ collectionLabel, subs, onOpen }: Pro
                   <span className="heSub-cta">View collection</span>
                 </span>
 
-                <span className="heSub-count">
-                  {s.count} {s.count === 1 ? 'piece' : 'pieces'}
-                </span>
               </button>
             </article>
           </section>
@@ -190,22 +180,6 @@ export default function SubCollectionDeck({ collectionLabel, subs, onOpen }: Pro
 const styles = `
   .heSub { position: relative; height: 100svh; }
 
-  /* ---------- fixed HUD ---------- */
-  .heSub-hud {
-    position: absolute; z-index: 4;
-    top: clamp(1rem, 3vh, 1.75rem); left: 0; right: 0;
-    display: flex; align-items: center; justify-content: center;
-    gap: 1rem; pointer-events: none;
-  }
-  .heSub-hudCol {
-    font-size: 0.7rem; letter-spacing: 0.34em; text-transform: uppercase;
-    color: var(--ink-soft);
-  }
-  .heSub-hudIdx {
-    font-size: 0.7rem; letter-spacing: 0.2em; color: var(--gold);
-    font-variant-numeric: tabular-nums;
-  }
-
   /* ---------- the scroller ---------- */
   .heSub-scroller {
     height: 100svh;
@@ -218,10 +192,14 @@ const styles = `
   .heSub-scroller::-webkit-scrollbar { display: none; }
 
   .heSub-slide {
+    /* svh, deliberately not dvh: dvh grows and shrinks as the mobile URL
+       bar hides, which resizes every slide mid-scroll and fights snapping. */
     height: 100svh;
-    scroll-snap-align: center;
+    scroll-snap-align: start;
     display: grid;
-    place-items: center;
+    /* stretch, not center: centring sizes the card to its content and
+       left the photo short of the viewport edges. */
+    place-items: stretch;
   }
 
   /* ---------- the card ----------
@@ -298,20 +276,6 @@ const styles = `
   }
   .heSub-cardBtn:hover .heSub-cta { background: var(--gold-bright); }
 
-  .heSub-count {
-    position: absolute;
-    /* Clear of the fixed HUD, which sits centred at the very top. */
-    top: clamp(4.5rem, 11vh, 6rem);
-    right: var(--pad-x);
-    padding: 0.4rem 0.9rem;
-    border-radius: 999px;
-    background: rgba(10,10,10,0.6);
-    backdrop-filter: blur(6px);
-    color: var(--ink);
-    font-size: 0.68rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-  }
 
   /* ---------- dot rail ---------- */
   .heSub-rail {

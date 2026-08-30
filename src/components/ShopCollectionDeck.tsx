@@ -391,7 +391,6 @@ export default function ShopCollectionDeck({ collections, products }: Props) {
                     exit="exit"
                   >
                     <SubCollectionDeck
-                      collectionLabel={openCol.label}
                       subs={openCol.subCollections}
                       onOpen={openSubCollection}
                     />
@@ -540,28 +539,24 @@ const styles = `
     background: linear-gradient(180deg, rgba(8,8,8,0.80), rgba(8,8,8,0.93) 42%, #080808 80%);
   }
   .heShop-overlayInner {
-    position: relative; z-index: 2; min-height: 100svh;
-    padding: clamp(7.5rem, 16vh, 10rem) var(--pad-x) clamp(4rem, 10vh, 7rem);
-  }
+    position: relative; z-index: 2; min-height: 100svh;  }
   /* The sub-collection deck sizes itself to 100svh, so the inner wrapper
      only supplies the side gutter — vertical padding would push it past
      the fold and reintroduce a scrollbar. */
   .heShop-overlay[data-level='subs'] .heShop-overlayInner {
-    min-height: 0;
-    padding: 0 var(--pad-x);
-  }
+    min-height: 0;  }
 
   /* Back arrow — parked under the logo, at the page gutter.
      top MUST clear the fixed header (~74px tall at z-index 100), which
      otherwise sits over this button and eats the click. */
   .heShop-back {
     position: fixed; top: 5.25rem; left: var(--pad-x); z-index: 95;
-    width: 44px; height: 44px; display: grid; place-items: center; border: 1px solid var(--line-strong);
+    width: 44px; height: 44px; display: grid; place-items: center; 
     color: var(--ink); border-radius: 999px; cursor: pointer; padding: 0;
     transition: background 240ms var(--ease-out), border-color 240ms var(--ease-out),
                 transform 240ms var(--ease-out);
   }
-  .heShop-back:hover { background: rgba(212,181,116,0.16); border-color: var(--gold); transform: translateX(-2px); }
+  .heShop-back:hover { background: rgba(212,181,116,0.16); transform: translateX(-2px); }
   .heShop-back:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 
   /* Level 2 (the sub-collection card stack) styles itself — see

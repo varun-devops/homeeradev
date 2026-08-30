@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { getShopProducts, buildCollections } from '@/lib/catalog';
+import { getCollections, getSubCollections } from '@/lib/collections';
 import ShopCollectionDeck from '@/components/ShopCollectionDeck';
 
 export const metadata: Metadata = {
@@ -21,8 +22,19 @@ export const revalidate = 3600;
  * component; this page only shapes the data it needs.
  */
 export default async function ShopPage() {
-  const products = await getShopProducts();
-  const collections = buildCollections(products);
+  const [products, collectionRows, subCollectionRows] = await Promise.all([
+    getShopProducts(),
+    getCollections(),
+    getSubCollections(),
+  ]);
+
+  // Card art an admin curated in /admin/collections. Without this the deck
+  // falls back to the first product photo in each group, which is why a
+  // sub-collection image set in the admin panel never showed up here.
+  const collections = buildCollections(products, {
+    collections: Object.fromEntries(collectionRows.map((c) => [c.slug, c.image_url])),
+    subCollections: Object.fromEntries(subCollectionRows.map((s) => [s.slug, s.image_url])),
+  });
 
   // Shape the products for the client deck — only what the grid renders.
   const lite = products.map((p) => {

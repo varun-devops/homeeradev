@@ -75,18 +75,19 @@ export default function PageTransition({ children }: { children: React.ReactNode
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: `
-        /* Forward: hinged on the right edge, swinging in from the right —
-           a page being turned right to left. */
+        /* A soft drift rather than a door swing.
+           The old 62deg rotateY threw the whole page edge-on and snapped it
+           flat in 720ms, which on a photography-led site distorted the very
+           images it was revealing. This keeps the directional read -- forward
+           enters from the right, back from the left -- with a shallow angle
+           and a small slide, over a longer, gentler curve. */
         @keyframes hePageFoldFwd {
-          from { opacity: 0; transform: perspective(1800px) rotateY(62deg); }
-          55%  { opacity: 1; }
-          to   { opacity: 1; transform: perspective(1800px) rotateY(0deg); }
+          from { opacity: 0; transform: perspective(2200px) translate3d(3.5%, 0, 0) rotateY(7deg) scale(0.985); }
+          to   { opacity: 1; transform: perspective(2200px) translate3d(0, 0, 0) rotateY(0deg) scale(1); }
         }
-        /* Back: the exact mirror, hinged left and swinging in from the left. */
         @keyframes hePageFoldBack {
-          from { opacity: 0; transform: perspective(1800px) rotateY(-62deg); }
-          55%  { opacity: 1; }
-          to   { opacity: 1; transform: perspective(1800px) rotateY(0deg); }
+          from { opacity: 0; transform: perspective(2200px) translate3d(-3.5%, 0, 0) rotateY(-7deg) scale(0.985); }
+          to   { opacity: 1; transform: perspective(2200px) translate3d(0, 0, 0) rotateY(0deg) scale(1); }
         }
 
         .hePageFold {
@@ -94,8 +95,11 @@ export default function PageTransition({ children }: { children: React.ReactNode
           /* Fill mode "backwards", NOT "both": the first frame is applied
              during the delay, and the element is released the moment the
              run ends — so no transform is left on the node. */
-          animation-duration: 720ms;
-          animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+          animation-duration: 900ms;
+          /* Long tail, no overshoot: most of the motion happens early and
+             the last of it settles slowly, which is what reads as smooth
+             rather than merely slow. */
+          animation-timing-function: cubic-bezier(0.22, 0.61, 0.24, 1);
           animation-fill-mode: backwards;
         }
         .hePageFold--fwd {

@@ -195,6 +195,10 @@ const styles = `
     /* svh, deliberately not dvh: dvh grows and shrinks as the mobile URL
        bar hides, which resizes every slide mid-scroll and fights snapping. */
     height: 100svh;
+    /* Reserve the fixed header. Without it the card ran to the very top and
+       the logo and menu button sat directly on the photograph. box-sizing is
+       border-box globally, so the slide still measures one viewport. */
+    padding-top: var(--header-h);
     scroll-snap-align: start;
     display: grid;
     /* stretch, not center: centring sizes the card to its content and

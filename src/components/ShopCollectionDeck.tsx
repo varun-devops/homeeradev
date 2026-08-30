@@ -225,7 +225,14 @@ export default function ShopCollectionDeck({ collections, products }: Props) {
   const items = openSubCol ? productsFor(openSubCol.slug) : [];
 
   return (
-    <section ref={rootRef} aria-label="Shop collections" className="heShop">
+    <section
+      ref={rootRef}
+      aria-label="Shop collections"
+      className="heShop"
+      // Lenis binds the wheel globally; its smoothing overrides CSS
+      // scroll-snap, so this scroller takes its own wheel events.
+      data-lenis-prevent
+    >
       <style dangerouslySetInnerHTML={{ __html: styles }} />
 
       {/* ============ LEVEL 1 — COLLECTION DECK ============ */}
@@ -456,9 +463,30 @@ export default function ShopCollectionDeck({ collections, products }: Props) {
 
 // ──────────────────────────────────────────────────────────────────
 const styles = `
-  .heShop { position: relative; width: 100%; }
+  /* One collection per screen. The panels were already a viewport tall, but
+     the page scrolled through them freely, so a scroll could stop halfway
+     between two and show neither. Snapping makes each card a stop.
+
+     A scroll container of its own rather than snapping the page: Lenis owns
+     the window scroll site-wide and its smoothing fights CSS snap, so the
+     deck opts out with data-lenis-prevent and snaps natively -- the same
+     arrangement SubCollectionDeck already uses one level down. */
+  .heShop {
+    position: relative; width: 100%;
+    height: 100svh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scroll-snap-type: y mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .heShop::-webkit-scrollbar { display: none; }
   .heShop-panel {
     position: relative; height: 100svh; width: 100%;
+    scroll-snap-align: start;
+    /* Same reservation as the sub-collection cards, so the header never
+       sits on a card's own title. */
+    padding-top: var(--header-h);
     overflow: hidden; display: grid; place-items: center; cursor: pointer;
   }
   .heShop-panel:focus-visible { outline: 2px solid var(--gold); outline-offset: -6px; }

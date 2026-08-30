@@ -30,6 +30,11 @@
   --section-y: clamp(3.25rem, 9vw, 6rem); /* vertical section pad  */
   --gap: clamp(1rem, 2.5vw, 1.5rem);      /* grid / flex gap       */
   --gap-lg: clamp(1.5rem, 4vw, 3rem);     /* large layout gap      */
+
+  /* Height the fixed header occupies. Full-bleed panels reserve this at
+     the top so the logo and the menu button never sit on top of a card's
+     own content. One token so the bar and the panels cannot drift apart. */
+  --header-h: clamp(4.25rem, 8vh, 5.25rem);
 }
 
 * { box-sizing: border-box; }

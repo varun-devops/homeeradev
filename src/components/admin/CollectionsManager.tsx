@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import MediaUploader from '@/components/admin/MediaUploader';
 import Img from '@/components/Img';
 import {
@@ -14,12 +15,18 @@ import {
 type Collection = { slug: string; label: string; copy: string | null; image_url: string | null; sort_order: number };
 type SubCollection = { slug: string; label: string; collection_slug: string; copy: string | null; sort_order: number };
 
+/** Key products are counted by: "<category label>␟<sub_category label>". */
+const countKey = (category: string, sub: string) => `${category}␟${sub}`;
+
 export default function CollectionsManager({
   collections,
   subCollections,
+  counts,
 }: {
   collections: Collection[];
   subCollections: SubCollection[];
+  /** Product count per category/sub-category pair, for the drill-down links. */
+  counts: Record<string, number>;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -33,6 +40,7 @@ export default function CollectionsManager({
           key={c.slug}
           collection={c}
           subs={subCollections.filter((s) => s.collection_slug === c.slug)}
+          counts={counts}
           onChange={refresh}
           start={start}
         />
@@ -63,16 +71,23 @@ export default function CollectionsManager({
 function CollectionCard({
   collection,
   subs,
+  counts,
   onChange,
   start,
 }: {
   collection: Collection;
   subs: SubCollection[];
+  counts: Record<string, number>;
   onChange: () => void;
   start: (cb: () => void) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [addingSub, setAddingSub] = useState(false);
+
+  const collectionTotal = subs.reduce(
+    (sum, s) => sum + (counts[countKey(collection.label, s.label)] ?? 0),
+    0,
+  );
 
   return (
     <div style={card}>
@@ -91,19 +106,25 @@ function CollectionCard({
           }
         />
       ) : (
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
           <div style={{ width: 64, height: 64, borderRadius: 8, overflow: 'hidden', background: '#15140f', flexShrink: 0 }}>
             {collection.image_url && (
               // eslint-disable-next-line @next/next/no-img-element
               <Img src={collection.image_url} alt="" sizes="64px" widths={[64, 128, 192]} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             )}
           </div>
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: 1, minWidth: 160 }}>
             <p style={{ margin: 0, fontSize: '1.05rem' }}>{collection.label}</p>
             <p style={{ margin: '0.2rem 0 0', fontSize: '0.78rem', color: 'var(--ink-mute)' }}>
-              {subs.length} sub-collection{subs.length !== 1 ? 's' : ''} · /{collection.slug}
+              {subs.length} sub-collection{subs.length !== 1 ? 's' : ''} · /{collection.slug} ·{' '}
+              {collectionTotal} product{collectionTotal !== 1 ? 's' : ''}
             </p>
           </div>
+          {/* Straight into the admin product list, pre-filtered to this
+              category — the drill-down the collections page needed. */}
+          <Link href={`/admin/products?category=${encodeURIComponent(collection.label)}`} style={miniBtnLink}>
+            View products
+          </Link>
           <button type="button" onClick={() => setEditing(true)} style={miniBtn}>Edit</button>
           <button
             type="button"
@@ -125,26 +146,35 @@ function CollectionCard({
       {/* Sub-collections */}
       <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
-          {subs.map((s) => (
-            <span key={s.slug} style={subChip}>
-              {s.label}
-              <button
-                type="button"
-                aria-label="Remove"
-                onClick={() => {
-                  if (confirm(`Delete sub-collection "${s.label}"?`))
-                    start(async () => {
-                      const res = await deleteSubCollection(s.slug);
-                      if (res.ok) onChange();
-                      else alert(res.message);
-                    });
-                }}
-                style={{ marginLeft: 6, background: 'none', border: 'none', color: 'var(--ink-mute)', cursor: 'pointer' }}
-              >
-                ×
-              </button>
-            </span>
-          ))}
+          {subs.map((s) => {
+            const count = counts[countKey(collection.label, s.label)] ?? 0;
+            return (
+              <span key={s.slug} style={subChip}>
+                <Link
+                  href={`/admin/products?category=${encodeURIComponent(collection.label)}&sub=${encodeURIComponent(s.label)}`}
+                  style={subChipLink}
+                  title={`View ${count} product${count !== 1 ? 's' : ''} in ${s.label}`}
+                >
+                  {s.label} <span style={{ color: 'var(--ink-mute)' }}>· {count}</span>
+                </Link>
+                <button
+                  type="button"
+                  aria-label="Remove"
+                  onClick={() => {
+                    if (confirm(`Delete sub-collection "${s.label}"?`))
+                      start(async () => {
+                        const res = await deleteSubCollection(s.slug);
+                        if (res.ok) onChange();
+                        else alert(res.message);
+                      });
+                  }}
+                  style={{ marginLeft: 6, background: 'none', border: 'none', color: 'var(--ink-mute)', cursor: 'pointer' }}
+                >
+                  ×
+                </button>
+              </span>
+            );
+          })}
           {addingSub ? (
             <SubEditor
               onCancel={() => setAddingSub(false)}
@@ -219,6 +249,8 @@ function SubEditor({ onSave, onCancel }: { onSave: (label: string) => void; onCa
 const card: React.CSSProperties = { border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: '1.25rem 1.5rem', background: 'rgba(255,255,255,0.02)' };
 const input: React.CSSProperties = { background: 'rgba(255,255,255,0.04)', border: '1px solid var(--line-strong)', borderRadius: 8, padding: '0.65rem 0.9rem', color: 'var(--ink)', fontSize: '0.92rem', width: '100%' };
 const miniBtn: React.CSSProperties = { padding: '0.45rem 0.9rem', borderRadius: 7, border: '1px solid var(--line-strong)', background: 'transparent', color: 'var(--ink)', fontSize: '0.74rem', letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer' };
+const miniBtnLink: React.CSSProperties = { ...miniBtn, textDecoration: 'none', display: 'inline-block' };
 const saveBtn: React.CSSProperties = { ...miniBtn, background: 'var(--gold)', color: '#0e0e0e', border: 'none', fontWeight: 600 };
 const addBtn: React.CSSProperties = { ...miniBtn, padding: '0.9rem', borderStyle: 'dashed', color: 'var(--gold)' };
 const subChip: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', padding: '0.4rem 0.75rem', borderRadius: 999, border: '1px solid var(--line-strong)', fontSize: '0.8rem', color: 'var(--ink-soft)' };
+const subChipLink: React.CSSProperties = { color: 'inherit', textDecoration: 'none' };

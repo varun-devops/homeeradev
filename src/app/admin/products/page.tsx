@@ -8,7 +8,13 @@ export const dynamic = 'force-dynamic';
 const BASE_COLUMNS =
   'id, sku, name, category, sub_category, price, image_url, is_active, created_at';
 
-export default async function AdminProductsPage() {
+export default async function AdminProductsPage({
+  searchParams,
+}: {
+  // Populated by the "View products" / sub-collection links on
+  // /admin/collections, so a click there lands pre-filtered here.
+  searchParams: { category?: string; sub?: string };
+}) {
   const svc = createServiceClient();
 
   // updated_at arrives with supabase/migration-10-product-updated-at.sql.
@@ -46,7 +52,11 @@ export default async function AdminProductsPage() {
         Filter by category, sub-category, name or item number. Prices and visibility
         can be edited inline.
       </p>
-      <AdminProductsTable products={products} />
+      <AdminProductsTable
+        products={products}
+        initialCategory={searchParams.category ?? ''}
+        initialSubCategory={searchParams.sub ?? ''}
+      />
     </div>
   );
 }

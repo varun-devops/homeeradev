@@ -29,11 +29,20 @@ type Sort = 'name' | 'newest' | 'edited' | 'price-desc' | 'price-asc';
  * round trip per keystroke; if the catalogue ever outgrows that, this is the
  * place to move to a server query.
  */
-export default function AdminProductsTable({ products }: { products: ProductRow[] }) {
+export default function AdminProductsTable({
+  products,
+  initialCategory = '',
+  initialSubCategory = '',
+}: {
+  products: ProductRow[];
+  /** Seeds the filters from a link on /admin/collections, e.g. "View products". */
+  initialCategory?: string;
+  initialSubCategory?: string;
+}) {
   const [rows, setRows] = useState(products);
   const [query, setQuery] = useState('');
-  const [category, setCategory] = useState('');
-  const [subCategory, setSubCategory] = useState('');
+  const [category, setCategory] = useState(initialCategory);
+  const [subCategory, setSubCategory] = useState(initialSubCategory);
   const [visibility, setVisibility] = useState<'' | 'visible' | 'hidden'>('');
   const [sort, setSort] = useState<Sort>('name');
   const [pending, start] = useTransition();

@@ -2,9 +2,9 @@
 
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
-import MediaUploader from '@/components/admin/MediaUploader';
 import ProductImages from '@/components/admin/ProductImages';
 import SavingBar from '@/components/admin/SavingBar';
+import { isVideoUrl } from '@/lib/media';
 import { createProduct, updateProduct, deleteProduct, type ProductInput } from '@/app/admin/actions';
 
 /** Sentinel for the "type a new one" option in the sub-category select. */
@@ -47,14 +47,14 @@ export default function ProductForm({ product, collections, subCollections }: Pr
     customizable: product?.customizable ?? false,
     customization_note: product?.customization_note ?? '',
   });
-  // One ordered list: [0] is the main image, the rest are the gallery.
-  // Split back apart only on save, so the form has a single source of truth.
+  // One ordered list holding photos and video together, split back into
+  // the three stored columns only on save. The form keeps a single source
+  // of truth so a video can be dragged among the photos like anything else.
   const [images, setImages] = useState<string[]>(() =>
-    [product?.image_url, ...(product?.gallery_urls ?? [])].filter(
+    [product?.image_url, ...(product?.gallery_urls ?? []), product?.video_url].filter(
       (u): u is string => typeof u === 'string' && u.length > 0,
     ),
   );
-  const [video, setVideo] = useState<string[]>(product?.video_url ? [product.video_url] : []);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   // True while the sub-category is being typed rather than picked.
   const [addingSub, setAddingSub] = useState(false);
@@ -73,6 +73,8 @@ export default function ProductForm({ product, collections, subCollections }: Pr
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     setMsg(null);
+    const photos = images.filter((u) => !isVideoUrl(u));
+    const clips = images.filter(isVideoUrl);
     const input: ProductInput = {
       id: product?.id,
       sku: f.sku,
@@ -85,9 +87,13 @@ export default function ProductForm({ product, collections, subCollections }: Pr
       size: f.size || null,
       weight_kg: f.weight_kg === '' ? null : Number(f.weight_kg),
       price: f.price === '' ? 0 : Number(f.price),
-      image_url: images[0] ?? null,
-      gallery_urls: images.slice(1),
-      video_url: video[0] ?? null,
+      // The stored shape still has three fields, so split the one list:
+      // first photo is the main image, remaining photos are the gallery,
+      // and the first video is the product video. Order within the list
+      // is preserved, so the gallery keeps the sequence set by dragging.
+      image_url: photos[0] ?? null,
+      gallery_urls: photos.slice(1),
+      video_url: clips[0] ?? null,
       is_active: f.is_active,
       // migration-05 attributes
       brand: f.brand || null,
@@ -267,7 +273,6 @@ export default function ProductForm({ product, collections, subCollections }: Pr
       {/* Media */}
       <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
         <ProductImages value={images} onChange={setImages} />
-        <MediaUploader label="Product video" accept="video" value={video} onChange={setVideo} />
       </div>
 
       <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.85rem', color: 'var(--ink-soft)' }}>

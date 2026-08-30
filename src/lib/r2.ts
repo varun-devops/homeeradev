@@ -117,6 +117,77 @@ export async function r2Put(
 }
 
 /**
+ * A short-lived URL the browser can PUT a file to directly.
+ *
+ * Uploading through our own route cannot work for video: a serverless
+ * function on Vercel caps the request body at 4.5 MB, and the platform
+ * rejects anything larger with a plain-text "Request Entity Too Large"
+ * before the handler runs — which is why the client saw a JSON parse error
+ * rather than a size message. Presigning moves the bytes browser → R2 and
+ * leaves only the signature to us, so the ceiling becomes R2's, not
+ * Vercel's. It is also cheaper: the file never occupies a function.
+ *
+ * The signature covers the method, key, content type and expiry, so a
+ * returned URL can only be used to write the one object it was issued for,
+ * and only until it expires.
+ *
+ * SigV4 query-string form: everything moves into the query except `host`,
+ * and the payload hash is the literal UNSIGNED-PAYLOAD, since we cannot
+ * know the body's hash at signing time.
+ */
+export function r2PresignPut(
+  key: string,
+  contentType: string,
+  expiresInSeconds = 900,
+): string {
+  if (!r2Configured()) throw new Error('R2 is not configured');
+
+  const host = `${ACCOUNT_ID}.r2.cloudflarestorage.com`;
+  const canonicalUri = `/${encodeKey(BUCKET)}/${encodeKey(key)}`;
+
+  const amzDate = new Date().toISOString().replace(/[:-]|\.\d{3}/g, '');
+  const dateStamp = amzDate.slice(0, 8);
+  const scope = `${dateStamp}/${REGION}/s3/aws4_request`;
+
+  // content-type is signed so the URL cannot be reused to store something of
+  // a different type than the one it was requested for.
+  const signedHeaders = 'content-type;host';
+
+  // Query params must be sorted by name, and each part encoded.
+  const query = [
+    ['X-Amz-Algorithm', 'AWS4-HMAC-SHA256'],
+    ['X-Amz-Credential', `${ACCESS_KEY}/${scope}`],
+    ['X-Amz-Date', amzDate],
+    ['X-Amz-Expires', String(expiresInSeconds)],
+    ['X-Amz-SignedHeaders', signedHeaders],
+  ]
+    .map(([k, v]) => [uriEncode(k), uriEncode(v)] as const)
+    .sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))
+    .map(([k, v]) => `${k}=${v}`)
+    .join('&');
+
+  const canonicalHeaders = `content-type:${contentType}\nhost:${host}\n`;
+
+  const canonicalRequest = [
+    'PUT',
+    canonicalUri,
+    query,
+    canonicalHeaders,
+    signedHeaders,
+    'UNSIGNED-PAYLOAD',
+  ].join('\n');
+
+  const stringToSign = ['AWS4-HMAC-SHA256', amzDate, scope, sha256(canonicalRequest)].join('\n');
+  const signingKey = hmac(
+    hmac(hmac(hmac(`AWS4${SECRET_KEY}`, dateStamp), REGION), 's3'),
+    'aws4_request',
+  );
+  const signature = createHmac('sha256', signingKey).update(stringToSign).digest('hex');
+
+  return `https://${host}${canonicalUri}?${query}&X-Amz-Signature=${signature}`;
+}
+
+/**
  * A collision-free object key. The random suffix means re-uploading a file
  * with the same name never overwrites the old one — important because objects
  * are served with an immutable cache header.

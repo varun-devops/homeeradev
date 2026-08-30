@@ -2,10 +2,13 @@
 
 import { useRef, useState } from 'react';
 import Img from '@/components/Img';
+import { isVideoUrl, videoPoster } from '@/lib/media';
+import { uploadFile } from '@/lib/upload-client';
 
 /**
- * One ordered list of product photos, replacing the old split between a
- * "Main image" field and a separate "Gallery images" field.
+ * One ordered list of product media, replacing the old split between a
+ * "Main image" field, a separate "Gallery images" field, and a separate
+ * video uploader.
  *
  * The order IS the meaning: position 1 is the main image the shop and the
  * admin table show, the rest become the gallery in the order given. That
@@ -29,16 +32,18 @@ type Props = {
 export default function ProductImages({ value, onChange, max = 12 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
-  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  const [progress, setProgress] = useState<{ done: number; total: number; fraction: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [fileOver, setFileOver] = useState(false);
   const dragIndex = useRef<number | null>(null);
   const [overIndex, setOverIndex] = useState<number | null>(null);
 
   const upload = async (files: File[]) => {
-    const images = files.filter((f) => f.type.startsWith('image/'));
+    const images = files.filter(
+      (f) => f.type.startsWith('image/') || f.type.startsWith('video/'),
+    );
     if (images.length === 0) {
-      setError('Only image files can be added here.');
+      setError('Only image or video files can be added here.');
       return;
     }
     const room = max - value.length;
@@ -50,18 +55,18 @@ export default function ProductImages({ value, onChange, max = 12 }: Props) {
 
     setError(images.length > room ? `Only ${room} more photo(s) could be added.` : null);
     setBusy(true);
-    setProgress({ done: 0, total: batch.length });
+    setProgress({ done: 0, total: batch.length, fraction: 0 });
 
     const uploaded: string[] = [];
     try {
       for (const file of batch) {
-        const fd = new FormData();
-        fd.append('file', file);
-        const res = await fetch('/api/admin/upload', { method: 'POST', body: fd });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Upload failed');
-        uploaded.push(data.url);
-        setProgress({ done: uploaded.length, total: batch.length });
+        // Straight to R2 — see lib/upload-client.ts for why this cannot
+        // go through our own route.
+        const res = await uploadFile(file, (fraction) =>
+          setProgress({ done: uploaded.length, total: batch.length, fraction }),
+        );
+        uploaded.push(res.url);
+        setProgress({ done: uploaded.length, total: batch.length, fraction: 0 });
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed');
@@ -90,9 +95,9 @@ export default function ProductImages({ value, onChange, max = 12 }: Props) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.75rem', flexWrap: 'wrap' }}>
-        <span style={labelStyle}>Photos</span>
+        <span style={labelStyle}>Photos &amp; video</span>
         <span style={{ fontSize: '0.76rem', color: 'var(--ink-mute)' }}>
-          Drag to reorder — the first one is the main image. {value.length}/{max}
+          Drag to reorder — the first photo is the main image. {value.length}/{max}
         </span>
       </div>
 
@@ -133,14 +138,21 @@ export default function ProductImages({ value, onChange, max = 12 }: Props) {
                 transform: overIndex === i ? 'translateY(-2px)' : 'none',
               }}
             >
+              {/* A video tile shows its own still frame — loading the clip
+                  itself just to fill a 140px square was megabytes each. */}
               <Img
-                src={url}
+                src={isVideoUrl(url) ? videoPoster(url, 280) || url : url}
                 alt=""
                 sizes="140px"
                 widths={[140, 280, 420]}
                 draggable={false}
                 style={{ width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }}
               />
+              {isVideoUrl(url) && (
+                <span style={videoMark} aria-hidden="true">
+                  ▶
+                </span>
+              )}
 
               {/* Position, and what position 1 means. */}
               <span style={i === 0 ? mainBadge : orderBadge}>{i === 0 ? 'Main' : i + 1}</span>
@@ -213,15 +225,18 @@ export default function ProductImages({ value, onChange, max = 12 }: Props) {
       >
         {busy ? (
           <span style={{ fontSize: '0.85rem', color: 'var(--ink-soft)' }}>
-            Uploading{progress ? ` ${progress.done}/${progress.total}` : ''}…
+            {progress
+              ? `Uploading ${progress.done + 1}/${progress.total}` +
+                (progress.fraction > 0 ? ` — ${Math.round(progress.fraction * 100)}%` : '…')
+              : 'Uploading…'}
           </span>
         ) : (
           <>
             <span style={{ fontSize: '0.9rem', color: 'var(--ink)' }}>
-              Drop photos here, or click to choose
+              Drop photos or video here, or click to choose
             </span>
             <span style={{ fontSize: '0.76rem', color: 'var(--ink-mute)' }}>
-              JPG, PNG or WebP · up to 10 MB each · several at once is fine
+              JPG, PNG, WebP up to 10 MB · MP4 or WebM up to 200 MB
             </span>
           </>
         )}
@@ -230,7 +245,7 @@ export default function ProductImages({ value, onChange, max = 12 }: Props) {
       <input
         ref={inputRef}
         type="file"
-        accept="image/*"
+        accept="image/*,video/*"
         multiple
         onChange={(e) => upload(Array.from(e.target.files ?? []))}
         style={{ display: 'none' }}
@@ -310,16 +325,30 @@ const nudgeRow: React.CSSProperties = {
   justifyContent: 'space-between',
   gap: 4,
 };
+// Icon only: the filled pills sat on top of the photo and were the
+// loudest thing in the grid. A drop-shadow keeps the chevron legible
+// over a light image without painting a box behind it.
 const nudgeBtn: React.CSSProperties = {
   width: 24,
   height: 22,
-  borderRadius: 5,
-  background: 'rgba(0,0,0,0.72)',
+  background: 'transparent',
   color: '#fff',
   border: 'none',
   cursor: 'pointer',
-  fontSize: '0.95rem',
+  fontSize: '1.25rem',
   lineHeight: 1,
+  padding: 0,
+  filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.9))',
+};
+const videoMark: React.CSSProperties = {
+  position: 'absolute',
+  inset: 0,
+  display: 'grid',
+  placeItems: 'center',
+  color: '#fff',
+  fontSize: '1.4rem',
+  textShadow: '0 1px 4px rgba(0,0,0,0.9)',
+  pointerEvents: 'none',
 };
 const dropZone: React.CSSProperties = {
   display: 'flex',

@@ -123,6 +123,45 @@ migration script reads from Cloudinary.
 
 ---
 
+## Step 3b — Allow the admin panel to upload to the bucket
+
+**Required, or every upload in the admin panel fails.**
+
+Product photos and video go from the browser straight to R2, not through the
+app. A serverless function on Vercel caps its request body at 4.5 MB and
+rejects anything larger with a plain-text error before our code runs, so a
+video could never be uploaded through it. Instead the app signs a short-lived
+URL and the browser PUTs the file to R2 itself.
+
+A browser will only do that if the bucket allows the origin, so R2 needs a
+CORS rule. Cloudflare dashboard → **R2** → your bucket → **Settings** →
+**CORS policy** → **Add CORS policy**, and paste:
+
+```json
+[
+  {
+    "AllowedOrigins": [
+      "https://www.homeraa.com",
+      "https://homeraa.com",
+      "http://localhost:3000"
+    ],
+    "AllowedMethods": ["PUT"],
+    "AllowedHeaders": ["content-type"],
+    "MaxAgeSeconds": 3600
+  }
+]
+```
+
+Only `PUT` is needed — reads are served by ImageKit, not the browser. Keep
+`localhost:3000` so uploads work while developing; drop it if you would
+rather they did not.
+
+**Symptom if this is missing:** the upload fails immediately with a message
+about CORS, and the browser console shows a blocked cross-origin request. The
+file is never written.
+
+---
+
 ## Step 4 — Move the existing media across
 
 With the keys in `.env.local`, from the project root:

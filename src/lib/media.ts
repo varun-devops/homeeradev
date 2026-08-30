@@ -114,6 +114,20 @@ export function imageSrcSet(
  * something immediately instead of waiting on the clip. Falls back to '' when
  * the video is not on ImageKit — a missing poster is better than a broken one.
  */
+/**
+ * Is this stored URL a video?
+ *
+ * By extension rather than by folder: media migrated from Cloudinary keeps
+ * its original path, so `videos/` is only reliable for things uploaded
+ * since. The extension survives both.
+ */
+export function isVideoUrl(src: string | null | undefined): boolean {
+  if (!src) return false;
+  // Strip any query (ImageKit transforms) before looking at the extension.
+  const path = src.split('?')[0].toLowerCase();
+  return /\.(mp4|webm|mov|m4v)$/.test(path);
+}
+
 export function videoPoster(src: string | null | undefined, width = 1280): string {
   if (!src) return '';
   const path = imageKitPath(src);

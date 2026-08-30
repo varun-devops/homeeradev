@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 import Img from '@/components/Img';
+import { uploadFile } from '@/lib/upload-client';
 
 /**
  * Uploads images/videos to Cloudflare R2 via /api/admin/upload and reports
@@ -36,12 +37,9 @@ export default function MediaUploader({ label, accept, multiple = false, value, 
     try {
       const uploaded: string[] = [];
       for (const file of Array.from(files)) {
-        const fd = new FormData();
-        fd.append('file', file);
-        const res = await fetch('/api/admin/upload', { method: 'POST', body: fd });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Upload failed');
-        uploaded.push(data.url);
+        // Presigned, straight to R2 — see lib/upload-client.ts.
+        const res = await uploadFile(file);
+        uploaded.push(res.url);
       }
       onChange(multiple ? [...value, ...uploaded] : uploaded.slice(0, 1));
     } catch (err) {

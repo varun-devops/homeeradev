@@ -1,3 +1,45 @@
+/* ---- Helvetica Now Light ------------------------------------------
+   Helvetica Now is a licensed Monotype face, so the files are not in this
+   repo. Drop the woff2 you have licensed into public/fonts/ under the
+   names below and these rules pick them up with no code change.
+
+   Until then every rule still resolves: the stack falls through to Inter
+   (loaded in layout.tsx), then to the system Helvetica, then Arial. That
+   ordering matters — Inter is the closest free grotesque, so the site
+   looks intentional rather than broken while the licence is sorted out.
+
+   font-display: swap keeps text visible during the swap rather than
+   holding a blank page for a font that may not be there at all. */
+@font-face {
+  font-family: 'Helvetica Now Text';
+  src: url('/fonts/HelveticaNowText-Light.woff2') format('woff2');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Helvetica Now Text';
+  src: url('/fonts/HelveticaNowText-LightItalic.woff2') format('woff2');
+  font-weight: 300;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Helvetica Now Text';
+  src: url('/fonts/HelveticaNowText-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  /* Display cut, for the large card titles. Optional: if it is absent the
+     Text cut above covers those sizes perfectly well. */
+  font-family: 'Helvetica Now Display';
+  src: url('/fonts/HelveticaNowDisplay-Light.woff2') format('woff2');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
 :root {
   --bg: #0a0a0a;
   --bg-deep: #050505;
@@ -14,6 +56,11 @@
   --line-strong: rgba(212, 181, 116, 0.35);
   --radius: 14px;
   --maxw: 1320px;
+  /* One face across the storefront and the admin panel. Everything reads
+     these two variables, so this is the only place the family is set. */
+  --font-sans: 'Helvetica Now Text', var(--font-inter), 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --font-display: 'Helvetica Now Display', 'Helvetica Now Text', var(--font-inter), 'Helvetica Neue', Helvetica, Arial, sans-serif;
+
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
 
@@ -50,7 +97,7 @@ html, body {
   padding: 0;
   background: var(--bg);
   color: var(--ink);
-  font-family: var(--font-display, 'Cormorant Garamond'), 'Times New Roman', serif;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
@@ -73,7 +120,10 @@ html, body {
 }
 
 body {
-  font-family: var(--font-sans, 'Inter'), system-ui, -apple-system, sans-serif;
+  font-family: var(--font-sans);
+  /* Light throughout — the weight is the point of the choice, so it is
+     set once here rather than repeated at every call site. */
+  font-weight: 300;
   font-size: 16px;
   line-height: 1.6;
 }
@@ -83,9 +133,11 @@ a { color: inherit; text-decoration: none; }
 img, svg, video { display: block; max-width: 100%; }
 
 h1, h2, h3, h4 {
-  font-family: var(--font-display, 'Cormorant Garamond'), serif;
-  font-weight: 500;
-  letter-spacing: -0.01em;
+  font-family: var(--font-display);
+  /* Light as well: a grotesque at display size does not need the extra
+     weight the old serif did to hold the page. */
+  font-weight: 300;
+  letter-spacing: -0.02em;
   margin: 0;
   line-height: 1.05;
   color: var(--ink);

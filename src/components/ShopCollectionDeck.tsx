@@ -8,6 +8,7 @@ import { formatINR } from '@/lib/format';
 import SubCollectionDeck from '@/components/SubCollectionDeck';
 import Img from '@/components/Img';
 import CardMedia from '@/components/CardMedia';
+import ScrollHint from '@/components/ScrollHint';
 import { lockScroll } from '@/lib/scroll-lock';
 
 export type LiteProduct = {
@@ -237,6 +238,9 @@ export default function ShopCollectionDeck({ collections, products }: Props) {
       // scroll-snap, so this scroller takes its own wheel events.
       data-lenis-prevent
     >
+      {/* Fixed, so one for the whole deck rather than one per panel.
+          Hidden while an overlay is up — that level draws its own. */}
+      {collections.length > 1 && !openSlug && <ScrollHint />}
       <style dangerouslySetInnerHTML={{ __html: styles }} />
 
       {/* ============ LEVEL 1 — COLLECTION DECK ============ */}
@@ -469,14 +473,19 @@ const styles = `
       radial-gradient(ellipse 95% 70% at 50% 50%, transparent 45%, rgba(0,0,0,0.62) 100%),
       linear-gradient(180deg, rgba(0,0,0,0.35), transparent 28%, transparent 64%, rgba(0,0,0,0.55));
   }
+  /* Bottom-left, matching the sub-collection cards one level down, so
+     the title sits in the same place all the way through the deck. */
   .heShop-content {
-    position: relative; z-index: 2; max-width: 820px; text-align: center;
-    padding: clamp(2rem, 6vw, 4rem) var(--pad-x);
+    position: absolute; z-index: 2;
+    left: 0; right: 0; bottom: 0;
+    max-width: 900px; text-align: left;
+    padding: clamp(2rem, 6vw, 4.5rem) var(--pad-x) clamp(3.5rem, 10vh, 6rem);
     will-change: transform; pointer-events: none;
   }
   .heShop-title {
-    font-style: italic; margin: 0; font-size: clamp(2.8rem, 11vw, 6.5rem);
-    line-height: 0.98; letter-spacing: -0.02em;
+    margin: 0; font-size: clamp(2.4rem, 9vw, 5.5rem);
+    line-height: 1; letter-spacing: -0.03em;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.45);
   }
 
   /* ---------- scroll cue ---------- */
@@ -504,6 +513,22 @@ const styles = `
   @media (max-width: 640px) {
     /* Tighter gutter on a phone, where --pad-x is already small. */
     .heShop-cueIdx { left: 0.6rem; font-size: 0.62rem; letter-spacing: 0.22em; }
+  }
+
+  /* ---------- scroll hint ---------- */
+  .heScrollHint {
+    position: fixed; z-index: 4;
+    right: var(--pad-x);
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--ink-soft);
+    opacity: 0.65;
+    pointer-events: none;
+    filter: drop-shadow(0 1px 3px rgba(0,0,0,0.7));
+  }
+  @media (max-width: 640px) {
+    .heScrollHint { right: 0.5rem; }
+    .heScrollHint svg { height: 36px; }
   }
 
   .heShop-overlay { position: fixed; inset: 0; z-index: 90; overflow-y: auto; -webkit-overflow-scrolling: touch; }

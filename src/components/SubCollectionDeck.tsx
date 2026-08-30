@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useReducedMotion } from 'framer-motion';
 import { SUB_COLLECTION_COPY } from '@/lib/collection-copy';
 import CardMedia from '@/components/CardMedia';
+import ScrollHint from '@/components/ScrollHint';
 
 export type SubCollectionItem = {
   slug: string;
@@ -162,6 +163,7 @@ export default function SubCollectionDeck({ subs, onOpen }: Props) {
           {String(index + 1).padStart(2, '0')} / {String(total).padStart(2, '0')}
         </span>
       )}
+      {total > 1 && <ScrollHint />}
     </div>
   );
 }
@@ -298,5 +300,21 @@ const styles = `
        screen, unlike in the inset card it used to be hidden in. */
     .heSub-copy { font-size: 0.82rem; }
     .heSub-body { padding-bottom: clamp(4rem, 12vh, 6rem); }
+  }
+
+  /* ---------- scroll hint ---------- */
+  .heScrollHint {
+    position: fixed; z-index: 4;
+    right: var(--pad-x);
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--ink-soft);
+    opacity: 0.65;
+    pointer-events: none;
+    filter: drop-shadow(0 1px 3px rgba(0,0,0,0.7));
+  }
+  @media (max-width: 640px) {
+    .heScrollHint { right: 0.5rem; }
+    .heScrollHint svg { height: 36px; }
   }
 `;

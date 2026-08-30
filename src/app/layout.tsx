@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Inter, Cormorant_Garamond } from 'next/font/google';
+import { Inter } from 'next/font/google';
 // Lenis needs its own stylesheet to work: it sets `html.lenis body { height:
 // auto }` and the `[data-lenis-prevent]` escape hatch that lets an inner
 // scroll container (the sub-collection deck) keep its own wheel events.
@@ -11,18 +11,22 @@ import { SpeedInsights } from '@vercel/speed-insights/next';
 import Chrome from '@/components/Chrome';
 import { mediaOrigins } from '@/lib/media';
 
+/**
+ * Fallback for Helvetica Now, which is a licensed Monotype face and cannot
+ * be bundled here. globals.css builds the real stack on top of this: if the
+ * licensed woff2 files are present in public/fonts they win, otherwise the
+ * page renders in Inter, then the system Helvetica/Arial. Inter is the
+ * closest free grotesque, so the fallback is not a jarring one.
+ *
+ * Cormorant Garamond is gone: the brief is one face everywhere, and keeping
+ * a serif loaded that nothing renders is a download for nothing.
+ */
 const sans = Inter({
   subsets: ['latin'],
   display: 'swap',
-  variable: '--font-sans',
-  preload: true,
-});
-
-const display = Cormorant_Garamond({
-  subsets: ['latin'],
-  weight: ['400', '500', '600'],
-  display: 'swap',
-  variable: '--font-display',
+  variable: '--font-inter',
+  // 300 matters — the whole site is set Light.
+  weight: ['300', '400', '500', '600'],
   preload: true,
 });
 
@@ -100,7 +104,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${sans.variable} ${display.variable}`}>
+    <html lang="en" className={sans.variable}>
       <head>
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         {/*

@@ -23,3 +23,8 @@ scripts/data/
 /*.MP4
 /*.mov
 /*.MOV
+
+# Local design sources — uploaded to R2, not served from the repo.
+/*.png
+!/public/**/*.png
+!/src/**/*.png

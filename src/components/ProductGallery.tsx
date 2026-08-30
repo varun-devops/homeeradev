@@ -31,14 +31,14 @@ export default function ProductGallery({
   const [active, setActive] = useState(0);
 
   if (media.length === 0) {
-    return <div style={{ aspectRatio: '4 / 5', background: '#15140f', borderRadius: 'var(--radius)' }} />;
+    return <div style={{ aspectRatio: '1 / 1', background: '#15140f', borderRadius: 'var(--radius)' }} />;
   }
 
   const current = media[Math.min(active, media.length - 1)];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-      <div style={{ aspectRatio: '4 / 5', background: '#15140f', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+      <div style={{ aspectRatio: '1 / 1', background: '#15140f', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
         {current.type === 'video' ? (
           <video
             src={videoUrl(current.url)}
@@ -77,7 +77,7 @@ export default function ProductGallery({
               aria-label={`View ${m.type} ${i + 1}`}
               style={{
                 width: 64,
-                height: 78,
+                height: 64,
                 borderRadius: 8,
                 overflow: 'hidden',
                 background: '#15140f',

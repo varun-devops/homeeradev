@@ -587,7 +587,7 @@ const styles = `
 
   .heShop-card { display: block; }
   .heShop-cardImg {
-    aspect-ratio: 4 / 5; border-radius: 6px; position: relative; overflow: hidden;
+    aspect-ratio: 1 / 1; border-radius: 6px; position: relative; overflow: hidden;
     background: #15140f; transition: transform 600ms var(--ease-out);
   }
   .heShop-card:hover .heShop-cardImg { transform: translateY(-4px); }

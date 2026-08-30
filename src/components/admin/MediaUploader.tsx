@@ -62,7 +62,7 @@ export default function MediaUploader({ label, accept, multiple = false, value, 
       {value.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.6rem' }}>
           {value.map((url, i) => (
-            <div key={url + i} style={{ position: 'relative', width: 84, height: 100, borderRadius: 6, overflow: 'hidden', background: '#15140f', border: '1px solid var(--line-strong)' }}>
+            <div key={url + i} style={{ position: 'relative', width: 84, height: 84, borderRadius: 6, overflow: 'hidden', background: '#15140f', border: '1px solid var(--line-strong)' }}>
               {accept === 'video' ? (
                 <video src={url} muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               ) : (

@@ -283,10 +283,9 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 const grid2: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem' };
 const grid3: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1.25rem' };
-const input: React.CSSProperties = {
-  background: 'rgba(255,255,255,0.04)', border: '1px solid var(--line-strong)', borderRadius: 8,
-  padding: '0.7rem 0.9rem', color: 'var(--ink)', fontSize: '0.92rem', width: '100%',
-};
+// Styled by the admin layout stylesheet — see the note on  in
+// AdminProductsTable for why this is not an inline background.
+const input: React.CSSProperties = { width: '100%' };
 const primaryBtn: React.CSSProperties = {
   padding: '0.8rem 1.6rem', borderRadius: 8, background: 'var(--gold)', color: '#0e0e0e',
   fontWeight: 600, fontSize: '0.8rem', letterSpacing: '0.12em', textTransform: 'uppercase', border: 'none', cursor: 'pointer',

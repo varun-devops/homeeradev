@@ -83,6 +83,83 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
           gap: 1.25rem;
         }
+
+        /* ---- form controls ----
+           color-scheme:dark is doing the heavy lifting here. A <select>'s
+           popup list is drawn by the OS, not the page, so no amount of CSS on
+           <option> reliably themes it — the list was rendering light-on-light
+           against this dark panel and reading as an unstyled control. This
+           tells the browser the surface is dark, and it themes the popup,
+           the caret, scrollbars and focus rings to match. */
+        .adminShell { color-scheme: dark; }
+
+        .adminShell select,
+        .adminShell input,
+        .adminShell textarea {
+          font: inherit;
+          font-size: 0.88rem;
+          color: var(--ink);
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid var(--line-strong);
+          border-radius: 8px;
+          padding: 0.65rem 0.9rem;
+          width: 100%;
+          min-width: 0;
+          transition: border-color 150ms ease, background 150ms ease;
+        }
+        .adminShell textarea { resize: vertical; }
+
+        /* Native caret replaced with our own, so the control matches the rest
+           of the panel instead of the OS. appearance:none removes the stock
+           arrow; the padding-right reserves room for the SVG. */
+        .adminShell select {
+          -webkit-appearance: none;
+          -moz-appearance: none;
+          appearance: none;
+          padding-right: 2.2rem;
+          background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath fill='none' stroke='%23b8b2a3' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' d='M1 1.5 6 6.5l5-5'/%3E%3C/svg%3E");
+          background-repeat: no-repeat;
+          background-position: right 0.85rem center;
+          background-size: 11px 7px;
+          cursor: pointer;
+        }
+
+        /* Firefox and Windows Chrome do honour these on the list items, so
+           set them as a belt-and-braces fallback where color-scheme alone
+           leaves an option row light. */
+        .adminShell select option,
+        .adminShell select optgroup {
+          background-color: #17160f;
+          color: var(--ink);
+        }
+
+        .adminShell select:hover { border-color: rgba(212, 181, 116, 0.55); }
+        .adminShell select:focus-visible,
+        .adminShell input:focus-visible,
+        .adminShell textarea:focus-visible {
+          outline: none;
+          border-color: var(--gold);
+          background: rgba(255, 255, 255, 0.06);
+        }
+        .adminShell select:disabled,
+        .adminShell input:disabled { opacity: 0.55; cursor: not-allowed; }
+
+        .adminShell input::placeholder,
+        .adminShell textarea::placeholder { color: var(--ink-mute); }
+
+        /* Checkboxes keep the native control but pick up the brand colour. */
+        .adminShell input[type='checkbox'] {
+          width: auto;
+          min-width: 0;
+          padding: 0;
+          accent-color: var(--gold);
+          cursor: pointer;
+        }
+        /* Search inputs get the native clear affordance in the right colour. */
+        .adminShell input[type='search']::-webkit-search-cancel-button {
+          filter: invert(0.7);
+          cursor: pointer;
+        }
       ` }} />
       <AdminNav email={identity.email} role={identity.role} />
       <div className="adminShell-main">{children}</div>

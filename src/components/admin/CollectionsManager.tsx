@@ -13,7 +13,14 @@ import {
 } from '@/app/admin/actions';
 
 type Collection = { slug: string; label: string; copy: string | null; image_url: string | null; sort_order: number };
-type SubCollection = { slug: string; label: string; collection_slug: string; copy: string | null; sort_order: number };
+type SubCollection = {
+  slug: string;
+  label: string;
+  collection_slug: string;
+  copy: string | null;
+  image_url: string | null;
+  sort_order: number;
+};
 
 /** Key products are counted by: "<category label>␟<sub_category label>". */
 const countKey = (category: string, sub: string) => `${category}␟${sub}`;
@@ -143,44 +150,33 @@ function CollectionCard({
         </div>
       )}
 
-      {/* Sub-collections */}
+      {/* Sub-collections — a card each, because each one carries the image
+          the shop uses as that sub-collection's card background. A chip had
+          nowhere to show or change it. */}
       <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
-          {subs.map((s) => {
-            const count = counts[countKey(collection.label, s.label)] ?? 0;
-            return (
-              <span key={s.slug} style={subChip}>
-                <Link
-                  href={`/admin/products?category=${encodeURIComponent(collection.label)}&sub=${encodeURIComponent(s.label)}`}
-                  style={subChipLink}
-                  title={`View ${count} product${count !== 1 ? 's' : ''} in ${s.label}`}
-                >
-                  {s.label} <span style={{ color: 'var(--ink-mute)' }}>· {count}</span>
-                </Link>
-                <button
-                  type="button"
-                  aria-label="Remove"
-                  onClick={() => {
-                    if (confirm(`Delete sub-collection "${s.label}"?`))
-                      start(async () => {
-                        const res = await deleteSubCollection(s.slug);
-                        if (res.ok) onChange();
-                        else alert(res.message);
-                      });
-                  }}
-                  style={{ marginLeft: 6, background: 'none', border: 'none', color: 'var(--ink-mute)', cursor: 'pointer' }}
-                >
-                  ×
-                </button>
-              </span>
-            );
-          })}
+        <p style={{ margin: '0 0 0.75rem', fontSize: '0.72rem', letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--ink-soft)' }}>
+          Sub-collections
+        </p>
+        <div style={subGrid}>
+          {subs.map((s) => (
+            <SubCard
+              key={s.slug}
+              sub={s}
+              collectionLabel={collection.label}
+              count={counts[countKey(collection.label, s.label)] ?? 0}
+              onChange={onChange}
+              start={start}
+            />
+          ))}
+        </div>
+
+        <div style={{ marginTop: '0.85rem' }}>
           {addingSub ? (
-            <SubEditor
+            <SubCollectionEditor
               onCancel={() => setAddingSub(false)}
-              onSave={(label) =>
+              onSave={(input) =>
                 start(async () => {
-                  const res = await saveSubCollection({ label, collection_slug: collection.slug });
+                  const res = await saveSubCollection({ ...input, collection_slug: collection.slug });
                   if (res.ok) {
                     setAddingSub(false);
                     onChange();
@@ -189,7 +185,7 @@ function CollectionCard({
               }
             />
           ) : (
-            <button type="button" onClick={() => setAddingSub(true)} style={{ ...subChip, cursor: 'pointer', color: 'var(--gold)' }}>
+            <button type="button" onClick={() => setAddingSub(true)} style={{ ...miniBtn, borderStyle: 'dashed', color: 'var(--gold)' }}>
               + Sub-collection
             </button>
           )}
@@ -225,32 +221,157 @@ function CollectionEditor({
   );
 }
 
-function SubEditor({ onSave, onCancel }: { onSave: (label: string) => void; onCancel: () => void }) {
-  const [label, setLabel] = useState('');
+/**
+ * One sub-collection: its shop card image, name, product count, and the
+ * controls to change or remove it. The image is what the storefront renders
+ * as that card's background, so it is editable here rather than only being
+ * inherited from whichever product happened to sort first.
+ */
+function SubCard({
+  sub,
+  collectionLabel,
+  count,
+  onChange,
+  start,
+}: {
+  sub: SubCollection;
+  collectionLabel: string;
+  count: number;
+  onChange: () => void;
+  start: (cb: () => void) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+
+  if (editing) {
+    return (
+      <div style={subCard}>
+        <SubCollectionEditor
+          sub={sub}
+          onCancel={() => setEditing(false)}
+          onSave={(input) =>
+            start(async () => {
+              const res = await saveSubCollection({
+                ...input,
+                slug: sub.slug,
+                collection_slug: sub.collection_slug,
+              });
+              if (res.ok) {
+                setEditing(false);
+                onChange();
+              } else alert(res.message);
+            })
+          }
+        />
+      </div>
+    );
+  }
+
   return (
-    <span style={{ display: 'inline-flex', gap: '0.4rem', alignItems: 'center' }}>
+    <div style={subCard}>
+      <Link
+        href={`/admin/products?category=${encodeURIComponent(collectionLabel)}&sub=${encodeURIComponent(sub.label)}`}
+        style={{ ...subChipLink, display: 'block' }}
+        title={`View ${count} product${count !== 1 ? 's' : ''} in ${sub.label}`}
+      >
+        <div style={subThumb}>
+          {sub.image_url ? (
+            <Img
+              src={sub.image_url}
+              alt=""
+              sizes="180px"
+              widths={[180, 360, 540]}
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            />
+          ) : (
+            <span style={{ fontSize: '0.7rem', color: 'var(--ink-mute)' }}>No image</span>
+          )}
+        </div>
+        <p style={{ margin: '0.6rem 0 0', fontSize: '0.9rem' }}>{sub.label}</p>
+        <p style={{ margin: '0.15rem 0 0', fontSize: '0.74rem', color: 'var(--ink-mute)' }}>
+          {count} product{count !== 1 ? 's' : ''}
+        </p>
+      </Link>
+
+      <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.6rem' }}>
+        <button type="button" onClick={() => setEditing(true)} style={{ ...miniBtn, flex: 1, padding: '0.35rem 0.5rem' }}>
+          Edit
+        </button>
+        <button
+          type="button"
+          aria-label={`Delete ${sub.label}`}
+          onClick={() => {
+            if (confirm(`Delete sub-collection "${sub.label}"?`))
+              start(async () => {
+                const res = await deleteSubCollection(sub.slug);
+                if (res.ok) onChange();
+                else alert(res.message);
+              });
+          }}
+          style={{ ...miniBtn, padding: '0.35rem 0.6rem', color: '#e08a8a', borderColor: 'rgba(224,138,138,0.4)' }}
+        >
+          ×
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** Create/edit form for a sub-collection, including its card image. */
+function SubCollectionEditor({
+  sub,
+  onSave,
+  onCancel,
+}: {
+  sub?: SubCollection;
+  onSave: (input: { label: string; copy: string | null; image_url: string | null }) => void;
+  onCancel: () => void;
+}) {
+  const [label, setLabel] = useState(sub?.label ?? '');
+  const [copy, setCopy] = useState(sub?.copy ?? '');
+  const [image, setImage] = useState<string[]>(sub?.image_url ? [sub.image_url] : []);
+
+  const submit = () => {
+    if (!label.trim()) return;
+    onSave({ label: label.trim(), copy: copy || null, image_url: image[0] ?? null });
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
       <input
         autoFocus
         value={label}
         onChange={(e) => setLabel(e.target.value)}
         placeholder="Sub-collection name"
         onKeyDown={(e) => {
-          if (e.key === 'Enter' && label.trim()) onSave(label.trim());
+          if (e.key === 'Enter') submit();
           if (e.key === 'Escape') onCancel();
         }}
-        style={{ ...input, width: 200, padding: '0.4rem 0.6rem' }}
+        style={input}
       />
-      <button type="button" onClick={() => label.trim() && onSave(label.trim())} style={miniBtn}>Add</button>
-      <button type="button" onClick={onCancel} style={{ ...miniBtn, padding: '0.35rem 0.6rem' }}>×</button>
-    </span>
+      <input
+        value={copy}
+        onChange={(e) => setCopy(e.target.value)}
+        placeholder="Short description (optional)"
+        style={input}
+      />
+      <MediaUploader label="Card image" accept="image" value={image} onChange={setImage} />
+      <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <button type="button" onClick={submit} style={saveBtn}>Save</button>
+        <button type="button" onClick={onCancel} style={miniBtn}>Cancel</button>
+      </div>
+    </div>
   );
 }
 
 const card: React.CSSProperties = { border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: '1.25rem 1.5rem', background: 'rgba(255,255,255,0.02)' };
-const input: React.CSSProperties = { background: 'rgba(255,255,255,0.04)', border: '1px solid var(--line-strong)', borderRadius: 8, padding: '0.65rem 0.9rem', color: 'var(--ink)', fontSize: '0.92rem', width: '100%' };
+// Styled by the admin layout stylesheet.
+const input: React.CSSProperties = { width: '100%' };
 const miniBtn: React.CSSProperties = { padding: '0.45rem 0.9rem', borderRadius: 7, border: '1px solid var(--line-strong)', background: 'transparent', color: 'var(--ink)', fontSize: '0.74rem', letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer' };
 const miniBtnLink: React.CSSProperties = { ...miniBtn, textDecoration: 'none', display: 'inline-block' };
 const saveBtn: React.CSSProperties = { ...miniBtn, background: 'var(--gold)', color: '#0e0e0e', border: 'none', fontWeight: 600 };
 const addBtn: React.CSSProperties = { ...miniBtn, padding: '0.9rem', borderStyle: 'dashed', color: 'var(--gold)' };
-const subChip: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', padding: '0.4rem 0.75rem', borderRadius: 999, border: '1px solid var(--line-strong)', fontSize: '0.8rem', color: 'var(--ink-soft)' };
+const subGrid: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '0.85rem' };
+const subCard: React.CSSProperties = { border: '1px solid var(--line-strong)', borderRadius: 10, padding: '0.7rem', background: 'rgba(255,255,255,0.02)' };
+// Square, matching the 1:1 the storefront now uses for every product image.
+const subThumb: React.CSSProperties = { aspectRatio: '1 / 1', borderRadius: 7, overflow: 'hidden', background: '#15140f', display: 'grid', placeItems: 'center' };
 const subChipLink: React.CSSProperties = { color: 'inherit', textDecoration: 'none' };

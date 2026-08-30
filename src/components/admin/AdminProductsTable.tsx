@@ -206,7 +206,7 @@ export default function AdminProductsTable({
               <tr key={r.id} style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
                 <td style={td}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <div style={{ width: 42, height: 52, borderRadius: 5, overflow: 'hidden', background: '#15140f', flexShrink: 0 }}>
+                    <div style={{ width: 46, height: 46, borderRadius: 5, overflow: 'hidden', background: '#15140f', flexShrink: 0 }}>
                       {r.image_url && (
                         <Img src={r.image_url} alt="" sizes="56px" widths={[56, 112, 168]} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       )}
@@ -333,15 +333,10 @@ const filterBar: React.CSSProperties = {
   gap: '0.75rem',
   marginBottom: '0.9rem',
 };
-const control: React.CSSProperties = {
-  background: 'rgba(255,255,255,0.04)',
-  border: '1px solid var(--line-strong)',
-  borderRadius: 8,
-  padding: '0.65rem 0.9rem',
-  color: 'var(--ink)',
-  fontSize: '0.88rem',
-  minWidth: 0,
-};
+// Appearance (background, border, caret, focus ring) lives in the admin
+// layout's stylesheet so every control matches; an inline 
+// here would be a shorthand that wipes the select's custom caret image.
+const control: React.CSSProperties = { minWidth: 0 };
 const clearBtn: React.CSSProperties = {
   background: 'transparent',
   border: '1px solid var(--line-strong)',

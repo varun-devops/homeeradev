@@ -15,6 +15,8 @@ export type SubCollection = {
   label: string;
   collection_slug: string;
   copy: string | null;
+  /** Added by migration-08/09; the shop card's background image. */
+  image_url: string | null;
   sort_order: number;
 };
 

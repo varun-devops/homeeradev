@@ -254,7 +254,7 @@ const grid: React.CSSProperties = {
 };
 const card: React.CSSProperties = {
   position: 'relative',
-  aspectRatio: '4 / 5',
+  aspectRatio: '1 / 1',
   borderRadius: 8,
   overflow: 'hidden',
   background: '#15140f',

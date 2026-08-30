@@ -315,6 +315,7 @@ export async function saveSubCollection(input: {
   label: string;
   collection_slug: string;
   copy?: string | null;
+  image_url?: string | null;
   sort_order?: number;
 }) {
   const actor = await requireAdmin();
@@ -330,6 +331,7 @@ export async function saveSubCollection(input: {
       label: input.label.trim(),
       collection_slug: input.collection_slug,
       copy: input.copy ?? null,
+      image_url: input.image_url ?? null,
       sort_order: input.sort_order ?? 0,
     },
     { onConflict: 'slug' },

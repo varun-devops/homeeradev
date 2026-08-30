@@ -102,11 +102,6 @@ export default function SubCollectionDeck({ subs, onOpen }: Props) {
     return () => cancelAnimationFrame(raf);
   }, [reduce, subs.length]);
 
-  const goTo = (i: number) => {
-    const scroller = scrollerRef.current;
-    const target = scroller?.querySelectorAll<HTMLElement>('[data-slide]')[i];
-    target?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
-  };
 
 
   return (
@@ -159,20 +154,13 @@ export default function SubCollectionDeck({ subs, onOpen }: Props) {
         ))}
       </div>
 
-      {/* Dot rail — jumps straight to a card. */}
+      {/* Position in the deck, matching the collection level: the same
+          counter in the same place, so moving between levels does not
+          move the chrome around. */}
       {total > 1 && (
-        <nav className="heSub-rail" aria-label="Sub-collections">
-          {subs.map((s, i) => (
-            <button
-              key={s.slug}
-              type="button"
-              className="heSub-dot"
-              data-on={i === index}
-              aria-label={`Go to ${s.label}`}
-              onClick={() => goTo(i)}
-            />
-          ))}
-        </nav>
+        <span className="heSub-idx" aria-hidden="true">
+          {String(index + 1).padStart(2, '0')} / {String(total).padStart(2, '0')}
+        </span>
       )}
     </div>
   );
@@ -283,29 +271,32 @@ const styles = `
   .heSub-cardBtn:hover .heSub-cta { background: var(--gold-bright); }
 
 
-  /* ---------- dot rail ---------- */
-  .heSub-rail {
-    position: absolute; z-index: 4;
-    right: clamp(0.6rem, 2vw, 1.4rem); top: 50%;
+  /* ---------- position counter ---------- */
+  .heSub-idx {
+    position: fixed; z-index: 4;
+    left: var(--pad-x);
+    top: 50%;
     transform: translateY(-50%);
-    display: flex; flex-direction: column; gap: 0.65rem;
+    font-size: 0.68rem;
+    letter-spacing: 0.28em;
+    color: var(--ink-soft);
+    font-variant-numeric: tabular-nums;
+    /* Vertical, as on the collection deck — horizontal text in the left
+       gutter runs into the card title on a narrow screen. */
+    writing-mode: vertical-rl;
+    rotate: 180deg;
+    pointer-events: none;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.7);
   }
-  .heSub-dot {
-    width: 9px; height: 9px; border-radius: 50%;
-    border: 1px solid var(--ink-soft);
-    background: transparent; padding: 0; cursor: pointer;
-    transition: background 260ms var(--ease-out), transform 260ms var(--ease-out),
-                border-color 260ms var(--ease-out);
+  @media (max-width: 640px) {
+    .heSub-idx { left: 0.6rem; font-size: 0.62rem; letter-spacing: 0.22em; }
   }
-  .heSub-dot:hover { border-color: var(--gold); }
-  .heSub-dot[data-on='true'] { background: var(--gold); border-color: var(--gold); transform: scale(1.35); }
 
   @media (max-width: 720px) {
     /* The card is full-bleed at every size now, so the old max-height cap
        no longer applies. Copy stays — there is room for it on a full
        screen, unlike in the inset card it used to be hidden in. */
     .heSub-copy { font-size: 0.82rem; }
-    .heSub-rail { right: 0.5rem; }
     .heSub-body { padding-bottom: clamp(4rem, 12vh, 6rem); }
   }
 `;

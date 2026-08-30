@@ -299,59 +299,18 @@ export default function ShopCollectionDeck({ collections, products }: Props) {
             </motion.h2>
           </div>
 
-          {/* Scroll cue. Every collection is a full-height panel, so without
-              this the visitor has no way of knowing four more sit below the
-              fold — the card itself carries nothing but the name. Shows the
-              position in the deck, and on any panel but the last a chevron
-              that jumps to the next one. */}
+          {/* Position in the deck, parked at the middle of the left edge.
+              Just the count: the chevron that used to sit here duplicated
+              what a scroll already does, and the dot rail said the same
+              thing a third time. */}
           {collections.length > 1 && (
-            <div className="heShop-cue">
-              <span className="heShop-cueIdx">
-                {String(i + 1).padStart(2, '0')} / {String(collections.length).padStart(2, '0')}
-              </span>
-              {i < collections.length - 1 && (
-                <button
-                  type="button"
-                  className="heShop-cueBtn"
-                  aria-label={`Next collection: ${collections[i + 1].label}`}
-                  onClick={(e) => {
-                    // The panel itself opens the collection on click, so this
-                    // must not bubble up to it.
-                    e.stopPropagation();
-                    scrollToPanel(i + 1);
-                  }}
-                >
-                  <span className="heShop-cueNext">{collections[i + 1].label}</span>
-                  <svg
-                    className="heShop-cueChev"
-                    width="18" height="18" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"
-                    strokeLinejoin="round" aria-hidden="true"
-                  >
-                    <polyline points="6 9 12 15 18 9" />
-                  </svg>
-                </button>
-              )}
-            </div>
+            <span className="heShop-cueIdx" aria-hidden="true">
+              {String(i + 1).padStart(2, '0')} / {String(collections.length).padStart(2, '0')}
+            </span>
           )}
         </article>
       ))}
 
-      {/* Index rail — only meaningful with more than one collection. */}
-      {collections.length > 1 && (
-        <nav className="heShop-rail" aria-label="Collection index">
-          {collections.map((c, i) => (
-            <button
-              key={c.slug}
-              type="button"
-              className="heShop-dot"
-              data-on={active === i && !openSlug}
-              aria-label={`Go to ${c.label}`}
-              onClick={() => scrollToPanel(i)}
-            />
-          ))}
-        </nav>
-      )}
 
       {/* ============ LEVELS 2 + 3 — FULL-SCREEN OVERLAY ============ */}
       <AnimatePresence>
@@ -521,56 +480,30 @@ const styles = `
   }
 
   /* ---------- scroll cue ---------- */
-  .heShop-cue {
-    position: absolute; z-index: 3;
-    left: 50%; transform: translateX(-50%);
-    bottom: clamp(1.5rem, 5vh, 3rem);
-    display: flex; flex-direction: column; align-items: center; gap: 0.6rem;
-    pointer-events: none;
-  }
+  /* Position counter, vertically centred on the left edge. It is the only
+     chrome left on a panel: the dot rail and the next-panel chevron both
+     said the same "there is more" a second and third time, on a screen
+     whose whole job is the photograph. */
   .heShop-cueIdx {
-    font-size: 0.68rem; letter-spacing: 0.28em; color: var(--ink-soft);
-    font-variant-numeric: tabular-nums;
-  }
-  .heShop-cueBtn {
-    pointer-events: auto;
-    display: flex; flex-direction: column; align-items: center; gap: 0.3rem;
-    background: none; border: none; padding: 0.35rem 0.75rem; cursor: pointer;
+    position: absolute; z-index: 3;
+    left: var(--pad-x);
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.68rem;
+    letter-spacing: 0.28em;
     color: var(--ink-soft);
-    transition: color 240ms var(--ease-out);
+    font-variant-numeric: tabular-nums;
+    /* Vertical, running up the edge — horizontal text at the left margin
+       collides with the card title on narrow screens. */
+    writing-mode: vertical-rl;
+    transform-origin: center;
+    rotate: 180deg;
+    pointer-events: none;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.7);
   }
-  .heShop-cueBtn:hover { color: var(--gold); }
-  .heShop-cueBtn:focus-visible { outline: 1px solid var(--gold); outline-offset: 4px; border-radius: 8px; }
-  .heShop-cueNext {
-    font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase;
-  }
-  /* A slow bob — enough to read as "there is more below" without nagging. */
-  .heShop-cueChev { animation: heShopBob 2.1s ease-in-out infinite; }
-  @keyframes heShopBob {
-    0%, 100% { transform: translateY(0); opacity: 0.75; }
-    50%      { transform: translateY(5px); opacity: 1; }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .heShop-cueChev { animation: none; }
-  }
-
-  .heShop-rail {
-    position: fixed; right: clamp(0.75rem, 2.5vw, 1.75rem); top: 50%;
-    transform: translateY(-50%); display: flex; flex-direction: column; gap: 0.7rem; z-index: 40;
-  }
-  .heShop-dot {
-    width: 10px; height: 10px; border-radius: 50%; border: 1px solid var(--ink-soft);
-    background: transparent; padding: 0; cursor: pointer;
-    transition: background 280ms var(--ease-out), transform 280ms var(--ease-out),
-                border-color 280ms var(--ease-out);
-  }
-  .heShop-dot:hover { border-color: var(--gold); }
-  .heShop-dot[data-on='true'] { background: var(--gold); border-color: var(--gold); transform: scale(1.35); }
-  @media (max-width: 720px) {
-    /* The cue owns the bottom centre on mobile, so the rail tucks in below it. */
-    .heShop-rail { top: auto; bottom: 0.85rem; right: 50%; transform: translateX(50%); flex-direction: row; }
-    .heShop-cue { bottom: 3.25rem; }
-    .heShop-cueNext { display: none; }
+  @media (max-width: 640px) {
+    /* Tighter gutter on a phone, where --pad-x is already small. */
+    .heShop-cueIdx { left: 0.6rem; font-size: 0.62rem; letter-spacing: 0.22em; }
   }
 
   .heShop-overlay { position: fixed; inset: 0; z-index: 90; overflow-y: auto; -webkit-overflow-scrolling: touch; }
@@ -605,9 +538,12 @@ const styles = `
      SubCollectionDeck.tsx. */
 
   /* ---------- level 3: products ---------- */
+  /* Full-bleed rather than a 1100px column: the cards are tall 9:16 now, and
+     capping the width left them small in the middle of a wide screen. */
   .heShop-grid {
     display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: clamp(2rem, 4vw, 3rem) clamp(1.5rem, 3vw, 2.5rem); max-width: 1100px; margin: 0 auto;
+    gap: clamp(2rem, 4vw, 3rem) clamp(1.5rem, 3vw, 2.5rem);
+    max-width: 1600px; margin: 0 auto;
   }
   @media (max-width: 980px) { .heShop-grid { grid-template-columns: repeat(2, 1fr); } }
   /* Two columns all the way down to the narrowest phone. A single column
@@ -624,7 +560,10 @@ const styles = `
 
   .heShop-card { display: block; }
   .heShop-cardImg {
-    aspect-ratio: 1 / 1; border-radius: 6px; position: relative; overflow: hidden;
+    /* 9:16 — the product photographs are portrait objects, and a tall frame
+       shows a lamp or a sculpture at a useful size instead of cropping it
+       into a square. */
+    aspect-ratio: 9 / 16; border-radius: 6px; position: relative; overflow: hidden;
     background: #15140f; transition: transform 600ms var(--ease-out);
   }
   .heShop-card:hover .heShop-cardImg { transform: translateY(-4px); }

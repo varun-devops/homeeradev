@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react';
 import Img from '@/components/Img';
 import { uploadFile } from '@/lib/upload-client';
+import UploadProgress from '@/components/admin/UploadProgress';
 
 /**
  * Uploads images/videos to Cloudflare R2 via /api/admin/upload and reports
@@ -27,6 +28,12 @@ export default function MediaUploader({ label, accept, multiple = false, value, 
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [progress, setProgress] = useState<{
+    done: number;
+    total: number;
+    fraction: number;
+    name: string;
+  } | null>(null);
 
   const acceptAttr = accept === 'image' ? 'image/*' : 'video/*';
 
@@ -34,18 +41,25 @@ export default function MediaUploader({ label, accept, multiple = false, value, 
     if (!files || files.length === 0) return;
     setError(null);
     setBusy(true);
+    const list = Array.from(files);
+    setProgress({ done: 0, total: list.length, fraction: 0, name: list[0]?.name ?? '' });
     try {
       const uploaded: string[] = [];
-      for (const file of Array.from(files)) {
-        // Presigned, straight to R2 — see lib/upload-client.ts.
-        const res = await uploadFile(file);
+      for (const file of list) {
+        // Presigned, straight to R2 — see lib/upload-client.ts. The
+        // callback reports bytes Cloudflare has actually acknowledged.
+        const res = await uploadFile(file, (fraction) =>
+          setProgress({ done: uploaded.length, total: list.length, fraction, name: file.name }),
+        );
         uploaded.push(res.url);
+        setProgress({ done: uploaded.length, total: list.length, fraction: 0, name: file.name });
       }
       onChange(multiple ? [...value, ...uploaded] : uploaded.slice(0, 1));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed');
     } finally {
       setBusy(false);
+      setProgress(null);
       if (inputRef.current) inputRef.current.value = '';
     }
   };
@@ -105,6 +119,15 @@ export default function MediaUploader({ label, accept, multiple = false, value, 
         </button>
         {value.length > 0 && <span style={{ fontSize: '0.78rem', color: 'var(--ink-mute)' }}>{value.length} file{value.length > 1 ? 's' : ''}</span>}
       </div>
+
+      {progress && (
+        <UploadProgress
+          done={progress.done}
+          total={progress.total}
+          fraction={progress.fraction}
+          name={progress.name}
+        />
+      )}
 
       <input
         ref={inputRef}

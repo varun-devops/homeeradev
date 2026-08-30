@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import Img from '@/components/Img';
 import { isVideoUrl, videoPoster } from '@/lib/media';
 import { uploadFile } from '@/lib/upload-client';
+import UploadProgress from '@/components/admin/UploadProgress';
 
 /**
  * One ordered list of product media, replacing the old split between a
@@ -224,12 +225,13 @@ export default function ProductImages({ value, onChange, max = 12 }: Props) {
         }}
       >
         {busy ? (
-          <span style={{ fontSize: '0.85rem', color: 'var(--ink-soft)' }}>
-            {progress
-              ? `Uploading ${progress.done + 1}/${progress.total}` +
-                (progress.fraction > 0 ? ` — ${Math.round(progress.fraction * 100)}%` : '…')
-              : 'Uploading…'}
-          </span>
+          <div style={{ width: 'min(320px, 100%)' }}>
+            <UploadProgress
+              done={progress?.done ?? 0}
+              total={progress?.total ?? 1}
+              fraction={progress?.fraction ?? 0}
+            />
+          </div>
         ) : (
           <>
             <span style={{ fontSize: '0.9rem', color: 'var(--ink)' }}>

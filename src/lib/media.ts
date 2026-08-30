@@ -141,11 +141,27 @@ export function videoPoster(src: string | null | undefined, width = 1280): strin
   return `${IK_ENDPOINT}${path}/ik-thumbnail.jpg?tr=w-${width},f-auto`;
 }
 
-/** Video delivery URL. ImageKit transcodes to a web-friendly bitrate. */
+/**
+ * Video delivery URL — served straight from R2, deliberately not ImageKit.
+ *
+ * ImageKit meters video separately from images, and on the free plan that
+ * allowance is already spent: a clip it has not cached comes back 403
+ * "Video transformations limit exceeded", so a newly uploaded background
+ * video simply would not play. Nothing is lost by going direct, because we
+ * pre-encode clips to their delivery size rather than asking for transforms
+ * at request time — and R2 charges no egress, so this is the cheaper path
+ * as well as the working one.
+ *
+ * Falls back to the ImageKit URL only when no public R2 URL is configured,
+ * which keeps already-cached clips playing in that setup.
+ */
 export function videoUrl(src: string | null | undefined): string {
   if (!src) return '';
   const path = imageKitPath(src);
   if (!path) return src;
+
+  const r2Public = (process.env.NEXT_PUBLIC_R2_PUBLIC_URL ?? '').replace(/\/+$/, '');
+  if (r2Public) return `${r2Public}${path}`;
   return `${IK_ENDPOINT}${path}`;
 }
 

@@ -29,7 +29,7 @@ export default async function AdminOrdersPage() {
 
   return (
     <div>
-      <h1 style={{ fontStyle: 'italic', fontSize: '2rem', marginBottom: '0.5rem' }}>Orders</h1>
+      <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>Orders</h1>
       <p style={{ color: 'var(--ink-soft)', marginBottom: '2rem' }}>
         {orders.length} orders · who bought what, and payment status.
       </p>

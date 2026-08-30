@@ -38,7 +38,7 @@ export default async function AdminUsersPage() {
 
   return (
     <div>
-      <h1 style={{ fontStyle: 'italic', fontSize: '2rem', marginBottom: '0.5rem' }}>Users</h1>
+      <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>Users</h1>
       <p style={{ color: 'var(--ink-soft)', marginBottom: '2rem' }}>
         {rows.length} registered · cart and order activity per user.
       </p>

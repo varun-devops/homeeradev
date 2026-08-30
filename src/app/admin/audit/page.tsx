@@ -38,7 +38,7 @@ export default async function AdminAuditPage() {
 
   return (
     <div>
-      <h1 style={{ fontStyle: 'italic', fontSize: '2rem', marginBottom: '0.5rem' }}>Audit log</h1>
+      <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>Audit log</h1>
 
       {error && (
         <p style={{ color: '#e08a8a', marginBottom: '1.5rem' }}>

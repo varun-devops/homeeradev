@@ -64,7 +64,7 @@ export default async function AdminOrderDetailPage({ params }: { params: { id: s
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap', marginTop: '1rem' }}>
         <div>
-          <h1 style={{ fontStyle: 'italic', fontSize: '2rem', margin: 0 }}>Order #{o.id.slice(0, 8)}</h1>
+          <h1 style={{ fontSize: '2rem', margin: 0 }}>Order #{o.id.slice(0, 8)}</h1>
           <p style={{ margin: '0.3rem 0 0', fontSize: '0.8rem', color: 'var(--ink-mute)' }}>
             {new Date(o.created_at).toLocaleString('en-IN')}
           </p>

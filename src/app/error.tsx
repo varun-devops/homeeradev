@@ -51,7 +51,7 @@ export default function Error({
         >
           Something went wrong
         </p>
-        <h1 style={{ fontStyle: 'italic', fontSize: 'clamp(1.9rem, 5vw, 3rem)', marginBottom: '1rem' }}>
+        <h1 style={{ fontSize: 'clamp(1.9rem, 5vw, 3rem)', marginBottom: '1rem' }}>
           This page didn&rsquo;t load
         </h1>
         <p style={{ color: 'var(--ink-soft)', marginBottom: '2rem' }}>

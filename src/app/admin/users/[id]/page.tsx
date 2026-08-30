@@ -47,7 +47,7 @@ export default async function AdminUserDetailPage({ params }: { params: { id: st
         ← All users
       </Link>
 
-      <h1 style={{ fontStyle: 'italic', fontSize: '2rem', margin: '1rem 0 0' }}>
+      <h1 style={{ fontSize: '2rem', margin: '1rem 0 0' }}>
         {u.full_name || u.email || 'Customer'}
         {u.is_admin && <span style={{ color: 'var(--gold)', fontSize: '0.8rem', marginLeft: '0.75rem', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Admin</span>}
       </h1>

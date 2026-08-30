@@ -51,7 +51,7 @@ export default async function SuccessPage({
         >
           ✓
         </div>
-        <h1 style={{ fontStyle: 'italic', fontSize: 'clamp(2rem, 5vw, 2.8rem)', margin: 0 }}>
+        <h1 style={{ fontSize: 'clamp(2rem, 5vw, 2.8rem)', margin: 0 }}>
           {order.status === 'paid' ? 'Thank you — order confirmed' : 'Order received'}
         </h1>
         <p style={{ color: 'var(--ink-soft)', marginTop: '0.75rem' }}>

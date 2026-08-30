@@ -48,7 +48,7 @@ export default async function AdminDashboard() {
 
   return (
     <div>
-      <h1 style={{ fontStyle: 'italic', fontSize: '2rem', marginBottom: '0.5rem' }}>Dashboard</h1>
+      <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>Dashboard</h1>
 
       <div className="adminGrid">
         {cards.map((card) => (

@@ -244,7 +244,6 @@ const styles = `
   }
   .heSub-name {
     font-family: var(--font-display);
-    font-style: italic;
     font-size: clamp(1.9rem, 5.5vw, 3.4rem);
     line-height: 1;
     letter-spacing: -0.01em;

@@ -113,7 +113,7 @@ export default async function ProductPage({ params }: { params: { id: string } }
           >
             {p.sub_category}
           </p>
-          <h1 style={{ fontStyle: 'italic', fontSize: 'clamp(2rem, 4.5vw, 3.5rem)' }}>
+          <h1 style={{ fontSize: 'clamp(2rem, 4.5vw, 3.5rem)' }}>
             {p.name}
           </h1>
 

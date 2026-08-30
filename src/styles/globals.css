@@ -148,7 +148,7 @@ button {
   }
 }
 
-.prose h2 { font-size: 1.7rem; margin: 2.5rem 0 1rem; font-style: italic; color: var(--ink); }
+.prose h2 { font-size: 1.7rem; margin: 2.5rem 0 1rem; color: var(--ink); }
 .prose h3 { font-size: 1.25rem; margin: 2rem 0 0.75rem; color: var(--ink); }
 .prose p { margin: 0 0 1.1rem; color: var(--ink-soft); }
 .prose a { border-bottom: 1px solid var(--line); color: var(--gold); }
@@ -158,7 +158,6 @@ button {
   margin: 1.5rem 0;
   padding-left: 1.25rem;
   border-left: 2px solid var(--gold);
-  font-style: italic;
   color: var(--ink-soft);
 }
 .prose code {

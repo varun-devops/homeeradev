@@ -13,7 +13,7 @@ export default async function NewProductPage() {
       <Link href="/admin/products" style={{ fontSize: '0.78rem', color: 'var(--ink-soft)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
         ← Products
       </Link>
-      <h1 style={{ fontStyle: 'italic', fontSize: '2rem', margin: '0.75rem 0 1.5rem' }}>New product</h1>
+      <h1 style={{ fontSize: '2rem', margin: '0.75rem 0 1.5rem' }}>New product</h1>
       <ProductForm
         collections={collections.map((c) => ({ slug: c.slug, label: c.label }))}
         subCollections={subCollections.map((s) => ({ slug: s.slug, label: s.label, collection_slug: s.collection_slug }))}

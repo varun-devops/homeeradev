@@ -37,7 +37,7 @@ export default async function AdminProductsPage({
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
-        <h1 style={{ fontStyle: 'italic', fontSize: '2rem', margin: 0 }}>Products</h1>
+        <h1 style={{ fontSize: '2rem', margin: 0 }}>Products</h1>
         <Link
           href="/admin/products/new"
           style={{

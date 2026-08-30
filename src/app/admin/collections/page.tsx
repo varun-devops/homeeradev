@@ -20,7 +20,7 @@ export default async function AdminCollectionsPage() {
 
   return (
     <div>
-      <h1 style={{ fontStyle: 'italic', fontSize: '2rem', marginBottom: '0.5rem' }}>Collections</h1>
+      <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>Collections</h1>
 
       <CollectionsManager collections={collections} subCollections={subCollections} counts={Object.fromEntries(counts)} />
     </div>

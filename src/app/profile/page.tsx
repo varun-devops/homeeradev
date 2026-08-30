@@ -50,7 +50,7 @@ export default async function ProfilePage() {
 
   return (
     <main className="container" style={{ paddingTop: '8rem', paddingBottom: '4rem', minHeight: '70svh' }}>
-      <h1 style={{ fontStyle: 'italic', fontSize: 'clamp(2rem, 5vw, 3rem)' }}>Your profile</h1>
+      <h1 style={{ fontSize: 'clamp(2rem, 5vw, 3rem)' }}>Your profile</h1>
 
       <div
         style={{

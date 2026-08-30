@@ -48,7 +48,7 @@ export default async function CartPage() {
 
   return (
     <main className="container" style={{ paddingTop: '8rem', paddingBottom: '4rem', minHeight: '70svh' }}>
-      <h1 style={{ fontStyle: 'italic', fontSize: 'clamp(2rem, 5vw, 3rem)' }}>Your bag</h1>
+      <h1 style={{ fontSize: 'clamp(2rem, 5vw, 3rem)' }}>Your bag</h1>
 
       {items.length === 0 ? (
         <div style={{ marginTop: '2rem', color: 'var(--ink-soft)' }}>

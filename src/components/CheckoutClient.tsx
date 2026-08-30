@@ -241,7 +241,7 @@ export default function CheckoutClient({ items, total, email, saved }: Props) {
   return (
     <main className="container heCo" style={{ paddingTop: '8rem', paddingBottom: '4rem', minHeight: '70svh' }}>
       <style dangerouslySetInnerHTML={{ __html: styles }} />
-      <h1 style={{ fontStyle: 'italic', fontSize: 'clamp(2rem, 5vw, 3rem)' }}>Checkout</h1>
+      <h1 style={{ fontSize: 'clamp(2rem, 5vw, 3rem)' }}>Checkout</h1>
 
       <div className="heCo-grid">
         {/* ================= LEFT — address ================= */}

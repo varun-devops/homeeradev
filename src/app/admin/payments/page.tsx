@@ -59,7 +59,7 @@ export default async function AdminPaymentsPage() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap' }}>
         <div>
-          <h1 style={{ fontStyle: 'italic', fontSize: '2rem', marginBottom: '0.5rem' }}>Payments</h1>
+          <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>Payments</h1>
   
         </div>
         <SyncPaymentsButton disabled={!cfg.ready} />

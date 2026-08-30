@@ -80,7 +80,7 @@ export default function AboutPage() {
           margin: 0 0 1.1rem;
           font-family: var(--font-display);
           font-size: clamp(1.5rem, 3.4vw, 2.3rem);
-          font-style: italic;
+         
           line-height: 1.15;
           letter-spacing: -0.01em;
           color: var(--ink);

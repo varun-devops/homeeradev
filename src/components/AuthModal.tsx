@@ -129,8 +129,8 @@ export default function AuthModal({
             }
             .heAuth-close:hover { background: rgba(255,255,255,0.1); }
             .heAuth-title {
-              font-family: var(--font-display, Georgia, serif);
-              font-style: italic; font-size: clamp(1.6rem, 5vw, 2.1rem);
+              font-family: var(--font-display);
+              font-size: clamp(1.6rem, 5vw, 2.1rem);
               text-align: center; margin: 0 0 0.4rem;
               color: var(--ink, #f2ede3);
             }

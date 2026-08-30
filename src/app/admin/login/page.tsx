@@ -28,7 +28,7 @@ export default function AdminLoginPage() {
         >
           Homeera
         </p>
-        <h1 style={{ fontStyle: 'italic', fontSize: '2rem', textAlign: 'center', margin: 0 }}>
+        <h1 style={{ fontSize: '2rem', textAlign: 'center', margin: 0 }}>
           Admin
         </h1>
         <Suspense>

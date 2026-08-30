@@ -21,7 +21,7 @@ export default async function EditProductPage({ params }: { params: { id: string
       <Link href="/admin/products" style={{ fontSize: '0.78rem', color: 'var(--ink-soft)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
         ← Products
       </Link>
-      <h1 style={{ fontStyle: 'italic', fontSize: '2rem', margin: '0.75rem 0 1.5rem' }}>{product.name}</h1>
+      <h1 style={{ fontSize: '2rem', margin: '0.75rem 0 1.5rem' }}>{product.name}</h1>
       <ProductForm
         product={{
           id: product.id,

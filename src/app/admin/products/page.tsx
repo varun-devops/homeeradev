@@ -48,10 +48,7 @@ export default async function AdminProductsPage({
           + New product
         </Link>
       </div>
-      <p style={{ color: 'var(--ink-soft)', marginBottom: '1.5rem' }}>
-        Filter by category, sub-category, name or item number. Prices and visibility
-        can be edited inline.
-      </p>
+
       <AdminProductsTable
         products={products}
         initialCategory={searchParams.category ?? ''}

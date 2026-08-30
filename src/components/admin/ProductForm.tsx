@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import MediaUploader from '@/components/admin/MediaUploader';
 import ProductImages from '@/components/admin/ProductImages';
+import SavingBar from '@/components/admin/SavingBar';
 import { createProduct, updateProduct, deleteProduct, type ProductInput } from '@/app/admin/actions';
 
 /** Sentinel for the "type a new one" option in the sub-category select. */
@@ -58,8 +59,12 @@ export default function ProductForm({ product, collections, subCollections }: Pr
   // True while the sub-category is being typed rather than picked.
   const [addingSub, setAddingSub] = useState(false);
 
-  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
+  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    // A "Saved." banner left standing over an edited form claims
+    // something that is no longer true.
+    setMsg(null);
     setF((s) => ({ ...s, [k]: e.target.value }));
+  };
 
   // Sub-collections filtered to the chosen category (matched by label).
   const selectedCollectionSlug = collections.find((c) => c.label === f.category)?.slug;
@@ -98,12 +103,27 @@ export default function ProductForm({ product, collections, subCollections }: Pr
     };
     start(async () => {
       const res = isEdit ? await updateProduct(input) : await createProduct(input);
-      if (res.ok) {
-        router.push('/admin/products');
-        router.refresh();
-      } else {
+      if (!res.ok) {
         setMsg({ ok: false, text: res.message ?? 'Save failed' });
+        return;
       }
+
+      if (isEdit) {
+        // Stay put. Bouncing back to the list after every save meant
+        // losing your place and re-opening the product to make the next
+        // change. refresh() re-runs the server component underneath, so
+        // the form is showing saved data rather than only local state.
+        setMsg({ ok: true, text: 'Saved.' });
+        router.refresh();
+        return;
+      }
+
+      // A newly created product has no id in this form yet, so submitting
+      // again here would create a second one. Move to its own edit page —
+      // same work, now with an id, and every later save stays put.
+      if (res.id) router.replace(`/admin/products/${res.id}`);
+      else router.push('/admin/products');
+      router.refresh();
     });
   };
 
@@ -113,6 +133,7 @@ export default function ProductForm({ product, collections, subCollections }: Pr
     start(async () => {
       const res = await deleteProduct(product.id!);
       if (res.ok) {
+        // The only case that still navigates: there is no page to stay on.
         router.push('/admin/products');
         router.refresh();
       } else {
@@ -123,6 +144,7 @@ export default function ProductForm({ product, collections, subCollections }: Pr
 
   return (
     <form onSubmit={submit} style={{ maxWidth: 760, display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+      <SavingBar active={pending} />
       <div style={grid2}>
         <Field label="Product name*"><input required value={f.name} onChange={set('name')} style={input} /></Field>
         <Field label="Item No.*"><input required value={f.sku} onChange={set('sku')} style={input} /></Field>

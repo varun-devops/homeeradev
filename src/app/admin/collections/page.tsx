@@ -21,10 +21,7 @@ export default async function AdminCollectionsPage() {
   return (
     <div>
       <h1 style={{ fontStyle: 'italic', fontSize: '2rem', marginBottom: '0.5rem' }}>Collections</h1>
-      <p style={{ color: 'var(--ink-soft)', marginBottom: '2rem' }}>
-        Create and manage the top-level collections and their sub-collections shown in the shop.
-        Product counts link straight to that filtered list.
-      </p>
+
       <CollectionsManager collections={collections} subCollections={subCollections} counts={Object.fromEntries(counts)} />
     </div>
   );

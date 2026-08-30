@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import MediaUploader from '@/components/admin/MediaUploader';
 import Img from '@/components/Img';
+import SavingBar from '@/components/admin/SavingBar';
 import {
   saveCollection,
   deleteCollection,
@@ -42,6 +43,7 @@ export default function CollectionsManager({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', opacity: pending ? 0.6 : 1 }}>
+      <SavingBar active={pending} />
       {collections.map((c) => (
         <CollectionCard
           key={c.slug}

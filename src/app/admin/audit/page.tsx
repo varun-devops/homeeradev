@@ -39,10 +39,6 @@ export default async function AdminAuditPage() {
   return (
     <div>
       <h1 style={{ fontStyle: 'italic', fontSize: '2rem', marginBottom: '0.5rem' }}>Audit log</h1>
-      <p style={{ color: 'var(--ink-soft)', marginBottom: '2rem' }}>
-        Every product, collection, order-status and refund change made through this admin
-        panel, newest first. Read-only — nothing here can be edited or deleted from the app.
-      </p>
 
       {error && (
         <p style={{ color: '#e08a8a', marginBottom: '1.5rem' }}>
